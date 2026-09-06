@@ -11,12 +11,12 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
 LAYOUT_WITH_LEGEND()
-title [C4 Level 3] Explore ML - 组件图（单服务模板）
+title [C4 Level 3] Explore ML - Component Diagram (single-service template)
 
 Container_Boundary(svc, "python_ml/<name>") {
   Component(api, "api.py", "FastAPI routes", "HTTP")
-  Component(service, "service.py", "orchestration", "无业务规则堆积")
-  Component(domain, "domain/", "models / ETL", "ML 核心")
+  Component(service, "service.py", "orchestration", "No piled-up business rules")
+  Component(domain, "domain/", "models / ETL", "ML core")
   Component(config, "config.py", "env", "ports / paths")
 }
 
