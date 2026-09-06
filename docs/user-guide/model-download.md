@@ -1,184 +1,172 @@
-# 模型下载指南
+# Model download
 
-← [用户手册首页](README.md)
+← [User guide home](README.md)
 
-本文说明如何下载 Explore ML 默认使用的本地权重，并放到 `LOCAL_MODELS_ROOT`
-（默认 `$HOME/Codes/models`）。ML 选型与评估见 [Guideline](../Guideline.md)。
+Fetch local checkpoints only when you chose a local generative or rerank
+backend. Point helpers at one root (`LOCAL_MODELS_ROOT`). Keep large weights out
+of git.
 
-大权重**不入库**；下载后由各服务通过环境变量引用。
+This layout is a **target convention** for the easiest offline setup. Align
+loaders to it over time. Prefer a Hub id or lightweight backend when you want
+zero local disk.
 
----
+For model choice see the [Guideline](../Guideline.md).
 
-## 目录约定
+## When to download
 
-在 `LOCAL_MODELS_ROOT` 下按能力分子目录：
+```mermaid
+flowchart TB
+  Need[Need_Media_Gen_or_rerank]
+  Local{Local_backend?}
+  Skip[Skip_download_use_Hub_or_light]
+  Fetch[Download_under_LOCAL_MODELS_ROOT]
+  Need --> Local
+  Local -->|no| Skip
+  Local -->|yes| Fetch
+```
+
+Skip this guide when Vision / Recommendation online paths do not need those
+weights, or when `IMAGE_BACKEND` / `VOICE_BACKEND` already avoid local Qwen.
+
+## Target layout
+
+One root. One folder per modality:
 
 ```text
 $LOCAL_MODELS_ROOT/
-├── asr/models/Qwen3-ASR-1.7B/
-├── tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice/
-├── image/models/Qwen-Image/
-└── rerank/models/Qwen3-Reranker-8B/
+├── asr/models/<asr-model>/
+├── tts/models/<tts-model>/
+├── image/models/<image-model>/
+└── rerank/models/<rerank-model>/
 ```
 
-| 能力 | Hugging Face / ModelScope id | 本地子路径 | 服务 |
-| ---- | ---------------------------- | ---------- | ---- |
-| ASR | `Qwen/Qwen3-ASR-1.7B` | `asr/models/Qwen3-ASR-1.7B` | Media Gen |
-| TTS | `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice` | `tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice` | Media Gen |
-| 文生图 | `Qwen/Qwen-Image` | `image/models/Qwen-Image` | Media Gen |
-| 精排 | `Qwen/Qwen3-Reranker-8B` | `rerank/models/Qwen3-Reranker-8B` | RAG sidecar |
+Example ids that fit the target tree:
 
-Ollama 模型（如 embedding / LLM）仍用 `ollama pull`，落在 `~/.ollama`，不在此树。
+- ASR — `Qwen/Qwen3-ASR-1.7B`
+- TTS — `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`
+- Image — `Qwen/Qwen-Image`
+- Rerank — `Qwen/Qwen3-Reranker-8B`
 
----
+Keep Ollama LLM packages in the Ollama home via `ollama pull`—not under
+`LOCAL_MODELS_ROOT`.
 
-## 工具准备
+```mermaid
+flowchart LR
+  Root[LOCAL_MODELS_ROOT]
+  Media[Media_Gen]
+  Rerank[RAG_rerank]
+  Ollama[Ollama_home]
+  RAG[RAG_embed_chat]
+  Root --> Media
+  Root --> Rerank
+  Ollama --> RAG
+```
 
-任选其一（国内网络优先 ModelScope）：
+## Prepare tools
+
+Install one Hub client:
 
 ```bash
-# Hugging Face CLI
 pip install -U "huggingface_hub[cli]"
-
-# 或 ModelScope
+# or
 pip install -U modelscope
 ```
 
-可选镜像（Hugging Face）：
+Optional mirror:
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 ```
 
-设置根目录：
+Set the root once:
 
 ```bash
 export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
 mkdir -p "$LOCAL_MODELS_ROOT"/{asr,tts,image,rerank}/models
 ```
 
----
+## Download what you need
 
-## 下载命令
+Download only the modalities you will run locally.
 
-### ASR — Qwen3-ASR-1.7B
+### ASR
 
 ```bash
-# Hugging Face
 huggingface-cli download Qwen/Qwen3-ASR-1.7B \
   --local-dir "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
-
-# 或 ModelScope
-modelscope download --model Qwen/Qwen3-ASR-1.7B \
-  --local_dir "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
 ```
 
-文档：[Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)
-
-### TTS — Qwen3-TTS-12Hz-1.7B-CustomVoice
+### TTS
 
 ```bash
 huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
   --local-dir "$LOCAL_MODELS_ROOT/tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice"
-
-# 或
-modelscope download --model Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
-  --local_dir "$LOCAL_MODELS_ROOT/tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 ```
 
-文档：[Qwen3-TTS-12Hz-1.7B-CustomVoice](https://huggingface.co/Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice)
+### Image
 
-### 文生图 — Qwen-Image
-
-体积较大，首次下载较久。
+Expect a large first download.
 
 ```bash
 huggingface-cli download Qwen/Qwen-Image \
   --local-dir "$LOCAL_MODELS_ROOT/image/models/Qwen-Image"
-
-# 或
-modelscope download --model Qwen/Qwen-Image \
-  --local_dir "$LOCAL_MODELS_ROOT/image/models/Qwen-Image"
 ```
 
-文档：[Qwen-Image](https://huggingface.co/Qwen/Qwen-Image)
-
-### 精排 — Qwen3-Reranker-8B
+### Rerank
 
 ```bash
 huggingface-cli download Qwen/Qwen3-Reranker-8B \
   --local-dir "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
-
-# 或
-modelscope download --model Qwen/Qwen3-Reranker-8B \
-  --local_dir "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
 ```
 
-文档：[Qwen3-Reranker-8B](https://huggingface.co/Qwen/Qwen3-Reranker-8B)
+ModelScope works the same way with `modelscope download --model … --local_dir …`
+when Hugging Face is unreachable.
 
-也可用 Python：
+## Wire helpers (easiest config)
+
+Export the same root the helpers read:
 
 ```bash
-python - <<'PY'
-import os
-from modelscope import snapshot_download
-root = os.path.expanduser(os.environ.get("LOCAL_MODELS_ROOT", "~/Codes/models"))
-path = snapshot_download(
-    "Qwen/Qwen3-Reranker-8B",
-    local_dir=os.path.join(root, "rerank/models/Qwen3-Reranker-8B"),
-)
-print(path)
-PY
+export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
 ```
 
----
+Prefer defaults that resolve under that root. Override with a path or Hub id
+when needed. Swap away from local weights with backend flags—keep `/api/v1`
+routes unchanged.
 
-## 下载后如何接到服务
+For optional rerank, set one sidecar URL and one model path; if the sidecar is
+down, keep vector order (see [Guideline](../Guideline.md)).
 
-| 服务 | 相关环境变量 | 说明 |
-| ---- | ------------ | ---- |
-| Media Gen | `LOCAL_MODELS_ROOT`, `IMAGE_MODEL`, `TTS_MODEL`, `ASR_MODEL` | 默认解析到上表子路径；可改为其他本地目录或 HF id |
-| Media Gen | `IMAGE_BACKEND=sd`, `VOICE_BACKEND=edge` | 不用本地 Qwen 时的替代后端 |
-| RAG | `RERANK_MODEL`, `RERANK_URL` | 权重路径 + `python serve.py --port 8091`（在已下载的 `rerank/` 工具环境中） |
-
-启动 Media Gen / RAG 前确认对应目录存在且含 `config.json`（或 Diffusers 的 `model_index.json`）。
-
-精排 sidecar：
-
-```bash
-# 在含 transformers 的 venv 中，cwd 指向你的 rerank 工具目录亦可
-python serve.py --port 8091 --model "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
+```mermaid
+flowchart TB
+  Env[LOCAL_MODELS_ROOT_and_backends]
+  Routes[Stable_/api/v1_routes]
+  Env --> Routes
 ```
 
-（若使用仓库外的 `~/Codes/models/rerank/serve.py`，按该脚本的 `--model` 默认即可。）
-
----
-
-## Ollama（embedding / LLM）
-
-RAG 默认 embedding / chat 走 Ollama，与上述 Qwen 权重树分离：
+## Ollama (RAG embed / chat)
 
 ```bash
 ollama pull nomic-embed-text
-ollama pull qwen3-coder:30b   # 或你选用的 LLM
+ollama pull qwen3-coder:30b
 ```
 
----
+## Verify
 
-## 校验清单
+```bash
+ls "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
+curl -s "$HELPER/health"
+```
 
-| 检查 | 命令或现象 |
-| ---- | ---------- |
-| 目录非空 | `ls "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"` 可见 `config.json` |
-| ASR 冒烟 | `POST http://localhost:8003/api/v1/audios:transcribe` 上传 wav |
-| 精排健康 | `curl -s http://127.0.0.1:8091/health` |
-| 缺权重 | 服务日志报 missing path / download error，而非静默空结果 |
+Fail clearly when a required path is empty—do not hang on an unexpected Hub
+pull inside a hot request.
 
----
+## Related
 
-## 相关文档
+[User guide home](README.md)
 
-- [Guideline](../Guideline.md) — ML 实践
-- [Media Gen README](../../python_ml/media-gen/README.md)
-- [RAG README](../../python_ml/rag/README.md)
-- [旁路上游接入](sibling-integration.md)
+[Operator setup](operator-setup.md)
+
+[Loopback integration](loopback-integration.md)
+
+[Guideline](../Guideline.md)

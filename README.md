@@ -17,7 +17,7 @@ end; `data/` holds small fixtures.
 You need Python 3.11+ and Git. Redis is optional for recommendation Celery
 workers. Some helpers also expect Ollama, a GPU stack, or local model weights —
 see each service README and the
-[Model Download Guide](docs/user-guide/model-download.md).
+[Model download](docs/user-guide/model-download.md) guide.
 
 ### Initial setup
 
@@ -55,7 +55,7 @@ walkthrough, see the [User Guide](docs/user-guide/README.md).
 
 Each service ships `.env.example`. Do not commit real secrets. Large model
 weights stay out of git under `LOCAL_MODELS_ROOT`; download them with the
-[Model Download Guide](docs/user-guide/model-download.md). Media Gen and RAG
+[Model download](docs/user-guide/model-download.md) guide. Media Gen and RAG
 rerank prefer those local Qwen paths and can be overridden via env. Put small
 fixtures under `data/`.
 
@@ -67,10 +67,10 @@ cd python_ml/<name> && pytest
 
 ## Next steps
 
-- Follow the [User Guide](docs/user-guide/README.md) for local setup and sibling
-  product integration.
+- Follow the [User Guide](docs/user-guide/README.md) for local setup and
+  loopback integration.
 - Download checkpoints with the
-  [Model Download Guide](docs/user-guide/model-download.md).
+  [Model download](docs/user-guide/model-download.md) guide.
 - Read the [Guideline](docs/Guideline.md) for ML practice boundaries.
 - Learn the shared
   [Python services layout](docs/developer/python-services.md).

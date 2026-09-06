@@ -1,77 +1,118 @@
-# 本地运维 — 启动指南
+# Operator setup
 
-← [用户手册首页](README.md)
+← [User guide home](README.md)
 
-本文说明如何在本机安装并启动 Explore ML 四个旁路上游服务。
+Stand up Explore ML with the smallest durable config: one helper process, one
+port, one health URL. Start only what you need. Treat this as the **target
+runbook**—independent of today’s folders or entrypoints; align code to it over
+time.
 
----
+## Before you start
 
-## 前置条件
+Install a current Python toolchain and a way to run the helper process (local
+venv, container, or process manager). Optional:
 
-| 工具 | 说明 |
-| ---- | ---- |
-| Python | 3.11+ |
-| Git | 克隆本仓库 |
-| 可选 Redis | Recommendation Celery 任务 |
-| 可选 Ollama | RAG 本地 embedding / LLM |
-| 可选 GPU / MPS | Media Gen 与本地 Qwen 推理 |
+- Vector DB — when RAG stores embeddings locally
+- Local LLM runtime — when RAG embeds or chats offline
+- Redis — when recommendation batch jobs need a broker
+- GPU or Apple MPS — when Media Gen should run faster
 
-本地权重按 [模型下载指南](model-download.md) 下载到 `LOCAL_MODELS_ROOT`（默认 `$HOME/Codes/models`）。
+Download local weights only if you chose a local Media Gen or rerank backend
+([Model download](model-download.md)).
 
----
+## Steps
 
-## 服务与端口
+1. Choose **one** capability to prove first (recommendation, vision, RAG, or
+   media).
+2. Configure a single listen port and base URL. Prefer contiguous defaults:
 
-| 服务 | 目录 | 默认端口 | 环境变量（端口） |
-| ---- | ---- | -------- | ---------------- |
-| Recommendation | `python_ml/recommendation` | 8000 | `PORT` / `RECOMMENDATION_PORT` |
-| Vision | `python_ml/vision` | 8001 | `VISION_PORT` |
-| RAG | `python_ml/rag` | 8002 | `PORT` |
-| Media Gen | `python_ml/media-gen` | 8003 | `MEDIA_GEN_PORT` / `PORT` |
+- Recommendation — `8000`
+- Vision — `8001`
+- RAG — `8002`
+- Media Gen — `8003`
 
----
-
-## 启动步骤
-
-对每个需要的服务重复：
-
-```bash
-cd python_ml/<name>
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# 按需编辑 .env
-uvicorn main:app --host 0.0.0.0 --port <上表端口>
-```
-
-| 检查 | 示例 |
-| ---- | ---- |
-| Recommendation | `curl -s http://localhost:8000/health` |
-| Vision | `curl -s http://localhost:8001/health` |
-| RAG | `curl -s http://localhost:8002/health` |
-| Media Gen | `curl -s http://localhost:8003/health` |
-
-Swagger 一般在 `http://localhost:<port>/docs`。
-
----
-
-## 测试
+3. Provide secrets and datastore URLs through env (never commit them). Copy
+   from an example file when the helper ships one.
+4. Start the helper so it serves HTTP on that port.
+5. Verify:
 
 ```bash
-cd python_ml/<name>
-pytest
+export HELPER=http://localhost:8000   # change port to match
+curl -s "$HELPER/health"
+open "$HELPER/docs"                   # or visit in a browser
 ```
 
----
+6. Stop here until one route works. Add the next helper only when the product
+   feature needs it.
 
-## 常见问题
+```mermaid
+flowchart TB
+  Pick[Pick_one_capability]
+  Port[Set_port_and_env]
+  Run[Start_process]
+  Health[Check_health_and_docs]
+  Pick --> Port --> Run --> Health
+```
 
-| 情况 | 建议 |
-| ---- | ---- |
-| 端口已被占用 | 改 `.env` 中端口，并同步兄弟产品 upstream URL |
-| Media Gen 找不到本地权重 | 按 [模型下载指南](model-download.md) 补齐权重，或改 backend / `ASR_MODEL` |
-| RAG 精排无效果 | 先启动 rerank sidecar，或设 `RERANK_ENABLED=false` |
-| macOS 视频生成失败 | 需显式 `MEDIA_VIDEO_FORCE_LOCAL=1`，或跳过视频能力 |
+## Run more than one helper
 
-准则见 [Guideline](../Guideline.md)；接入见 [旁路上游接入](sibling-integration.md)。
+Give each helper its own process and port. Keep base URLs unique. Point the
+product API at each URL after health is OK—see
+[Loopback integration](loopback-integration.md).
+
+```mermaid
+flowchart LR
+  API[Product_API]
+  H1[Helper_A]
+  H2[Helper_B]
+  API -->|"URL_A"| H1
+  API -->|"URL_B"| H2
+```
+
+## Optional dependencies
+
+### RAG
+
+Start an embedding/chat runtime and a vector store before the first ingest.
+Keep their URLs in the helper env. Prefer one local stack (for example Ollama +
+Qdrant) for the easiest offline path.
+
+### Recommendation batch
+
+Start a job worker only when you need scheduled recall or training. Online rank
+should work without the worker when scores or candidates are already available.
+
+### Media Gen
+
+Prefer auto device selection. Force CPU with one env flag when GPUs are
+unavailable. Skip video on platforms that cannot run it unless you explicitly
+opt in.
+
+## Environment checklist
+
+Set these once and keep them aligned:
+
+- **Base URL** — public address your API uses (`http://localhost:<port>`)
+- **Listen port** — same host the base URL names
+- **Secrets** — DB, Redis, API keys via env or a secret store
+- **`LOCAL_MODELS_ROOT`** — only when local generative / rerank weights are on
+- **Timeouts** — owned by the product API, not the browser
+
+## If something fails
+
+- Port in use — change the helper port and every upstream that points at it.
+- Health fails — confirm the process listens on the URL you curl.
+- OpenAPI missing routes — restart after config changes; use `/docs` as truth.
+- Missing weights — download them, or switch to a Hub / lightweight backend.
+- Rerank quiet — disable rerank with one flag, or start the optional sidecar.
+- Slow first call — expect cold start; fail clearly if paths are empty.
+
+## Related
+
+[User guide home](README.md)
+
+[Loopback integration](loopback-integration.md)
+
+[Model download](model-download.md)
+
+[Guideline](../Guideline.md)
