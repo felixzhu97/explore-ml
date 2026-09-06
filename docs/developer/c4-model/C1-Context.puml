@@ -1,0 +1,26 @@
+@startuml
+!ROUNDED_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Context.puml
+UpdateElementStyle("person", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("external_person", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("system", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("external_system", "#FFFFFF", "#000000", "#000000")
+UpdateBoundaryStyle("", $bgColor="#FFFFFF", $fontColor="#000000", $borderColor="#000000")
+UpdateRelStyle("#000000", "#000000")
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+
+LAYOUT_WITH_LEGEND()
+title [C4 Level 1] Explore ML - 系统上下文
+
+Person(engineer, "平台工程师", "本地启动与联调")
+System(explore_ml, "Explore ML", "Python FastAPI 旁路：推荐、视觉、RAG、媒体生成")
+System_Ext(chat_api, "Explore Chat API", "Spring Boot；loopback 消费旁路")
+System_Ext(other_api, "其他 Explore API", "可选消费方")
+
+Rel(engineer, explore_ml, "启动 / 健康检查 / 测模")
+Rel(chat_api, explore_ml, "HTTP loopback", "可选")
+Rel(other_api, explore_ml, "HTTP loopback", "可选")
+
+SHOW_LEGEND()
+@enduml

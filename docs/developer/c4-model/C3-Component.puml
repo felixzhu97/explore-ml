@@ -1,0 +1,31 @@
+@startuml
+!ROUNDED_STYLE=1
+!include https://raw.githubusercontent.com/plantuml-stdlib/C4-PlantUML/master/C4_Component.puml
+UpdateElementStyle("person", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("system", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("container", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("component", "#FFFFFF", "#000000", "#000000")
+UpdateBoundaryStyle("", $bgColor="#FFFFFF", $fontColor="#000000", $borderColor="#000000")
+UpdateRelStyle("#000000", "#000000")
+skinparam backgroundColor #FFFFFF
+skinparam shadowing false
+
+LAYOUT_WITH_LEGEND()
+title [C4 Level 3] Explore ML - 组件图（单服务模板）
+
+Container_Boundary(svc, "python_ml/<name>") {
+  Component(api, "api.py", "FastAPI routes", "HTTP + AIP handlers")
+  Component(service, "service.py", "orchestration", "无业务规则堆积")
+  Component(domain, "domain/", "models / ETL", "ML 核心")
+  Component(aip, "aip/", "RpcStatus", "AIP-193")
+  Component(config, "config.py", "env", "ports / paths")
+}
+
+Rel(api, aip, "errors")
+Rel(api, service, "calls")
+Rel(service, domain, "calls")
+Rel(api, config, "reads")
+Rel(service, config, "reads")
+
+SHOW_LEGEND()
+@enduml

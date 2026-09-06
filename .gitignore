@@ -1,0 +1,32 @@
+# Python
+**/__pycache__/
+**/*.py[cod]
+**/.pytest_cache/
+**/.mypy_cache/
+**/.ruff_cache/
+**/htmlcov/
+**/.coverage
+**/*.egg-info/
+**/.venv/
+**/venv/
+**/.env
+!**/.env.example
+
+# Runtime / generated
+**/output/
+**/uploads/
+**/*.pt
+**/*.pth
+**/*.onnx
+**/*.bin
+
+# Keep data/ tracked structure; ignore large fixtures by default
+data/**
+!data/README.md
+!data/.gitkeep
+
+# OS / IDE
+.DS_Store
+.idea/
+.vscode/
+*.iml
