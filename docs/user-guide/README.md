@@ -1,62 +1,106 @@
-# Explore ML 用户手册
+# User guide
 
-面向本地运维与兄弟产品接入说明。架构见 [C4 模型](../developer/c4-model/README.md)；术语见 [Glossary](../Glossary.md)；集成准则见 [Guideline](../Guideline.md)。
+Run only the Explore ML helpers you need. Point your product API at one base
+URL per helper. Prefer the smallest path that proves one feature end to end.
 
----
+Diagrams and steps below are **target best practices** for easy integration and
+configuration. They are independent of today’s package layout; align
+implementation to them over time.
 
-## 介绍
+For design rules see the [Guideline](../Guideline.md). For terms see the
+[Glossary](../Glossary.md).
 
-Explore ML 提供可选的 Python FastAPI **旁路上游**（Loopback Upstream）：推荐、视觉审核、RAG、媒体生成。产品客户端只访问兄弟应用的 API；由 Spring（或其他后端）在本机回环调用这些服务。
+## Goal
 
-| 组件 | 说明 |
-| ---- | ---- |
-| Recommendation | Feed / Explore / Reels 排序与建议 |
-| Vision | 图像标签与内容审核 |
-| RAG | 文档索引、检索与问答 |
-| Media Gen | 文生图、视频、语音合成、ASR |
-| Local Models Root | 通过 [模型下载指南](model-download.md) 获取的权重根目录（`LOCAL_MODELS_ROOT`） |
+Four optional helpers. One base URL each. Loopback only from your product API.
+Product clients never dial the helpers.
 
----
-
-## 按角色阅读
-
-| 您是… | 请阅读 | 您将了解到 |
-| ----- | ------ | ---------- |
-| 本地运维 / 开发者 | [本地启动指南](operator-setup.md) | 如何安装依赖、启动四个服务并做健康检查 |
-| 兄弟产品后端开发者 | [旁路上游接入](sibling-integration.md) | 端口、环境变量、代理约定 |
-| 模型与推理运维 | [模型下载指南](model-download.md) | 下载 Qwen 权重、目录约定、接到服务 |
-
-原则与边界见 [Guideline](../Guideline.md)；本手册侧重可操作步骤。
-
----
-
-## 本地开发环境
-
-| 服务 | 地址 | 说明 |
-| ---- | ---- | ---- |
-| Recommendation | http://localhost:8000 | 推荐 / 排序 |
-| Vision | http://localhost:8001 | 视觉标签与审核 |
-| RAG | http://localhost:8002 | 检索增强问答 |
-| Media Gen | http://localhost:8003 | 图像 / 视频 / 语音 / ASR |
-| Rerank sidecar（可选） | http://127.0.0.1:8091 | 精排 HTTP；权重见 [模型下载指南](model-download.md) |
-
-启动示例（任选一个服务）：
-
-```bash
-cd python_ml/recommendation   # 或 vision / rag / media-gen
-python -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-uvicorn main:app --host 0.0.0.0 --port 8000   # 按上表改端口
+```mermaid
+flowchart LR
+  Client[Product_client]
+  API[Product_API]
+  ML[Explore_ML_helpers]
+  Client --> API
+  API -->|"base URL + /api/v1"| ML
 ```
 
-健康检查通常为 `GET /health`（以各服务 README 为准）。
+## Get started
 
----
+1. Start the smallest helper set you need (see
+   [Operator setup](operator-setup.md)).
+2. Confirm health on that base URL:
 
-## 文档说明
+```bash
+curl -s "$HELPER/health"
+```
 
-- Preferred Term 以 [Glossary](../Glossary.md) 为准；ML 实践以 [Guideline](../Guideline.md) 为准。
-- 大权重不入库，按 [模型下载指南](model-download.md) 获取；小样例放在仓库根目录 `data/`。
-- 默认端口为连续的 `8000`–`8003`；若兄弟产品仍指向旧的 media-gen `:3456`，请改为 `:8003`。
+3. Open `$HELPER/docs` and copy one request from OpenAPI.
+4. Set one env var on the product API to `$HELPER` (see
+   [Loopback integration](loopback-integration.md)).
+5. Call the same route through the product API once.
+
+Download checkpoints only when a local Media Gen or rerank backend needs them
+([Model download](model-download.md)). Skip downloads when you use a
+lightweight or Hub-backed backend.
+
+Use `$HELPER` as a placeholder. Local defaults are often:
+
+- Recommendation — `http://localhost:8000`
+- Vision — `http://localhost:8001`
+- RAG — `http://localhost:8002`
+- Media Gen — `http://localhost:8003`
+
+```mermaid
+flowchart TB
+  Start[Start_one_helper]
+  Health[GET_health]
+  Docs[Open_/docs]
+  Env[Set_one_base_URL]
+  Prove[Prove_one_route]
+  Start --> Health --> Docs --> Env --> Prove
+```
+
+## Useful endpoints
+
+Relative to each helper base URL (target contract):
+
+- Health — `GET /health`
+- Contract — `GET /docs`
+- Recommendation — `POST /api/v1/feeds:rank`, `explores:rank`, `reels:rank`,
+  `feeds:recall`
+- Vision — `POST /api/v1/images:predict`, `images:moderate`, `videos:moderate`
+- RAG — `POST /api/v1/documents`, `documents:query`, `documents:streamQuery`
+- Media Gen — `POST /api/v1/images:generate`, `voices:synthesize`,
+  `audios:transcribe`, `videos:generate`
+
+Prefer `/docs` over memorizing bodies. Keep custom-method names stable when
+code moves.
+
+## Next steps
+
+### Run helpers
+
+**Follow [Operator setup](operator-setup.md).** One process, one port, one
+health check.
+
+### Connect your API
+
+**Follow [Loopback integration](loopback-integration.md).** Four env vars at
+most for a full stack; one var for a single feature.
+
+### Fetch checkpoints
+
+**Follow [Model download](model-download.md).** Only when local weights are the
+chosen backend.
+
+## Related
+
+[Operator setup](operator-setup.md)
+
+[Loopback integration](loopback-integration.md)
+
+[Model download](model-download.md)
+
+[Guideline](../Guideline.md)
+
+[Glossary](../Glossary.md)
