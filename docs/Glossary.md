@@ -26,7 +26,7 @@ architecture naming. Chinese labels are for localization only.
 | Recommendation | 推荐     | `python_ml/recommendation` | `:8000`        | Feed / Explore / Reels rank         |
 | Vision         | 视觉审核 | `python_ml/vision`         | `:8001`        | Labels + moderation                 |
 | RAG            | 检索增强 | `python_ml/rag`            | `:8002`        | Documents + local Qdrant path       |
-| Media Gen      | 媒体生成 | `python_ml/media-gen`      | `:3456`        | Image / video / voice               |
+| Media Gen      | 媒体生成 | `python_ml/media-gen`      | `:8003`        | Image / video / voice               |
 | Model Test UI  | 测模界面 | `ui/`                      | —              | Placeholder; sibling of `python_ml` |
 | Fixture Data   | 测试数据 | `data/`                    | —              | Small fixtures only                 |
 

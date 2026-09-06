@@ -20,6 +20,6 @@ for d in (IMAGE_OUTPUT, VIDEO_OUTPUT, VOICE_OUTPUT):
     d.mkdir(parents=True, exist_ok=True)
 
 HOST = os.environ.get("MEDIA_GEN_HOST", "0.0.0.0")
-PORT = int(os.environ.get("MEDIA_GEN_PORT", "3456"))
+PORT = int(os.environ.get("MEDIA_GEN_PORT", os.environ.get("PORT", "8003")))
 BASE_URL = os.environ.get("MEDIA_GEN_BASE_URL", f"http://localhost:{PORT}")
 DEFAULT_VOICE = os.environ.get("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")

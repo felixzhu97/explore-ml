@@ -40,7 +40,7 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 | recommendation | 8000         | `RECOMMENDATION_API_URL`   |
 | vision         | 8001         | `VISION_SERVICE_URL`       |
 | rag            | 8002         | `RAG_SERVICE_URL`          |
-| media-gen      | 3456         | `MEDIA_GENERATION_API_URL` |
+| media-gen      | 8003         | `MEDIA_GENERATION_API_URL` |
 
 ## Layering
 

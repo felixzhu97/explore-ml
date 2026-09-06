@@ -5,7 +5,7 @@ products (especially [explore-chat](https://github.com/felixzhu97/explore-chat))
 You can run recommendation, vision, RAG, and media generation on loopback.
 Clients never call these services directly; Spring (or another API) proxies.
 
-Four services live under `python_ml/` today (separate ports). A future cut
+Four services live under `python_ml/` today on contiguous ports `8000`–`8003`. A future cut
 may fold them behind one port without moving the folder boundary. `ui/` is
 reserved for a model-test front end; `data/` holds test fixtures.
 
@@ -40,10 +40,10 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | recommendation | 8000         | `GET /health`    |
 | vision         | 8001         | `GET /health`    |
 | rag            | 8002         | `GET /health`    |
-| media-gen      | 3456         | `GET /health`    |
+| media-gen      | 8003         | `GET /health`    |
 
 Point explore-chat `chat.upstreams.*` (or env overrides) at these URLs.
-Ports stay the same after the extract so existing local configs keep working.
+Default ports are contiguous 8000–8003 (media-gen uses 8003).
 
 ### Checks
 
