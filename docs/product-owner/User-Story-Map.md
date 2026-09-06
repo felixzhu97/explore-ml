@@ -1,37 +1,38 @@
 ---
-title: Explore ML - 用户故事地图
+title: Explore ML - User Story Map
 ---
 
-# 用户故事地图
+# User Story Map
 
-> 索引页。ML helpers 由 sibling API 消费；产品用户不直连这些端口。
+> Index page. ML helpers are consumed by sibling APIs; product users never
+> call these ports directly.
 
-## 用户画像
+## Personas
 
-| 角色                | 说明                                              |
-| ------------------- | ------------------------------------------------- |
-| 平台工程师          | 本地启动旁路服务、挂载 fixture 数据               |
-| Sibling API 开发者  | 经 loopback 调用 recommendation / vision / rag / media-gen |
-| 测模工程师（规划）  | 经未来 `ui/` 试跑模型与健康检查                   |
+| Role | Description |
+| ---- | ----------- |
+| Platform engineer | Starts loopback helpers locally and mounts fixture data |
+| Sibling API developer | Calls recommendation / vision / rag / media-gen over loopback |
+| Model-test engineer (planned) | Exercises models and health checks via a future `ui/` |
 
-## 旅程总览
+## Journey overview
 
-### 本地旁路
+### Local loopback
 
 ```mermaid
 journey
-    title 本地旁路
-    section 启动
-        安装依赖并启动服务: 5: 平台工程师
-        健康检查通过: 5: 平台工程师
-    section 联调
-        Sibling API 调用 loopback: 5: Sibling API 开发者
+    title Local loopback
+    section Boot
+        Install dependencies and start services: 5: Platform engineer
+        Health checks pass: 5: Platform engineer
+    section Integrate
+        Sibling API calls loopback: 5: Sibling API developer
 ```
 
-## Epic 索引（规划）
+## Epic index (planned)
 
-| Epic | 状态   | 说明                         |
-| ---- | ------ | ---------------------------- |
-| E1   | 进行中 | 四服务分端口可用             |
-| E2   | 规划   | 单端口收敛（仍在 `python_ml/`） |
-| E3   | 规划   | `ui/` 测模前端               |
+| Epic | Status | Notes |
+| ---- | ------ | ----- |
+| E1 | In progress | Four services available on separate ports |
+| E2 | Planned | Converge behind one port (still under `python_ml/`) |
+| E3 | Planned | `ui/` model-test front end |

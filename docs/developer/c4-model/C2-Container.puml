@@ -13,28 +13,28 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
 LAYOUT_WITH_LEGEND()
-title [C4 Level 2] Explore ML - 容器图
+title [C4 Level 2] Explore ML - Container Diagram
 
-Person(engineer, "平台工程师", "本地")
-System_Ext(chat_api, "Explore Chat API", "Spring :9001")
+Person(engineer, "Platform engineer", "Local")
+System_Ext(sibling_api, "Sibling Explore API", "Product API boundary")
 
 System_Boundary(ml, "Explore ML") {
   Container(rec, "Recommendation", "FastAPI", "python_ml/recommendation :8000")
   Container(vision, "Vision", "FastAPI", "python_ml/vision :8001")
   Container(rag, "RAG", "FastAPI", "python_ml/rag :8002")
   Container(media, "Media Gen", "FastAPI", "python_ml/media-gen :8003")
-  Container(ui, "Model Test UI", "（规划）", "ui/")
-  ContainerDb(fixtures, "Fixture data", "文件", "data/")
+  Container(ui, "Model Test UI", "(planned)", "ui/")
+  ContainerDb(fixtures, "Fixture data", "Files", "data/")
 }
 
-Rel(engineer, ui, "测模（规划）")
+Rel(engineer, ui, "Model test (planned)")
 Rel(engineer, rec, "uvicorn / pytest")
-Rel(chat_api, rec, "HTTP", "可选")
-Rel(chat_api, vision, "HTTP", "可选")
-Rel(chat_api, rag, "HTTP", "可选")
-Rel(chat_api, media, "HTTP", "可选")
-Rel(ui, rec, "HTTP", "规划")
-Rel(rag, fixtures, "可选 path")
+Rel(sibling_api, rec, "HTTP", "optional")
+Rel(sibling_api, vision, "HTTP", "optional")
+Rel(sibling_api, rag, "HTTP", "optional")
+Rel(sibling_api, media, "HTTP", "optional")
+Rel(ui, rec, "HTTP", "planned")
+Rel(rag, fixtures, "optional path")
 
 SHOW_LEGEND()
 @enduml

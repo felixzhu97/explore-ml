@@ -10,25 +10,25 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
 LAYOUT_WITH_LEGEND()
-title [C4 Deployment] Explore ML - 本地开发
+title [C4 Deployment] Explore ML - Local Development
 
-Deployment_Node(dev_machine, "开发机", "macOS / Linux") {
-  Deployment_Node(py_svcs, "python_ml（venv）", "") {
+Deployment_Node(dev_machine, "Dev machine", "macOS / Linux") {
+  Deployment_Node(py_svcs, "python_ml (venv)", "") {
     Container(rec, "Recommendation", "FastAPI", ":8000")
     Container(vision, "Vision", "FastAPI", ":8001")
     Container(rag, "RAG", "FastAPI", ":8002")
     Container(media, "Media Gen", "FastAPI", ":8003")
   }
   Deployment_Node(data_node, "data/", "fixtures") {
-    Container(fixtures, "fixtures", "文件", "小文件入库；大权重 gitignore")
+    Container(fixtures, "fixtures", "Files", "Small files in git; large weights gitignored")
   }
-  Deployment_Node(ui_node, "ui/", "规划") {
-    Container(ui, "Model Test UI", "（未实现）", "与 python_ml 平级")
+  Deployment_Node(ui_node, "ui/", "planned") {
+    Container(ui, "Model Test UI", "(not implemented)", "Sibling of python_ml")
   }
 }
 
-Rel(rag, fixtures, "可选 path")
-Rel(ui, rec, "HTTP", "规划")
+Rel(rag, fixtures, "optional path")
+Rel(ui, rec, "HTTP", "planned")
 
 SHOW_LEGEND()
 @enduml

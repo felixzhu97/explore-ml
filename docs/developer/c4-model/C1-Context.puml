@@ -11,16 +11,16 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
 LAYOUT_WITH_LEGEND()
-title [C4 Level 1] Explore ML - 系统上下文
+title [C4 Level 1] Explore ML - System Context
 
-Person(engineer, "平台工程师", "本地启动与联调")
-System(explore_ml, "Explore ML", "Python FastAPI 旁路：推荐、视觉、RAG、媒体生成")
-System_Ext(chat_api, "Explore Chat API", "Spring Boot；loopback 消费旁路")
-System_Ext(other_api, "其他 Explore API", "可选消费方")
+Person(engineer, "Platform engineer", "Local boot and integration")
+System(explore_ml, "Explore ML", "Python FastAPI loopback helpers: recommendation, vision, RAG, media gen")
+System_Ext(sibling_api, "Sibling Explore API", "Spring (or other); consumes helpers over loopback")
+System_Ext(other_api, "Other Explore API", "Optional consumer")
 
-Rel(engineer, explore_ml, "启动 / 健康检查 / 测模")
-Rel(chat_api, explore_ml, "HTTP loopback", "可选")
-Rel(other_api, explore_ml, "HTTP loopback", "可选")
+Rel(engineer, explore_ml, "Start / health / model test")
+Rel(sibling_api, explore_ml, "HTTP loopback", "optional")
+Rel(other_api, explore_ml, "HTTP loopback", "optional")
 
 SHOW_LEGEND()
 @enduml

@@ -23,4 +23,5 @@ cd docs/developer/c4-model && docker run --rm -v "$PWD":/data plantuml/plantuml 
 | rag | `:8002` |
 | media-gen | `:8003` |
 
-Consumers (for example explore-chat Spring) keep existing loopback URLs.
+Sibling product APIs keep their own loopback upstream URLs pointed at these
+ports.
