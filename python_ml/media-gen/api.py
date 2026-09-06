@@ -1,7 +1,9 @@
+import os
 import uuid
+from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, HTTPException
+from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
@@ -9,6 +11,8 @@ import config
 import service
 
 router = APIRouter()
+
+_ALLOWED_AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac"}
 
 
 class ImageGenerateBody(BaseModel):
@@ -128,3 +132,40 @@ def serve_voice_wav(job_id: str):
     return FileResponse(path, media_type="audio/wav")
 
 
+@router.post("/api/v1/audios:transcribe")
+async def audios_transcribe(
+    file: UploadFile = File(...),
+    language: Optional[str] = Form(None),
+):
+    """Transcribe uploaded audio with local Qwen3-ASR (default)."""
+    suffix = Path(file.filename or "audio.wav").suffix.lower() or ".wav"
+    if suffix not in _ALLOWED_AUDIO_SUFFIXES:
+        raise HTTPException(
+            status_code=400,
+            detail=f"Unsupported audio type {suffix}. Allowed: {', '.join(sorted(_ALLOWED_AUDIO_SUFFIXES))}",
+        )
+    job_id = f"job-{uuid.uuid4().hex[:12]}"
+    tmp_path = config.ASR_UPLOADS / f"{job_id}{suffix}"
+    try:
+        data = await file.read()
+        if not data:
+            raise HTTPException(status_code=400, detail="empty audio file")
+        tmp_path.write_bytes(data)
+        result = await service.transcribe_audio(
+            str(tmp_path),
+            (language or "").strip() or None,
+        )
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e)) from e
+    finally:
+        try:
+            if tmp_path.exists():
+                os.unlink(tmp_path)
+        except OSError:
+            pass
+    return {
+        "text": result.get("text", ""),
+        **({"language": result["language"]} if result.get("language") else {}),
+    }

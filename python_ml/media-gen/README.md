@@ -1,10 +1,10 @@
-# Media Gen (Image + Video + Voice)
+# Media Gen (Image + Video + Voice + ASR)
 
 Layout (same as other Python helpers): `main.py` / `config.py` / `api.py` /
 `service.py` / `domain/` / `tests/`.
 
 Single service for image generation, video generation (CogVideoX), voice
-synthesis. Port: 8003.
+synthesis, and speech recognition (ASR). Port: 8003.
 
 **Defaults use downloaded local weights** under `LOCAL_MODELS_ROOT` (see
 [Model Download Guide](../../docs/user-guide/model-download.md)). Set backends
@@ -14,6 +14,7 @@ to switch to Hugging Face / edge-tts.
 | ---------- | --------------- | ---------------------------------------- | ----- |
 | Image      | `qwen`          | `image/models/Qwen-Image`                | `IMAGE_BACKEND=sd` + `SD_MODEL` / `IMAGE_MODEL` |
 | Voice      | `qwen`          | `tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice` | `VOICE_BACKEND=edge` + `EDGE_TTS_VOICE` |
+| ASR        | `qwen`          | `asr/models/Qwen3-ASR-1.7B`              | `ASR_MODEL` (path or HF id) |
 | Video      | CogVideoX HF id | —                                        | `COGVIDEOX_MODEL` |
 
 ## Setup
@@ -36,6 +37,8 @@ uvicorn main:app --host 0.0.0.0 --port 8003
 - `VOICE_BACKEND` (`qwen` \| `edge`, default: `qwen`)
 - `TTS_MODEL` / `TTS_SPEAKER` / `TTS_LANGUAGE` (Qwen TTS)
 - `EDGE_TTS_VOICE` (when `VOICE_BACKEND=edge`)
+- `ASR_BACKEND` (`qwen`, default)
+- `ASR_MODEL` / `ASR_LANGUAGE` (Qwen ASR)
 - `MEDIA_GEN_PORT` (default: 8003)
 - `MEDIA_GEN_BASE_URL` (default: `http://localhost:{PORT}`)
 - `MEDIA_OUTPUT_DIR` (default: `output`)
@@ -61,6 +64,14 @@ export VOICE_BACKEND=edge
   `GET /output/video/{job_id}.mp4`
 - **Voice**: `POST /api/v1/voices:synthesize` body `{ text }` → `{ audio_url }`
   (`.wav` for Qwen, `.mp3` for edge-tts)
+- **ASR**: `POST /api/v1/audios:transcribe` multipart `file` (+ optional
+  form `language`) → `{ text, language? }`
+
+```bash
+curl -s -X POST "http://localhost:8003/api/v1/audios:transcribe" \
+  -F "file=@sample.wav" \
+  -F "language=Chinese"
+```
 
 Server: set `MEDIA_GENERATION_API_URL=http://localhost:8003` in
 application.yml `chat.upstreams.media-gen`.

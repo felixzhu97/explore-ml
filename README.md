@@ -2,7 +2,8 @@
 
 `explore-ml` hosts optional Python FastAPI helpers used by sibling Explore
 products (especially [explore-chat](https://github.com/felixzhu97/explore-chat)).
-You can run recommendation, vision, RAG, and media generation on loopback.
+You can run recommendation, vision, RAG, and media generation (including ASR)
+on loopback.
 Clients never call these services directly; Spring (or another API) proxies.
 
 Four services live under `python_ml/` today on contiguous ports `8000`–`8003`. A future cut

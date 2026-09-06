@@ -17,7 +17,8 @@ OUTPUT_BASE = Path(os.environ.get("MEDIA_OUTPUT_DIR", "output"))
 IMAGE_OUTPUT = OUTPUT_BASE / "image"
 VIDEO_OUTPUT = OUTPUT_BASE / "video"
 VOICE_OUTPUT = OUTPUT_BASE / "voice"
-for d in (IMAGE_OUTPUT, VIDEO_OUTPUT, VOICE_OUTPUT):
+ASR_UPLOADS = OUTPUT_BASE / "asr"
+for d in (IMAGE_OUTPUT, VIDEO_OUTPUT, VOICE_OUTPUT, ASR_UPLOADS):
     d.mkdir(parents=True, exist_ok=True)
 
 HOST = os.environ.get("MEDIA_GEN_HOST", "0.0.0.0")
@@ -53,5 +54,12 @@ DEFAULT_VOICE = os.environ.get("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
 VOICE_EXT = "wav" if VOICE_BACKEND == "qwen" else "mp3"
 VOICE_MEDIA_TYPE = "audio/wav" if VOICE_BACKEND == "qwen" else "audio/mpeg"
 
+# ASR: default local Qwen3-ASR; override ASR_MODEL (HF id or path).
+ASR_BACKEND = os.environ.get("ASR_BACKEND", "qwen").strip().lower()
+ASR_MODEL = os.environ.get(
+    "ASR_MODEL",
+    str(LOCAL_MODELS_ROOT / "asr" / "models" / "Qwen3-ASR-1.7B"),
+)
+ASR_LANGUAGE = os.environ.get("ASR_LANGUAGE", "")
 
 COGVIDEOX_MODEL = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")

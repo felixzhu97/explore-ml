@@ -9,6 +9,7 @@ jobs_lock = threading.Lock()
 image_pipe = None
 video_pipe = None
 tts_model = None
+asr_model = None
 pipe_lock = threading.Lock()
 
 
@@ -156,6 +157,56 @@ def get_tts_model():
     return tts_model
 
 
+def get_asr_model():
+    global asr_model
+    with pipe_lock:
+        if asr_model is None:
+            if config.ASR_BACKEND != "qwen":
+                raise RuntimeError(
+                    f"Unsupported ASR_BACKEND={config.ASR_BACKEND!r}; use qwen"
+                )
+            import torch
+            from qwen_asr import Qwen3ASRModel
+
+            device = _device()
+            if device == "mps":
+                dtype = torch.float16
+            elif device == "cuda":
+                dtype = torch.bfloat16
+            else:
+                dtype = torch.float32
+            asr_model = Qwen3ASRModel.from_pretrained(
+                config.ASR_MODEL,
+                dtype=dtype,
+                device_map=device,
+                max_inference_batch_size=1,
+                max_new_tokens=512,
+            )
+    return asr_model
+
+
+def _transcribe_qwen(audio_path: str, language: str | None) -> dict:
+    asr = get_asr_model()
+    lang = language or config.ASR_LANGUAGE or None
+    results = asr.transcribe(audio=audio_path, language=lang or None)
+    if not results:
+        return {"text": "", "language": lang or ""}
+    first = results[0]
+    text = getattr(first, "text", None)
+    if text is None and isinstance(first, dict):
+        text = first.get("text", "")
+    if text is None:
+        text = str(first)
+    detected = getattr(first, "language", None)
+    if detected is None and isinstance(first, dict):
+        detected = first.get("language", "")
+    return {"text": text or "", "language": detected or lang or ""}
+
+
+async def transcribe_audio(audio_path: str, language: str | None = None) -> dict:
+    import asyncio
+
+    return await asyncio.to_thread(_transcribe_qwen, audio_path, language)
 
 
 def get_video_pipeline():
