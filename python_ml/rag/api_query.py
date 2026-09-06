@@ -12,6 +12,7 @@ import service as rag_service
 from config import get_settings
 from domain.core.embedding import EmbeddingService
 from domain.core.qdrant_client import QdrantService
+from domain.core.rerank import apply_rerank_scores, rerank_documents
 from domain.schemas.query import QueryRequest, QueryResponse, SourceDocument
 
 logger = logging.getLogger(__name__)
@@ -161,6 +162,26 @@ async def search_collections(
     return all_results
 
 
+async def retrieve_and_rerank(
+    query: str,
+    embeddings: EmbeddingService,
+    qdrant: QdrantService,
+    collection: Optional[str],
+    top_k: int,
+) -> tuple[list[dict], list[dict]]:
+    """Vector search then optional local rerank. Returns (top_k, all_hits)."""
+    query_vector = await embeddings.embed_single(query)
+    all_results = await search_collections(
+        embeddings, qdrant, query_vector, collection, top_k
+    )
+    candidates = all_results[: max(top_k * 3, top_k)]
+    texts = [r["payload"].get("text", "") for r in candidates]
+    rerank_scores = await rerank_documents(query, texts)
+    if rerank_scores is not None:
+        candidates = apply_rerank_scores(candidates, rerank_scores)
+    return candidates[:top_k], all_results
+
+
 @router.post("/documents:query", response_model=QueryResponse)
 async def query(
     request: QueryRequest,
@@ -172,11 +193,13 @@ async def query(
     settings = get_settings()
 
     try:
-        query_vector = await embeddings.embed_single(request.query)
-        all_results = await search_collections(
-            embeddings, qdrant, query_vector, request.collection, request.top_k
+        top_results, all_results = await retrieve_and_rerank(
+            request.query,
+            embeddings,
+            qdrant,
+            request.collection,
+            request.top_k,
         )
-        top_results = all_results[:request.top_k]
 
         if not top_results:
             return QueryResponse(
@@ -241,11 +264,13 @@ async def query_stream(
     settings = get_settings()
 
     try:
-        query_vector = await embeddings.embed_single(request.query)
-        all_results = await search_collections(
-            embeddings, qdrant, query_vector, request.collection, request.top_k
+        top_results, _all_results = await retrieve_and_rerank(
+            request.query,
+            embeddings,
+            qdrant,
+            request.collection,
+            request.top_k,
         )
-        top_results = all_results[:request.top_k]
 
         if not top_results:
             async def no_results_stream():

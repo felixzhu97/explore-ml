@@ -22,7 +22,7 @@ System_Boundary(ml, "Explore ML") {
   Container(rec, "Recommendation", "FastAPI", "python_ml/recommendation :8000")
   Container(vision, "Vision", "FastAPI", "python_ml/vision :8001")
   Container(rag, "RAG", "FastAPI", "python_ml/rag :8002")
-  Container(media, "Media Gen", "FastAPI", "python_ml/media-gen :3456")
+  Container(media, "Media Gen", "FastAPI", "python_ml/media-gen :8003")
   Container(ui, "Model Test UI", "（规划）", "ui/")
   ContainerDb(fixtures, "Fixture data", "文件", "data/")
 }

@@ -17,7 +17,7 @@ Deployment_Node(dev_machine, "开发机", "macOS / Linux") {
     Container(rec, "Recommendation", "FastAPI", ":8000")
     Container(vision, "Vision", "FastAPI", ":8001")
     Container(rag, "RAG", "FastAPI", ":8002")
-    Container(media, "Media Gen", "FastAPI", ":3456")
+    Container(media, "Media Gen", "FastAPI", ":8003")
   }
   Deployment_Node(data_node, "data/", "fixtures") {
     Container(fixtures, "fixtures", "文件", "小文件入库；大权重 gitignore")

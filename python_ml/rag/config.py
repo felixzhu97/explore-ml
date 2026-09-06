@@ -51,6 +51,20 @@ CRAWLER_MAX_DEPTH = int(os.getenv("CRAWLER_MAX_DEPTH", "2"))
 
 DATABASE_URL = os.getenv("DATABASE_URL", "")
 
+# Rerank: default points at local Qwen3-Reranker (HTTP serve under ~/Codes/models/rerank).
+# Set RERANK_ENABLED=false to skip; RERANK_URL / RERANK_MODEL override defaults.
+_LOCAL_MODELS_ROOT = Path(
+    os.getenv("LOCAL_MODELS_ROOT", str(Path.home() / "Codes" / "models"))
+).expanduser()
+LOCAL_MODELS_ROOT = _LOCAL_MODELS_ROOT
+RERANK_ENABLED = os.getenv("RERANK_ENABLED", "true").lower() in ("1", "true", "yes")
+RERANK_URL = os.getenv("RERANK_URL", "http://127.0.0.1:8091")
+RERANK_MODEL = os.getenv(
+    "RERANK_MODEL",
+    str(_LOCAL_MODELS_ROOT / "rerank" / "models" / "Qwen3-Reranker-8B"),
+)
+RERANK_TIMEOUT = float(os.getenv("RERANK_TIMEOUT", "30"))
+
 
 def ensure_directories() -> None:
     """Create necessary directories if they don't exist."""
@@ -91,5 +105,10 @@ def get_settings() -> SimpleNamespace:
         crawler_timeout=CRAWLER_TIMEOUT,
         crawler_max_depth=CRAWLER_MAX_DEPTH,
         database_url=DATABASE_URL,
+        local_models_root=LOCAL_MODELS_ROOT,
+        rerank_enabled=RERANK_ENABLED,
+        rerank_url=RERANK_URL,
+        rerank_model=RERANK_MODEL,
+        rerank_timeout=RERANK_TIMEOUT,
         ensure_directories=ensure_directories,
     )

@@ -17,7 +17,7 @@ async def lifespan(_app: FastAPI):
 
 from aip import register_aip_exception_handlers
 
-app = FastAPI(title="Media Gen API (Image + Video + Voice)", lifespan=lifespan)
+app = FastAPI(title="Media Gen API (Image + Video + Voice + ASR)", lifespan=lifespan)
 register_aip_exception_handlers(app)
 app.add_middleware(
     CORSMiddleware,

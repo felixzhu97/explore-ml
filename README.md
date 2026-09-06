@@ -2,12 +2,13 @@
 
 `explore-ml` hosts optional Python FastAPI helpers used by sibling Explore
 products (especially [explore-chat](https://github.com/felixzhu97/explore-chat)).
-You can run recommendation, vision, RAG, and media generation on loopback.
-Clients never call these services directly; Spring (or another API) proxies.
+You can run recommendation, vision, RAG, and media generation (including ASR)
+on loopback. Clients never call these services directly; Spring (or another
+API) proxies.
 
-Four services live under `python_ml/` today (separate ports). A future cut
-may fold them behind one port without moving the folder boundary. `ui/` is
-reserved for a model-test front end; `data/` holds test fixtures.
+Four services live under `python_ml/` today on contiguous ports `8000`–`8003`.
+A future cut may fold them behind one port without moving the folder boundary.
+`ui/` is reserved for a model-test front end; `data/` holds test fixtures.
 
 ## Get started
 
@@ -40,10 +41,9 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 | recommendation | 8000         | `GET /health`    |
 | vision         | 8001         | `GET /health`    |
 | rag            | 8002         | `GET /health`    |
-| media-gen      | 3456         | `GET /health`    |
+| media-gen      | 8003         | `GET /health`    |
 
 Point explore-chat `chat.upstreams.*` (or env overrides) at these URLs.
-Ports stay the same after the extract so existing local configs keep working.
 
 ### Checks
 
@@ -54,10 +54,16 @@ cd python_ml/<name> && pytest
 ## Configuration
 
 Each service ships `.env.example`. Do not commit real secrets. Large model
-weights and generated media stay out of git; put small fixtures under `data/`.
+weights stay out of git under `LOCAL_MODELS_ROOT`; download them with the
+[Model Download Guide](docs/user-guide/model-download.md). Media Gen and RAG
+rerank prefer those local Qwen paths and can be overridden via env. Put small
+fixtures under `data/`.
 
 ## Next steps
 
+- [User Guide](docs/user-guide/README.md) — 本地启动与接入
+- [Model Download Guide](docs/user-guide/model-download.md) — 模型下载
+- [Guideline](docs/Guideline.md) — ML 实践准则
 - [Python services layout](docs/developer/python-services.md)
 - [Glossary](docs/Glossary.md)
 - [C4 model](docs/developer/c4-model/)
@@ -69,7 +75,7 @@ weights and generated media stay out of git; put small fixtures under `data/`.
 python_ml/     FastAPI helpers (recommendation / vision / rag / media-gen)
 ui/            Model-test UI (placeholder)
 data/          Test / fixture data
-docs/          Glossary, C4, product-owner, developer guides
+docs/          Glossary, Guideline, user-guide, C4, product-owner
 ```
 
 ## Contributing

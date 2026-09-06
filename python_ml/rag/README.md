@@ -98,6 +98,19 @@ Configure via environment variables or `.env` file:
 | `LLM_TIMEOUT`        | LLM request timeout (seconds) | `120`                    |
 | `CHUNK_SIZE`         | Text chunk size (tokens)      | `256`                    |
 | `CHUNK_OVERLAP`      | Overlap between chunks        | `50`                     |
+| `LOCAL_MODELS_ROOT`  | Local Qwen weights root       | `$HOME/Codes/models` (see [download guide](../../docs/user-guide/model-download.md)) |
+| `RERANK_ENABLED`     | Call local rerank HTTP serve  | `true` (skips if down)   |
+| `RERANK_URL`         | Rerank serve base URL         | `http://127.0.0.1:8091`  |
+| `RERANK_MODEL`       | Documented local weight path  | `…/rerank/models/Qwen3-Reranker-8B` |
+
+Download rerank weights, then start the sidecar:
+
+```bash
+# after following docs/user-guide/model-download.md
+python serve.py --port 8091 --model "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
+```
+
+Set `RERANK_ENABLED=false` to disable.
 
 ### Recommended Ollama Models
 
