@@ -8,6 +8,7 @@ video_jobs = {}
 jobs_lock = threading.Lock()
 image_pipe = None
 video_pipe = None
+tts_model = None
 pipe_lock = threading.Lock()
 
 
@@ -112,16 +113,49 @@ def get_image_pipeline():
             import torchvision
 
             _ = getattr(torchvision, "__version__", None)
-            from diffusers import StableDiffusionPipeline
-
-            model_id = os.environ.get("SD_MODEL", "runwayml/stable-diffusion-v1-5")
+            model_id = config.IMAGE_MODEL
             device = _device()
-            image_pipe = StableDiffusionPipeline.from_pretrained(
-                model_id,
-                torch_dtype=torch.float16 if device != "cpu" else torch.float32,
-            )
+            if config.IMAGE_BACKEND == "sd":
+                from diffusers import StableDiffusionPipeline
+
+                image_pipe = StableDiffusionPipeline.from_pretrained(
+                    model_id,
+                    torch_dtype=torch.float16 if device != "cpu" else torch.float32,
+                )
+            else:
+                from diffusers import DiffusionPipeline
+
+                if device == "mps":
+                    dtype = torch.bfloat16
+                elif device == "cpu":
+                    dtype = torch.float32
+                else:
+                    dtype = torch.float16
+                image_pipe = DiffusionPipeline.from_pretrained(
+                    model_id,
+                    torch_dtype=dtype,
+                )
             image_pipe = image_pipe.to(device)
     return image_pipe
+
+
+def get_tts_model():
+    global tts_model
+    with pipe_lock:
+        if tts_model is None:
+            import torch
+            from qwen_tts import Qwen3TTSModel
+
+            device = _device()
+            dtype = torch.float16 if device in ("mps", "cuda") else torch.float32
+            tts_model = Qwen3TTSModel.from_pretrained(
+                config.TTS_MODEL,
+                device_map=device,
+                dtype=dtype,
+            )
+    return tts_model
+
+
 
 
 def get_video_pipeline():
@@ -139,7 +173,7 @@ def get_video_pipeline():
             _ = getattr(torchvision, "__version__", None)
             from diffusers import CogVideoXPipeline
 
-            model_id = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")
+            model_id = config.COGVIDEOX_MODEL
             device = _device()
             video_pipe = CogVideoXPipeline.from_pretrained(
                 model_id,
@@ -156,12 +190,26 @@ def run_image_job(job_id: str, prompt: str, negative_prompt: str):
     try:
         pipe = get_image_pipeline()
         out_path = config.IMAGE_OUTPUT / f"{job_id}.png"
-        result = pipe(
-            prompt=prompt,
-            negative_prompt=negative_prompt or None,
-            num_inference_steps=30,
-            guidance_scale=7.5,
-        )
+        if config.IMAGE_BACKEND == "sd":
+            result = pipe(
+                prompt=prompt,
+                negative_prompt=negative_prompt or None,
+                num_inference_steps=30,
+                guidance_scale=7.5,
+            )
+        else:
+            result = pipe(
+                prompt,
+                negative_prompt=negative_prompt or " ",
+                num_inference_steps=20,
+            )
+            import torch
+
+            if _device() == "mps" and hasattr(torch, "mps"):
+                try:
+                    torch.mps.synchronize()
+                except Exception:
+                    pass
         result.images[0].save(str(out_path))
         with jobs_lock:
             if job_id in image_jobs:
@@ -206,8 +254,35 @@ def run_video_job(job_id: str, prompt: str):
                 video_jobs[job_id]["error"] = str(e)
 
 
-async def synthesize_voice(text: str, voice: str, job_id: str, out_path):
-    import edge_tts
+def _synthesize_qwen_voice(text: str, speaker: str, out_path) -> None:
+    import numpy as np
+    import soundfile as sf
+    import torch
 
-    communicate = edge_tts.Communicate(text, voice)
-    await communicate.save(str(out_path))
+    tts = get_tts_model()
+    speakers = tts.get_supported_speakers()
+    chosen = speaker or config.TTS_SPEAKER or (speakers[0] if speakers else "vivian")
+    waves, sr = tts.generate_custom_voice(
+        text=text,
+        speaker=chosen,
+        language=config.TTS_LANGUAGE,
+        non_streaming_mode=True,
+    )
+    audio = waves[0]
+    if isinstance(audio, torch.Tensor):
+        audio = audio.detach().cpu().numpy()
+    audio = np.asarray(audio, dtype=np.float32)
+    sf.write(str(out_path), audio, sr)
+
+
+async def synthesize_voice(text: str, voice: str, job_id: str, out_path):
+    if config.VOICE_BACKEND == "edge":
+        import edge_tts
+
+        communicate = edge_tts.Communicate(text, voice or config.DEFAULT_VOICE)
+        await communicate.save(str(out_path))
+        return
+
+    import asyncio
+
+    await asyncio.to_thread(_synthesize_qwen_voice, text, voice or "", out_path)

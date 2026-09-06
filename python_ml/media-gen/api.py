@@ -97,19 +97,34 @@ def serve_video(job_id: str):
 async def voice_synthesize(body: VoiceSynthesizeBody):
     if not body.text.strip():
         raise HTTPException(status_code=400, detail="text is required")
-    voice = (body.voice or config.DEFAULT_VOICE).strip()
+    if config.VOICE_BACKEND == "edge":
+        voice = (body.voice or config.DEFAULT_VOICE).strip()
+    else:
+        voice = (body.voice or config.TTS_SPEAKER or "").strip()
     job_id = f"job-{uuid.uuid4().hex[:12]}"
-    out_path = config.VOICE_OUTPUT / f"{job_id}.mp3"
+    out_path = config.VOICE_OUTPUT / f"{job_id}.{config.VOICE_EXT}"
     try:
         await service.synthesize_voice(body.text.strip(), voice, job_id, out_path)
     except Exception as e:
         raise HTTPException(status_code=500, detail=str(e))
-    return {"audio_url": f"{config.BASE_URL}/output/voice/{job_id}.mp3"}
+    return {
+        "audio_url": f"{config.BASE_URL}/output/voice/{job_id}.{config.VOICE_EXT}"
+    }
 
 
 @router.get("/output/voice/{job_id}.mp3")
-def serve_voice(job_id: str):
+def serve_voice_mp3(job_id: str):
     path = config.VOICE_OUTPUT / f"{job_id}.mp3"
     if not path.exists():
         raise HTTPException(status_code=404, detail="File not found")
     return FileResponse(path, media_type="audio/mpeg")
+
+
+@router.get("/output/voice/{job_id}.wav")
+def serve_voice_wav(job_id: str):
+    path = config.VOICE_OUTPUT / f"{job_id}.wav"
+    if not path.exists():
+        raise HTTPException(status_code=404, detail="File not found")
+    return FileResponse(path, media_type="audio/wav")
+
+

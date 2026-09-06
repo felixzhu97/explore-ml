@@ -8,4 +8,6 @@ def test_aip_media_routes_registered():
     assert "/api/v1/videos:generate" in paths
     assert "/api/v1/videoJobs/{video_job}" in paths
     assert "/api/v1/voices:synthesize" in paths
+    assert "/output/voice/{job_id}.wav" in paths
+    assert "/output/voice/{job_id}.mp3" in paths
     assert "/image/generate" not in paths
