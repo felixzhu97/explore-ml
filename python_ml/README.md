@@ -9,4 +9,4 @@ Optional Python FastAPI services used by sibling Explore APIs over loopback:
 | `rag` | 8002 | Document / post RAG Q&A |
 | `media-gen` | 3456 | Image, video, voice generation |
 
-Layout and AIP REST rules: [`docs/developer/python-services.md`](../../docs/developer/python-services.md).
+Layout: [`docs/developer/python-services.md`](../../docs/developer/python-services.md).

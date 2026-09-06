@@ -26,7 +26,7 @@ uvicorn main:app --host 0.0.0.0 --port 3456
 - `EDGE_TTS_VOICE` (default: zh-CN-XiaoxiaoNeural)
 - `MEDIA_VIDEO_FORCE_LOCAL` (set `1` to try local video on macOS)
 
-## API (AIP REST)
+## API
 
 - **Image**: `POST /api/v1/images:generate` → `{ job_id }`; `GET /api/v1/imageJobs/{image_job}` → `{ status, image_url? }`; `GET /output/image/{job_id}.png`
 - **Video**: `POST /api/v1/videos:generate` → `{ job_id }`; `GET /api/v1/videoJobs/{video_job}` → `{ status, video_url? }`; `GET /output/video/{job_id}.mp4`

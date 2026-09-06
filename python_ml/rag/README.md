@@ -113,7 +113,7 @@ Configure via environment variables or `.env` file:
 
 > **Note**: Ensure your chunk size doesn't exceed the embedding model's context length (~2000 chars for nomic-embed-text).
 
-## API Endpoints (AIP REST)
+## API Endpoints
 
 ### Documents
 
