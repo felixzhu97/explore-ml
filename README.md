@@ -35,12 +35,12 @@ cp .env.example .env
 uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
-| Service        | Default port | Health (typical)        |
-| -------------- | ------------ | ----------------------- |
-| recommendation | 8000         | `GET /health`           |
-| vision         | 8001         | `GET /health`           |
-| rag            | 8002         | `GET /health`           |
-| media-gen      | 3456         | `GET /health`           |
+| Service        | Default port | Health (typical) |
+| -------------- | ------------ | ---------------- |
+| recommendation | 8000         | `GET /health`    |
+| vision         | 8001         | `GET /health`    |
+| rag            | 8002         | `GET /health`    |
+| media-gen      | 3456         | `GET /health`    |
 
 Point explore-chat `chat.upstreams.*` (or env overrides) at these URLs.
 Ports stay the same after the extract so existing local configs keep working.
@@ -48,8 +48,6 @@ Ports stay the same after the extract so existing local configs keep working.
 ### Checks
 
 ```bash
-bash scripts/check-aip-rest.sh
-# per service:
 cd python_ml/<name> && pytest
 ```
 
@@ -61,7 +59,6 @@ weights and generated media stay out of git; put small fixtures under `data/`.
 ## Next steps
 
 - [Python services layout](docs/developer/python-services.md)
-- [AIP REST](docs/developer/aip-rest.md)
 - [Glossary](docs/Glossary.md)
 - [C4 model](docs/developer/c4-model/)
 - [User Story Map](docs/product-owner/User-Story-Map.md)
@@ -73,7 +70,6 @@ python_ml/     FastAPI helpers (recommendation / vision / rag / media-gen)
 ui/            Model-test UI (placeholder)
 data/          Test / fixture data
 docs/          Glossary, C4, product-owner, developer guides
-scripts/       Repo checks
 ```
 
 ## Contributing

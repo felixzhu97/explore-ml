@@ -10,7 +10,7 @@ title: Explore ML - 用户故事地图
 
 | 角色                | 说明                                              |
 | ------------------- | ------------------------------------------------- |
-| 平台工程师          | 本地启动旁路服务、对齐 AIP、挂载 fixture 数据     |
+| 平台工程师          | 本地启动旁路服务、挂载 fixture 数据               |
 | Sibling API 开发者  | 经 loopback 调用 recommendation / vision / rag / media-gen |
 | 测模工程师（规划）  | 经未来 `ui/` 试跑模型与健康检查                   |
 
