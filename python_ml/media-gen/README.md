@@ -64,14 +64,36 @@ export VOICE_BACKEND=edge
   `GET /output/video/{job_id}.mp4`
 - **Voice**: `POST /api/v1/voices:synthesize` body `{ text }` → `{ audio_url }`
   (`.wav` for Qwen, `.mp3` for edge-tts)
-- **ASR**: `POST /api/v1/audios:transcribe` multipart `file` (+ optional
+- **ASR (batch)**: `POST /api/v1/audios:transcribe` multipart `file` (+ optional
   form `language`) → `{ text, language? }`
+- **ASR (streaming)**: `WS /ws/v1/audios:transcribe` — PCM/WAV base64 chunks;
+  server replies `partial` / `final` / `error`. Default backend is a **rolling
+  buffer** over local Qwen3-ASR (Mac/MPS-friendly). Set `ASR_STREAM_BACKEND=vllm`
+  on CUDA for native streaming when available
+  ([Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)).
 
 ```bash
 curl -s -X POST "http://localhost:8003/api/v1/audios:transcribe" \
   -F "file=@sample.wav" \
   -F "language=Chinese"
 ```
+
+Streaming message shapes:
+
+```json
+// client → server
+{"type":"audio","data":"<base64 pcm|wav>","sample_rate":16000}
+{"type":"commit"}
+{"type":"stop"}
+
+// server → client
+{"type":"partial","text":"…"}
+{"type":"final","text":"…"}
+{"type":"error","text":"…"}
+```
+
+Optional stream env: `ASR_STREAM_BACKEND`, `ASR_STREAM_PARTIAL_INTERVAL_SEC`,
+`ASR_STREAM_MIN_PARTIAL_BYTES`.
 
 Server: set `MEDIA_GENERATION_API_URL=http://localhost:8003` in
 application.yml `chat.upstreams.media-gen`.

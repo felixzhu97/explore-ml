@@ -455,8 +455,11 @@ formats aligned (`.wav` vs `.mp3`).
 
 **Keep ASR on an explicit transcribe route.** Lineage:
 [Whisper](https://arxiv.org/abs/2212.04356). Default to local Qwen3-ASR
-(`audios:transcribe`). Do not mix incompatible contracts across TTS, ASR,
-diffusion image, and video.
+(`POST /api/v1/audios:transcribe`). For live conversation, expose streaming
+on `WS /ws/v1/audios:transcribe` with the same Qwen3 weights; use a rolling
+buffer on MPS/CPU and vLLM streaming on CUDA when configured
+([Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)). Do not mix
+incompatible contracts across TTS, ASR, diffusion image, and video.
 
 ```mermaid
 flowchart LR
@@ -465,12 +468,14 @@ flowchart LR
     Vid[videos_generate]
     Tts[voices_synthesize]
     Asr[audios_transcribe]
+    AsrWs[ws_audios_transcribe]
   end
   Config[Backend_and_model_env]
   Config --> Img
   Config --> Vid
   Config --> Tts
   Config --> Asr
+  Config --> AsrWs
 ```
 
 ### Device and dtype

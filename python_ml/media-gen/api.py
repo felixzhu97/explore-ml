@@ -1,14 +1,25 @@
+import json
 import os
 import uuid
 from pathlib import Path
 from typing import Optional
 
-from fastapi import APIRouter, BackgroundTasks, File, Form, HTTPException, UploadFile
+from fastapi import (
+    APIRouter,
+    BackgroundTasks,
+    File,
+    Form,
+    HTTPException,
+    UploadFile,
+    WebSocket,
+    WebSocketDisconnect,
+)
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
 import config
 import service
+from streaming_asr import StreamingAsrSession
 
 router = APIRouter()
 
@@ -169,3 +180,69 @@ async def audios_transcribe(
         "text": result.get("text", ""),
         **({"language": result["language"]} if result.get("language") else {}),
     }
+
+
+@router.websocket("/ws/v1/audios:transcribe")
+async def audios_transcribe_stream(websocket: WebSocket):
+    """
+    Streaming ASR over WebSocket (Qwen3-ASR rolling buffer by default).
+
+    Client → server:
+      {"type":"audio","data":"<base64 pcm|wav>","sample_rate":16000}
+      {"type":"commit"}
+      {"type":"stop"}
+    Server → client:
+      {"type":"partial"|"final"|"error","text":"..."}
+    """
+    await websocket.accept()
+    session = StreamingAsrSession(
+        transcribe_fn=service._transcribe_qwen,
+        sample_rate=16000,
+        language=(config.ASR_LANGUAGE or None) or None,
+        partial_interval_sec=config.ASR_STREAM_PARTIAL_INTERVAL_SEC,
+        min_partial_bytes=config.ASR_STREAM_MIN_PARTIAL_BYTES,
+        uploads_dir=config.ASR_UPLOADS,
+    )
+    try:
+        while True:
+            raw = await websocket.receive_text()
+            try:
+                message = json.loads(raw)
+            except json.JSONDecodeError:
+                await websocket.send_json({"type": "error", "text": "invalid JSON"})
+                continue
+            if not isinstance(message, dict):
+                await websocket.send_json({"type": "error", "text": "message must be object"})
+                continue
+            msg_type = message.get("type")
+            if msg_type == "audio":
+                data = message.get("data")
+                if not isinstance(data, str) or not data.strip():
+                    continue
+                sr = message.get("sample_rate")
+                event = session.append_audio(
+                    data, sample_rate=int(sr) if sr is not None else None
+                )
+                if event:
+                    await websocket.send_json(event)
+            elif msg_type == "commit":
+                await websocket.send_json(session.commit())
+            elif msg_type == "stop":
+                await websocket.send_json(session.stop())
+                break
+            else:
+                await websocket.send_json(
+                    {"type": "error", "text": f"unsupported type: {msg_type}"}
+                )
+    except WebSocketDisconnect:
+        return
+    except Exception as exc:  # noqa: BLE001
+        try:
+            await websocket.send_json({"type": "error", "text": str(exc)})
+        except Exception:  # noqa: BLE001
+            pass
+    finally:
+        try:
+            await websocket.close()
+        except Exception:  # noqa: BLE001
+            pass
