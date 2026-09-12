@@ -39,7 +39,7 @@ curl -s "$HELPER/health"
    [Loopback integration](loopback-integration.md)).
 5. Call the same route through the product API once.
 
-Download checkpoints only when a local Media Gen or rerank backend needs them
+Download checkpoints only when a local Speech / Image Playground / Video or rerank backend needs them
 ([Model download](model-download.md)). Skip downloads when you use a
 lightweight or Hub-backed backend.
 
@@ -48,7 +48,9 @@ Use `$HELPER` as a placeholder. Local defaults are often:
 - Recommendation — `http://localhost:8000`
 - Vision — `http://localhost:8001`
 - RAG — `http://localhost:8002`
-- Media Gen — `http://localhost:8003`
+- Image Playground — `http://localhost:8003`
+- Speech — `http://localhost:8004`
+- Video — `http://localhost:8005`
 
 ```mermaid
 flowchart TB
@@ -70,7 +72,7 @@ Relative to each helper base URL (target contract):
   `feeds:recall`
 - Vision — `POST /api/v1/images:predict`, `images:moderate`, `videos:moderate`
 - RAG — `POST /api/v1/documents`, `documents:query`, `documents:streamQuery`
-- Media Gen — `POST /api/v1/images:generate`, `voices:synthesize`,
+- Speech / Image Playground / Video — `POST /api/v1/images:generate`, `voices:synthesize`,
   `audios:transcribe`, `videos:generate`
 
 Prefer `/docs` over memorizing bodies. Keep custom-method names stable when

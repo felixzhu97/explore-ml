@@ -14,7 +14,7 @@ LAYOUT_WITH_LEGEND()
 title [C4 Level 1] Explore ML - System Context
 
 Person(engineer, "Platform engineer", "Local boot and integration")
-System(explore_ml, "Explore ML", "Python FastAPI loopback helpers: recommendation, vision, RAG, media gen")
+System(explore_ml, "Explore ML", "Python FastAPI loopback helpers: recommendation, vision, RAG, image-playground, speech, video")
 System_Ext(sibling_api, "Sibling Explore API", "Spring (or other); consumes helpers over loopback")
 System_Ext(other_api, "Other Explore API", "Optional consumer")
 

@@ -6,7 +6,7 @@ and media generation — including speech transcription — on loopback.
 
 Product clients never call these helpers directly. A Spring (or other) API
 proxies over localhost. Four services live under `python_ml/` today on
-contiguous ports `8000`–`8003`. A future cut may fold them behind one port
+contiguous ports `8000`–`8005`. A future cut may fold them behind one port
 without moving the folder boundary. `ui/` is reserved for a model-test front
 end; `data/` holds small fixtures.
 
@@ -29,7 +29,7 @@ cd explore-ml
 ### Run your first service
 
 ```bash
-cd python_ml/recommendation   # or vision / rag / media-gen
+cd python_ml/recommendation   # or vision / rag / image-playground / speech / video
 python -m venv .venv
 source .venv/bin/activate
 pip install -r requirements.txt
@@ -46,7 +46,9 @@ for the other helpers:
 | recommendation | 8000         | `GET /health`    |
 | vision         | 8001         | `GET /health`    |
 | rag            | 8002         | `GET /health`    |
-| media-gen      | 8003         | `GET /health`    |
+| image-playground | 8003       | `GET /health`    |
+| speech         | 8004         | `GET /health`    |
+| video          | 8005         | `GET /health`    |
 
 Wire your product’s upstream or env config to these loopback URLs. For a fuller
 walkthrough, see the [User Guide](docs/user-guide/README.md).
@@ -55,7 +57,7 @@ walkthrough, see the [User Guide](docs/user-guide/README.md).
 
 Each service ships `.env.example`. Do not commit real secrets. Large model
 weights stay out of git under `LOCAL_MODELS_ROOT`; download them with the
-[Model download](docs/user-guide/model-download.md) guide. Media Gen and RAG
+[Model download](docs/user-guide/model-download.md) guide. Image Playground / Speech / Video and RAG
 rerank prefer those local Qwen paths and can be overridden via env. Put small
 fixtures under `data/`.
 
@@ -81,7 +83,7 @@ cd python_ml/<name> && pytest
 ## Repository layout
 
 ```text
-python_ml/     FastAPI helpers (recommendation / vision / rag / media-gen)
+python_ml/     FastAPI helpers (recommendation / vision / rag / image-playground / speech / video)
 ui/            Model-test UI (placeholder)
 data/          Test / fixture data
 docs/          Glossary, Guideline, user-guide, C4, product-owner

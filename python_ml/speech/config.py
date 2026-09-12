@@ -13,36 +13,20 @@ if "HF_ENDPOINT" not in os.environ:
 
 from pathlib import Path
 
-OUTPUT_BASE = Path(os.environ.get("MEDIA_OUTPUT_DIR", "output"))
-IMAGE_OUTPUT = OUTPUT_BASE / "image"
-VIDEO_OUTPUT = OUTPUT_BASE / "video"
+OUTPUT_BASE = Path(os.environ.get("SPEECH_OUTPUT_DIR", "output"))
 VOICE_OUTPUT = OUTPUT_BASE / "voice"
 ASR_UPLOADS = OUTPUT_BASE / "asr"
-for d in (IMAGE_OUTPUT, VIDEO_OUTPUT, VOICE_OUTPUT, ASR_UPLOADS):
+for d in (VOICE_OUTPUT, ASR_UPLOADS):
     d.mkdir(parents=True, exist_ok=True)
 
-HOST = os.environ.get("MEDIA_GEN_HOST", "0.0.0.0")
-PORT = int(os.environ.get("MEDIA_GEN_PORT", os.environ.get("PORT", "8003")))
-BASE_URL = os.environ.get("MEDIA_GEN_BASE_URL", f"http://localhost:{PORT}")
+HOST = os.environ.get("SPEECH_HOST", "0.0.0.0")
+PORT = int(os.environ.get("SPEECH_PORT", os.environ.get("PORT", "8004")))
+BASE_URL = os.environ.get("SPEECH_BASE_URL", f"http://localhost:{PORT}")
 
-# Local Qwen weights root (override with LOCAL_MODELS_ROOT).
 LOCAL_MODELS_ROOT = Path(
     os.environ.get("LOCAL_MODELS_ROOT", str(Path.home() / "Codes" / "models"))
 ).expanduser()
 
-# Image: default local Qwen-Image; set IMAGE_BACKEND=sd for Stable Diffusion.
-IMAGE_BACKEND = os.environ.get("IMAGE_BACKEND", "qwen").strip().lower()
-_DEFAULT_IMAGE_MODEL = {
-    "qwen": str(LOCAL_MODELS_ROOT / "image" / "models" / "Qwen-Image"),
-    "sd": "runwayml/stable-diffusion-v1-5",
-}
-IMAGE_MODEL = (
-    os.environ.get("IMAGE_MODEL")
-    or os.environ.get("SD_MODEL")
-    or _DEFAULT_IMAGE_MODEL.get(IMAGE_BACKEND, _DEFAULT_IMAGE_MODEL["qwen"])
-)
-
-# Voice: default local Qwen3-TTS; set VOICE_BACKEND=edge for edge-tts.
 VOICE_BACKEND = os.environ.get("VOICE_BACKEND", "qwen").strip().lower()
 TTS_MODEL = os.environ.get(
     "TTS_MODEL",
@@ -54,14 +38,12 @@ DEFAULT_VOICE = os.environ.get("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
 VOICE_EXT = "wav" if VOICE_BACKEND == "qwen" else "mp3"
 VOICE_MEDIA_TYPE = "audio/wav" if VOICE_BACKEND == "qwen" else "audio/mpeg"
 
-# ASR: default local Qwen3-ASR; override ASR_MODEL (HF id or path).
 ASR_BACKEND = os.environ.get("ASR_BACKEND", "qwen").strip().lower()
 ASR_MODEL = os.environ.get(
     "ASR_MODEL",
     str(LOCAL_MODELS_ROOT / "asr" / "models" / "Qwen3-ASR-1.7B"),
 )
 ASR_LANGUAGE = os.environ.get("ASR_LANGUAGE", "")
-# Streaming ASR: rolling (transformers / MPS) or vllm (CUDA). Same WS contract.
 ASR_STREAM_BACKEND = os.environ.get("ASR_STREAM_BACKEND", "rolling").strip().lower()
 ASR_STREAM_PARTIAL_INTERVAL_SEC = float(
     os.environ.get("ASR_STREAM_PARTIAL_INTERVAL_SEC", "1.0")
@@ -69,5 +51,3 @@ ASR_STREAM_PARTIAL_INTERVAL_SEC = float(
 ASR_STREAM_MIN_PARTIAL_BYTES = int(
     os.environ.get("ASR_STREAM_MIN_PARTIAL_BYTES", str(16000 * 2))
 )
-
-COGVIDEOX_MODEL = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")

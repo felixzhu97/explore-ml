@@ -15,9 +15,9 @@ venv, container, or process manager). Optional:
 - Vector DB — when RAG stores embeddings locally
 - Local LLM runtime — when RAG embeds or chats offline
 - Redis — when recommendation batch jobs need a broker
-- GPU or Apple MPS — when Media Gen should run faster
+- GPU or Apple MPS — when Speech / Image Playground / Video should run faster
 
-Download local weights only if you chose a local Media Gen or rerank backend
+Download local weights only if you chose a local Speech / Image Playground / Video or rerank backend
 ([Model download](model-download.md)).
 
 ## Steps
@@ -29,7 +29,9 @@ Download local weights only if you chose a local Media Gen or rerank backend
 - Recommendation — `8000`
 - Vision — `8001`
 - RAG — `8002`
-- Media Gen — `8003`
+- Image Playground — `8003`
+- Speech — `8004`
+- Video — `8005`
 
 3. Provide secrets and datastore URLs through env (never commit them). Copy
    from an example file when the helper ships one.
@@ -82,7 +84,7 @@ Qdrant) for the easiest offline path.
 Start a job worker only when you need scheduled recall or training. Online rank
 should work without the worker when scores or candidates are already available.
 
-### Media Gen
+### Speech / Image Playground / Video
 
 Prefer auto device selection. Force CPU with one env flag when GPUs are
 unavailable. Skip video on platforms that cannot run it unless you explicitly
