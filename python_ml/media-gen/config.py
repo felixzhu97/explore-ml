@@ -61,5 +61,13 @@ ASR_MODEL = os.environ.get(
     str(LOCAL_MODELS_ROOT / "asr" / "models" / "Qwen3-ASR-1.7B"),
 )
 ASR_LANGUAGE = os.environ.get("ASR_LANGUAGE", "")
+# Streaming ASR: rolling (transformers / MPS) or vllm (CUDA). Same WS contract.
+ASR_STREAM_BACKEND = os.environ.get("ASR_STREAM_BACKEND", "rolling").strip().lower()
+ASR_STREAM_PARTIAL_INTERVAL_SEC = float(
+    os.environ.get("ASR_STREAM_PARTIAL_INTERVAL_SEC", "1.0")
+)
+ASR_STREAM_MIN_PARTIAL_BYTES = int(
+    os.environ.get("ASR_STREAM_MIN_PARTIAL_BYTES", str(16000 * 2))
+)
 
 COGVIDEOX_MODEL = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")
