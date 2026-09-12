@@ -28,7 +28,9 @@ Set one upstream string per helper you use. Local defaults for a full stack:
 export RECOMMENDATION_API_URL=http://localhost:8000
 export VISION_SERVICE_URL=http://localhost:8001
 export RAG_SERVICE_URL=http://localhost:8002
-export MEDIA_GENERATION_API_URL=http://localhost:8003
+export IMAGE_PLAYGROUND_API_URL=http://localhost:8003
+export SPEECH_API_URL=http://localhost:8004
+export VIDEO_API_URL=http://localhost:8005
 ```
 
 For a single feature, set **only** that helper’s URL. Keep model roots and
@@ -106,10 +108,10 @@ flowchart LR
   Ingest --> Ask --> Answer
 ```
 
-### Media Gen — generate then poll
+### Image Playground / Speech / Video — generate then poll
 
 ```bash
-curl -s -X POST "$MEDIA_GENERATION_API_URL/api/v1/images:generate" \
+curl -s -X POST "$IMAGE_PLAYGROUND_API_URL/api/v1/images:generate" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"a quiet desk lamp"}'
 ```
@@ -118,12 +120,16 @@ Treat heavy work as a job: store the `job_id`, poll until ready, then return the
 asset URL to the client.
 
 ```bash
-curl -s -X POST "$MEDIA_GENERATION_API_URL/api/v1/voices:synthesize" \
+curl -s -X POST "$SPEECH_API_URL/api/v1/voices:synthesize" \
   -H 'Content-Type: application/json' \
   -d '{"text":"Hello from Explore ML"}'
 
-curl -s -X POST "$MEDIA_GENERATION_API_URL/api/v1/audios:transcribe" \
+curl -s -X POST "$SPEECH_API_URL/api/v1/audios:transcribe" \
   -F "file=@sample.wav"
+
+curl -s -X POST "$VIDEO_API_URL/api/v1/videos:generate" \
+  -H 'Content-Type: application/json' \
+  -d '{"prompt":"a calm pan across a desk"}'
 ```
 
 Swap backends with env (`IMAGE_BACKEND`, `VOICE_BACKEND`, model ids)—keep the
@@ -132,11 +138,11 @@ same routes.
 ```mermaid
 sequenceDiagram
   participant API as Product_API
-  participant MG as Media_Gen
-  API->>MG: images:generate
-  MG-->>API: job_id
-  API->>MG: poll job
-  MG-->>API: ready + URL
+  participant IP as Image_Playground
+  API->>IP: images:generate
+  IP-->>API: job_id
+  API->>IP: poll job
+  IP-->>API: ready + URL
 ```
 
 ## Integration rules

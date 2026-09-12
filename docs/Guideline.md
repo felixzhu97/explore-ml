@@ -102,7 +102,7 @@ sidecar never blocks the whole answer path.
 
 ### Local checkpoints
 
-**Default to local checkpoints; keep backends swappable.** Media Gen and RAG
+**Default to local checkpoints; keep backends swappable.** Image Playground / Speech / Video and RAG
 prefer downloaded weights under `LOCAL_MODELS_ROOT` (see the
 [download guide](user-guide/model-download.md)). Operators may switch to HF ids,
 Stable Diffusion, edge-tts, or cloud embeddings without changing each API’s ML
@@ -218,18 +218,24 @@ flowchart TB
     R[RECOMMENDATION_API_URL]
     V[VISION_SERVICE_URL]
     G[RAG_SERVICE_URL]
-    M[MEDIA_GENERATION_API_URL]
+    I[IMAGE_PLAYGROUND_API_URL]
+    S[SPEECH_API_URL]
+    V[VIDEO_API_URL]
   end
   subgraph ports [Local defaults]
     P0[localhost:8000]
     P1[localhost:8001]
     P2[localhost:8002]
-    P3[localhost:8003]
+    P3[localhost:8003 image-playground]
+    P4[localhost:8004 speech]
+    P5[localhost:8005 video]
   end
   R --> P0
   V --> P1
   G --> P2
-  M --> P3
+  I --> P3
+    S --> P4
+    V --> P5
 ```
 
 Own connect timeouts and fallbacks in the product API. Degrade the feature when

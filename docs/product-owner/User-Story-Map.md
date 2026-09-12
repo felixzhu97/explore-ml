@@ -12,7 +12,7 @@ title: Explore ML - User Story Map
 | Role | Description |
 | ---- | ----------- |
 | Platform engineer | Starts loopback helpers locally and mounts fixture data |
-| Sibling API developer | Calls recommendation / vision / rag / media-gen over loopback |
+| Sibling API developer | Calls recommendation / vision / rag / image-playground / speech / video over loopback |
 | Model-test engineer (planned) | Exercises models and health checks via a future `ui/` |
 
 ## Journey overview

@@ -21,7 +21,9 @@ cd docs/developer/c4-model && docker run --rm -v "$PWD":/data plantuml/plantuml 
 | recommendation | `:8000` |
 | vision | `:8001` |
 | rag | `:8002` |
-| media-gen | `:8003` |
+| image-playground | `:8003` |
+| speech | `:8004` |
+| video | `:8005` |
 
 Sibling product APIs keep their own loopback upstream URLs pointed at these
 ports.

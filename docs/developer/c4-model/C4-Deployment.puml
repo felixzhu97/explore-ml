@@ -17,7 +17,9 @@ Deployment_Node(dev_machine, "Dev machine", "macOS / Linux") {
     Container(rec, "Recommendation", "FastAPI", ":8000")
     Container(vision, "Vision", "FastAPI", ":8001")
     Container(rag, "RAG", "FastAPI", ":8002")
-    Container(media, "Media Gen", "FastAPI", ":8003")
+    Container(ip, "Image Playground", "FastAPI", ":8003")
+    Container(sp, "Speech", "FastAPI", ":8004")
+    Container(vd, "Video", "FastAPI", ":8005")
   }
   Deployment_Node(data_node, "data/", "fixtures") {
     Container(fixtures, "fixtures", "Files", "Small files in git; large weights gitignored")

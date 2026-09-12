@@ -40,7 +40,9 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 | recommendation | 8000         | `RECOMMENDATION_API_URL`   |
 | vision         | 8001         | `VISION_SERVICE_URL`       |
 | rag            | 8002         | `RAG_SERVICE_URL`          |
-| media-gen      | 8003         | `MEDIA_GENERATION_API_URL` |
+| image-playground | 8003      | `IMAGE_PLAYGROUND_API_URL` |
+| speech         | 8004         | `SPEECH_API_URL` |
+| video          | 8005         | `VIDEO_API_URL` |
 
 ## Layering
 
