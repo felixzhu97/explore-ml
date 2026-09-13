@@ -1,0 +1,75 @@
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      github-actions:
+        patterns:
+          - "*"
+    commit-message:
+      prefix: "chore"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/image-playground"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-image-playground:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/rag"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-rag:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/recommendation"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-recommendation:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/speech"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-speech:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/video"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-video:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "pip"
+    directory: "/python_ml/vision"
+    schedule:
+      interval: "weekly"
+    groups:
+      pip-vision:
+        patterns:
+          - "*"
+
+  - package-ecosystem: "docker"
+    directory: "/python_ml/vision"
+    schedule:
+      interval: "weekly"
+    groups:
+      docker-vision:
+        patterns:
+          - "*"
