@@ -67,6 +67,8 @@ fixtures under `data/`.
 cd python_ml/<name> && pytest
 ```
 
+Pull requests run `pytest` for the RAG helper on GitHub Actions.
+
 ## Next steps
 
 - Follow the [User Guide](docs/user-guide/README.md) for local setup and
