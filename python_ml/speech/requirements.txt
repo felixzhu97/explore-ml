@@ -1,5 +1,5 @@
 fastapi>=0.141.1
-uvicorn[standard]>=0.52.4
+uvicorn[standard]>=0.53.0
 edge-tts>=7.2.8
 numpy>=2.5.3,<3.0.0
 torch>=2.14.0,<2.15.0
