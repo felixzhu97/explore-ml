@@ -1,5 +1,5 @@
 fastapi>=0.141.1
-uvicorn[standard]>=0.52.4
+uvicorn[standard]>=0.53.0
 numpy>=2.5.3,<3.0.0
 diffusers>=0.40.0
 transformers>=5.17.0,<5.18.0
