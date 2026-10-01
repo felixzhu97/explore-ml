@@ -17,11 +17,11 @@ import { ModulePage } from '../ui/module-page';
     <app-module-page module="speech">
       <app-endpoint title="语音合成" path="/api/v1/voices:synthesize" [call]="tts">
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">text</span>
+          <span class="text-caption font-semibold text-ink-80">text</span>
           <textarea nz-input rows="3" [formField]="f.text"></textarea>
         </label>
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">voice（可选）</span>
+          <span class="text-caption font-semibold text-ink-80">voice（可选）</span>
           <input nz-input placeholder="zh-CN-XiaoxiaoNeural" [formField]="f.voice" />
         </label>
         <div>
@@ -44,7 +44,7 @@ import { ModulePage } from '../ui/module-page';
       <app-endpoint title="语音识别（文件）" path="/api/v1/audios:transcribe" [call]="asr">
         <app-file-pick accept="audio/*" (picked)="file.set($event)" />
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">language（可选）</span>
+          <span class="text-caption font-semibold text-ink-80">language（可选）</span>
           <input nz-input placeholder="Chinese" [formField]="f.language" />
         </label>
         <div>

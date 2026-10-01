@@ -12,12 +12,12 @@ import { getService, svcUrl, type ServiceId } from '../core/services';
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     @let s = service();
-    <div class="mx-auto flex max-w-[980px] flex-col gap-6 px-6 py-12">
+    <div class="mx-auto flex max-w-page flex-col gap-6 px-6 py-12">
       <header class="flex flex-col gap-3">
-        <h1 class="font-display text-[40px] leading-[1.1] font-semibold tracking-[-0.28px]">
+        <h1 class="m-0 font-display text-display-lg font-semibold">
           {{ s.name }}
         </h1>
-        <p class="text-sm text-muted">
+        <p class="m-0 text-caption text-muted">
           python_ml/{{ s.dir }} · 端口 {{ s.port }} · 代理 /svc/{{ s.id }} ·
           <a [href]="docsUrl()" target="_blank">OpenAPI</a>
         </p>

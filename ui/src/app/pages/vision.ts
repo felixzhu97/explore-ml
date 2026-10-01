@@ -31,11 +31,11 @@ function bars(r: ModerationResult | undefined) {
         <app-endpoint [title]="e.title" [path]="e.path" [call]="calls[e.target]">
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1">
-              <span class="text-sm font-semibold text-ink-80">上传文件</span>
+              <span class="text-caption font-semibold text-ink-80">上传文件</span>
               <app-file-pick [accept]="e.accept" (picked)="pick(e.target, $event)" />
             </div>
             <label class="flex flex-col gap-1">
-              <span class="text-sm font-semibold text-ink-80">或填写 URL</span>
+              <span class="text-caption font-semibold text-ink-80">或填写 URL</span>
               <input
                 nz-input
                 [placeholder]="e.placeholder"

@@ -19,7 +19,7 @@ import { ModulePage } from '../ui/module-page';
         [call]="call"
       >
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">prompt</span>
+          <span class="text-caption font-semibold text-ink-80">prompt</span>
           <textarea nz-input rows="3" [formField]="f.prompt"></textarea>
         </label>
         <div>
@@ -35,7 +35,7 @@ import { ModulePage } from '../ui/module-page';
           </button>
         </div>
         @if (url()) {
-          <video class="max-w-full rounded-xl" [src]="url()" controls></video>
+          <video class="max-w-full rounded-md" [src]="url()" controls></video>
         }
       </app-endpoint>
     </app-module-page>

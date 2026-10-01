@@ -18,7 +18,7 @@ const ROW_HEIGHT = 32;
 @Component({
   selector: 'app-bar-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'block w-full text-xs [&_text]:fill-ink-80' },
+  host: { class: 'block w-full text-fine [&_text]:fill-ink-80' },
   template: `<svg #svg role="img" [attr.aria-label]="ariaLabel()"></svg>`,
 })
 export class BarChart {
@@ -78,13 +78,13 @@ export class BarChart {
       .attr('x', LABEL_WIDTH)
       .attr('width', innerWidth)
       .attr('height', y.bandwidth())
-      .attr('fill', CHART_COLORS.empty)
+      .style('fill', CHART_COLORS.empty)
       .attr('opacity', 0.4);
     rows
       .select<SVGRectElement>('rect.bar')
       .attr('x', LABEL_WIDTH)
       .attr('height', y.bandwidth())
-      .attr('fill', CHART_COLORS.primary)
+      .style('fill', CHART_COLORS.primary)
       .transition()
       .duration(300)
       .attr('width', (d) => (d.value == null ? 0 : Math.max(0, x(d.value))));
@@ -99,7 +99,7 @@ export class BarChart {
       .data(threshold ? [threshold] : [])
       .join((enter) => {
         const g = enter.append('g').attr('class', 'threshold');
-        g.append('line').attr('stroke', CHART_COLORS.ink).attr('stroke-dasharray', '3 3');
+        g.append('line').style('stroke', CHART_COLORS.ink).attr('stroke-dasharray', '3 3');
         g.append('text').attr('text-anchor', 'middle');
         return g;
       });

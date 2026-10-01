@@ -31,7 +31,7 @@ type CallState = Pick<Call<unknown>, 'busy' | 'value' | 'error' | 'ms'>;
         }
         @if (c.value() !== undefined) {
           <pre
-            class="m-0 max-h-80 overflow-auto rounded-xl bg-parchment p-4 font-mono text-[13px] leading-5"
+            class="m-0 max-h-80 overflow-auto rounded-md bg-parchment p-4 font-mono text-caption"
             >{{ c.value() | json }}</pre>
         }
       </div>
@@ -39,8 +39,8 @@ type CallState = Pick<Call<unknown>, 'busy' | 'value' | 'error' | 'ms'>;
 
     <ng-template #header>
       <div class="flex flex-col gap-1 py-1">
-        <span class="font-display text-[21px] font-semibold tracking-[-0.2px]">{{ title() }}</span>
-        <span class="flex items-center gap-2 font-mono text-sm font-normal text-muted">
+        <span class="font-display text-tagline font-semibold">{{ title() }}</span>
+        <span class="flex items-center gap-2 font-mono text-caption font-normal text-muted">
           <nz-tag class="m-0 font-semibold">{{ method() }}</nz-tag>
           {{ path() }}
         </span>
