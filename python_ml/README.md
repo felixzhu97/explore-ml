@@ -1,14 +1,92 @@
 # Machine learning helpers
 
-Optional Python FastAPI services used by sibling Explore APIs over loopback:
+One FastAPI app on port **8000** serves six modules. Sibling Explore APIs
+and the UI call it over loopback.
 
-| Service | Port | Role | Health check |
+| Module | Package | Role | Operations |
 | --- | --- | --- | --- |
-| `recommendation` | 8000 | Feed / Explore / Reels rank & recall | `GET /health` |
-| `vision` | 8001 | Image labels & moderation | `GET /health` |
-| `rag` | 8002 | Document / post RAG Q&A | `GET /health/ready` |
-| `image-playground` | 8003 | Image generation (Image Playground) | `GET /openapi.json` |
-| `speech` | 8004 | ASR + TTS (Speech) | `GET /openapi.json` |
-| `video` | 8005 | Video generation | `GET /openapi.json` |
+| Recommendation | `recommendation` | Feed / Explore / Reels rank and recall | `feeds:rank`, `explores:rank`, `reels:rank`, `feeds:recall` |
+| Vision | `vision` | Image labels and image / video moderation | `images:predict`, `images:moderate`, `videos:moderate` |
+| RAG | `rag` | Document, webpage and post Q&A | `documents:query`, `documents:streamQuery`, `documents`, `collections`, … |
+| Image Playground | `image_playground` | Text-to-image jobs | `images:generate`, `imageJobs/{id}` |
+| Speech | `speech` | TTS and ASR (file and WebSocket) | `voices:synthesize`, `audios:transcribe`, `ws/v1/audios:transcribe` |
+| Video | `video` | Text-to-video jobs | `videos:generate`, `videoJobs/{id}` |
 
-Layout: [`docs/developer/python-services.md`](../docs/developer/python-services.md).
+Every operation lives under `/api/v1/<collection>:<method>` with no module
+prefix ([AIP-136](https://google.aip.dev/136) custom methods). Layout and
+module contract: [`docs/developer/python-services.md`](../docs/developer/python-services.md).
+
+## Run
+
+```bash
+cd python_ml
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt --override overrides.txt
+cp .env.example .env          # loaded automatically at startup
+uvicorn main:app --port 8000  # or: python main.py
+```
+
+`overrides.txt` pins `transformers==4.57.6`. qwen-tts pins `4.57.3` and
+qwen-asr pins `4.57.6`; both work with `4.57.6`, so the override lets uv
+resolve one environment. LightFM does not build on Python 3.12, so it
+lives in `recommendation/requirements-optional.txt`.
+
+To run only some modules, set `EXPLORE_MODULES` to a comma-separated
+subset. Heavy model libraries load lazily, so the app starts without
+weights. RAG reports `degraded` in `/health` until its embedding model
+in Ollama is reachable.
+
+```bash
+EXPLORE_MODULES=rag,vision uvicorn main:app --port 8000
+```
+
+## Shared endpoints
+
+| Path | Purpose |
+| --- | --- |
+| `GET /health` | `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}` |
+| `GET /health/live` | Process is up |
+| `GET /health/ready` | 503 with per-module reasons until every module is ready |
+| `GET /metrics` | Prometheus metrics |
+| `GET /docs` | OpenAPI UI for all modules |
+
+## Settings
+
+One `python_ml/.env` holds every module's variables;
+[`.env.example`](.env.example) groups them by module.
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `HOST` / `PORT` | `0.0.0.0` / `8000` | Bind address |
+| `BASE_URL` | `http://localhost:$PORT` | Base for media URLs the image, speech and video modules return |
+| `EXPLORE_MODULES` | all six | Modules to load |
+| `CONTENT_API_URL` | — | Content API that RAG syncs posts and comments from |
+| `DATABASE_URL` | — | Postgres for recommendation |
+
+## Batch jobs and training
+
+Run from `python_ml/` so package imports resolve:
+
+```bash
+python -m recommendation.run_jobs --job suggestions
+celery -A recommendation.celery_app worker -l info -B
+python -m vision.training.train_head --data <dir> --output <dir>
+python -m rag.training.eval_retrieval --url http://localhost:8000
+python -m image_playground.training.compare_prompts --lora <dir> --prompts prompts.txt
+python -m speech.training.eval_wer --help
+```
+
+## Tests
+
+```bash
+cd python_ml
+pytest -q                     # app tests (tests/)
+pytest -q tests rag/tests     # what CI runs
+```
+
+## Container
+
+```bash
+docker build -t explore-ml python_ml
+docker run -p 8000:8000 --env-file python_ml/.env explore-ml
+```

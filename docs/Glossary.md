@@ -21,21 +21,24 @@ architecture naming. Chinese labels are for localization only.
 
 ## 2. Business Domains | 业务域总览
 
-| Preferred Term | 中文     | Code / Path                | HTTP (default) | Notes                               |
-| -------------- | -------- | -------------------------- | -------------- | ----------------------------------- |
-| Recommendation | 推荐     | `python_ml/recommendation` | `:8000`        | Feed / Explore / Reels rank         |
-| Vision         | 视觉审核 | `python_ml/vision`         | `:8001`        | Labels + moderation                 |
-| RAG            | 检索增强 | `python_ml/rag`            | `:8002`        | Documents + local Qdrant path       |
-| Image Playground | 图像游乐场 | `python_ml/image-playground` | `:8003` | Image generation |
-| Speech           | 语音       | `python_ml/speech`           | `:8004` | ASR + TTS |
-| Video            | 视频生成   | `python_ml/video`            | `:8005` | Video generation |
-| Model Test UI  | 测模界面 | `ui/`                      | `:4200`        | Angular dev UI; proxies `/svc/<id>` |
-| Fixture Data   | 测试数据 | `data/`                    | —              | Small fixtures only                 |
+Every module is a package in one FastAPI app (`python_ml/main.py`, port
+`8000`). `EXPLORE_MODULES` selects which ones load.
+
+| Preferred Term   | 中文       | Code / Path                  | Notes                               |
+| ---------------- | ---------- | ---------------------------- | ----------------------------------- |
+| Recommendation   | 推荐       | `python_ml/recommendation`   | Feed / Explore / Reels rank         |
+| Vision           | 视觉审核   | `python_ml/vision`           | Labels + moderation                 |
+| RAG              | 检索增强   | `python_ml/rag`              | Documents + local Qdrant path       |
+| Image Playground | 图像游乐场 | `python_ml/image_playground` | Image generation                    |
+| Speech           | 语音       | `python_ml/speech`           | ASR + TTS                           |
+| Video            | 视频生成   | `python_ml/video`            | Video generation                    |
+| Model Test UI    | 测模界面   | `ui/` (`:4200`)              | Angular dev UI; proxies `/ml`       |
+| Fixture Data     | 测试数据   | `data/`                      | Small fixtures only                 |
 
 ```mermaid
 flowchart LR
-  siblingApi[explore-chat Spring] --> pyMl[python_ml]
-  testUi[Model Test UI] -->|/svc proxy| pyMl
+  siblingApi[explore-chat Spring] --> pyMl[python_ml app :8000]
+  testUi[Model Test UI] -->|/ml proxy| pyMl
   pyMl --> rec[Recommendation]
   pyMl --> vis[Vision]
   pyMl --> ragSvc[RAG]
@@ -50,22 +53,25 @@ flowchart LR
 
 | Preferred Term    | 中文       | Definition                                                              |
 | ----------------- | ---------- | ----------------------------------------------------------------------- |
-| Explore ML        | Explore ML | Sibling repo of optional Python FastAPI helpers for Explore products    |
+| Explore ML        | Explore ML | Sibling repo of one optional Python FastAPI app (six modules) for Explore products |
+| ML App            | ML 应用    | `python_ml/main.py` → `server.create_app`; mounts every module's routers on one port (`PORT`, default `8000`) |
+| Module            | 模块       | Package under `python_ml/` exposing `module.py` (`routers`, optional `lifespan`, `health`, `readiness`, `register_exception_handlers`) |
 | Loopback Upstream | 旁路上游   | Called only by a sibling API over localhost; never from product clients |
 | Fixture Data      | 测试数据   | Committed small files under `data/`; large weights stay gitignored      |
 | Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT` (default `~/Codes/models`); obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground, Speech, RAG rerank and the Recommendation feed ranker read it. Video loads the Hugging Face id in `COGVIDEOX_MODEL` instead |
 | ASR               | 语音识别   | Speech-to-text on Speech (`POST /api/v1/audios:transcribe`); default local Qwen3-ASR after download |
 | Streaming ASR     | 流式识别   | `WS /ws/v1/audios:transcribe`; client sends `audio` / `commit` / `stop`, server answers `partial` / `final` / `error`; buffered by `StreamingTranscriptionSession` |
 | TTS               | 语音合成   | Text-to-speech on Speech (`POST /api/v1/voices:synthesize`); returns `audio_url` directly (`.wav` with Qwen, `.mp3` with Edge) |
-| Service Proxy     | 服务代理   | `ng serve` route `/svc/<id>` → helper on loopback (`image` for Image Playground); target overridable via `RECOMMENDATION_URL`, `VISION_URL`, `RAG_URL`, `IMAGE_URL`, `SPEECH_URL`, `VIDEO_URL` |
-| Module Page       | 模块页     | One UI page per helper module (`#/<id>`) with a card for every endpoint |
-| Health Probe      | 健康探针   | Recommendation and Vision serve `GET /health`; RAG serves `/health`, `/health/live`, `/health/ready`; Image Playground, Speech and Video have none, so the UI probes `/openapi.json` |
+| ML Proxy          | ML 代理    | `ng serve` route `/ml` → the ML app on loopback (prefix stripped, WebSocket on); target overridable via `EXPLORE_ML_URL` |
+| Module Page       | 模块页     | One UI page per module (`#/<id>`) with a card for every endpoint and D3 charts of its results |
+| Chart             | 图表       | D3 component in `ui/src/app/shared/` (bar, line, slope, histogram, scatter, job timeline, waveform); math lives in `chart-math.ts` |
+| Health Report     | 健康报告   | `GET /health` → `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}`; `/health/live` and `/health/ready` (503 lists not-ready modules) |
 
 ---
 
-## 4. Domain Terms by Helper | 各模块领域术语
+## 4. Domain Terms by Module | 各模块领域术语
 
-Each term is a class or constant in the helper's `domain/` (or `service/` /
+Each term is a class or constant in the module's `domain/` (or `service/` /
 `infra/` where noted). Services are `XService` classes provided by an
 `@lru_cache` `get_x_service()` function.
 
@@ -90,8 +96,10 @@ Each term is a class or constant in the helper's `domain/` (or `service/` /
 
 | Preferred Term      | 中文     | Code                                    | Definition |
 | ------------------- | -------- | --------------------------------------- | ---------- |
+| Prediction          | 预测     | `domain/prediction.py` `Prediction`         | One label with its softmax score; `top_unique` keeps the best per label |
 | Moderation Category | 审核类别 | `domain/moderation.py` `ModerationCategory` | One flagged label with its score |
-| Moderation Verdict  | 审核结论 | `domain/moderation.py` `ModerationVerdict`  | `safe` flag plus the flagged categories |
+| Frame Verdict       | 帧结论   | `domain/moderation.py` `FrameVerdict`       | One sampled video frame: `offset_seconds`, category scores, `safe` |
+| Moderation Verdict  | 审核结论 | `domain/moderation.py` `ModerationVerdict`  | `safe` flag, flagged categories, every category's score (peak over frames for video) and the frames |
 
 ### Image Playground and Video
 

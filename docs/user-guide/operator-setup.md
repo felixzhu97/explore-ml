@@ -2,15 +2,14 @@
 
 ← [User guide home](README.md)
 
-Stand up Explore ML with the smallest durable config: one helper process, one
-port, one health URL. Start only what you need. Treat this as the **target
-runbook**—independent of today’s folders or entrypoints; align code to it over
-time.
+Stand up Explore ML with the smallest durable config: one process, one port,
+one health URL. Load only the modules you need.
 
 ## Before you start
 
-Install a current Python toolchain and a way to run the helper process (local
-venv, container, or process manager). Optional:
+Install Python 3.11+ and [uv](https://docs.astral.sh/uv/) (or pip), plus a
+way to run the process (local venv, container, or process manager).
+Optional:
 
 - Vector DB — RAG uses embedded Qdrant under `python_ml/rag/data/qdrant` by
   default; set `QDRANT_URL` for a server
@@ -19,66 +18,87 @@ venv, container, or process manager). Optional:
   engagement and follow data or runs batch jobs
 - GPU or Apple MPS — when Speech / Image Playground / Video should run faster
 
-Download local weights only if you chose a local Speech / Image Playground / Video or rerank backend
-([Model download](model-download.md)).
+Download local weights only if you chose a local Speech / Image Playground /
+Video or rerank backend ([Model download](model-download.md)).
 
 ## Steps
 
 1. Choose **one** capability to prove first (recommendation, vision, RAG, or
    media).
-2. Configure a single listen port and base URL. Defaults and the env vars
-   that override them (the first one set wins):
+2. Install and configure from `python_ml/`:
 
-| Helper | Port | Port env | Liveness check |
-| --- | --- | --- | --- |
-| Recommendation | `8000` | `PORT`, then `RECOMMENDATION_PORT` | `GET /health` |
-| Vision | `8001` | `VISION_PORT` | `GET /health` |
-| RAG | `8002` | `PORT` | `GET /health/ready` |
-| Image Playground | `8003` | `IMAGE_PLAYGROUND_PORT`, then `PORT` | `GET /openapi.json` |
-| Speech | `8004` | `SPEECH_PORT`, then `PORT` | `GET /openapi.json` |
-| Video | `8005` | `VIDEO_PORT`, then `PORT` | `GET /openapi.json` |
+```bash
+cd python_ml
+uv venv && source .venv/bin/activate
+uv pip install -r requirements.txt --override overrides.txt
+cp .env.example .env
+```
 
-   When you start a helper with `uvicorn --port`, keep the port env in sync:
-   helpers build the asset URLs they return from it.
+   `.env` is loaded at startup and holds every module's settings, grouped by
+   module. Never commit it.
 
-3. Provide secrets and datastore URLs through env (never commit them). Copy
-   from `.env.example` when the helper ships one. Only RAG and
-   recommendation load `.env` themselves; export the variables in your shell
-   for the others.
-4. Start the helper so it serves HTTP on that port.
+3. Pick the listen port and modules:
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `PORT` / `HOST` | `8000` / `0.0.0.0` | Listen address for every module |
+| `BASE_URL` | `http://localhost:$PORT` | Base of the media URLs image, speech and video return |
+| `EXPLORE_MODULES` | all six | Comma-separated subset, e.g. `rag,vision` |
+
+   If clients reach the app under another address than
+   `http://localhost:$PORT`, set `BASE_URL` to it, or returned media URLs
+   will point at the wrong host.
+
+4. Start the app:
+
+```bash
+uvicorn main:app --port 8000
+# or: EXPLORE_MODULES=rag uvicorn main:app --port 8000
+```
+
 5. Verify:
 
 ```bash
-export HELPER=http://localhost:8000   # change port to match
-curl -s "$HELPER/health"              # or /openapi.json for image, speech, video
-open "$HELPER/docs"                   # or visit in a browser
+export EXPLORE_ML_URL=http://localhost:8000
+curl -s "$EXPLORE_ML_URL/health"   # status per module
+open "$EXPLORE_ML_URL/docs"        # or visit in a browser
 ```
 
-6. Stop here until one route works. Add the next helper only when the product
-   feature needs it.
+6. Stop here until one route works. Add the next module only when the
+   product feature needs it.
 
 ```mermaid
 flowchart TB
   Pick[Pick_one_capability]
-  Port[Set_port_and_env]
+  Env[Set_env_and_modules]
   Run[Start_process]
   Health[Check_health_and_docs]
-  Pick --> Port --> Run --> Health
+  Pick --> Env --> Run --> Health
 ```
 
-## Run more than one helper
+## Health
 
-Give each helper its own process and port. Keep base URLs unique. Point the
-product API at each URL after the liveness check passes—see
-[Loopback integration](loopback-integration.md).
+`GET /health` always answers 200 while the process is up:
 
-```mermaid
-flowchart LR
-  API[Product_API]
-  H1[Helper_A]
-  H2[Helper_B]
-  API -->|"URL_A"| H1
-  API -->|"URL_B"| H2
+```json
+{
+  "status": "degraded",
+  "modules": {
+    "vision": { "status": "ok", "model": "resnet50", "latency_ms": 0.02 },
+    "rag": { "status": "degraded", "qdrant": true, "embeddings": false, "latency_ms": 1.2 }
+  }
+}
+```
+
+Use `/health/live` for a liveness probe and `/health/ready` for readiness;
+the latter returns 503 with a reason per module until every loaded module is
+ready. A module missing from `modules` was not loaded (`EXPLORE_MODULES`).
+
+## Container
+
+```bash
+docker build -t explore-ml python_ml
+docker run -p 8000:8000 --env-file python_ml/.env explore-ml
 ```
 
 ## Optional dependencies
@@ -89,14 +109,15 @@ Start Ollama (`OLLAMA_BASE_URL`, default `http://localhost:11434`) before
 the first ingest. Qdrant runs embedded by default, so no server is needed.
 Rerank is on by default and calls a sidecar at `RERANK_URL`
 (`http://127.0.0.1:8091`); set `RERANK_ENABLED=false` when the sidecar is
-not running.
+not running. Post and comment sync reads from `CONTENT_API_URL`.
 
 ### Recommendation
 
 Point recommendation at the same PostgreSQL (`DATABASE_URL`), Redis
 (`REDIS_URL`) and Cassandra (`CASSANDRA_CONTACT_POINTS`) as the product
 backend; features, follows and recall vectors come from them. Start a
-Celery worker only when you need scheduled recall or training; the broker is
+Celery worker only when you need scheduled recall or training
+(`celery -A recommendation.celery_app worker -l info`); the broker is
 `CELERY_BROKER_URL`, falling back to `REDIS_URL`.
 
 ### Speech / Image Playground / Video
@@ -110,18 +131,18 @@ try local generation anyway.
 
 Set these once and keep them aligned:
 
-- **Base URL** — public address your API uses (`http://localhost:<port>`)
-- **Listen port** — same host the base URL names
-- **Secrets** — DB, Redis, API keys via env or a secret store
+- **Base URL** — the address your API uses (`http://localhost:8000`)
+- **`BASE_URL`** — same address, when it is not `localhost:$PORT`
+- **Secrets** — DB, Redis, API keys via `python_ml/.env` or a secret store
 - **`LOCAL_MODELS_ROOT`** — only when local generative / rerank weights are on
 - **Timeouts** — owned by the product API, not the browser
 
 ## If something fails
 
-- Port in use — change the helper port and every upstream that points at it.
-- Health fails — confirm the process listens on the URL you curl. Image
-  Playground, Speech and Video return 404 for `/health`; use
-  `/openapi.json`.
+- Port in use — change `PORT` and the one upstream that points at it.
+- A module shows `degraded` or `error` — read its fields in `/health`; for
+  RAG, `embeddings: false` means Ollama or the embedding model is missing.
+- A module is absent from `/health` — add it to `EXPLORE_MODULES`.
 - OpenAPI missing routes — restart after config changes; use `/docs` as truth.
 - Missing weights — download them, or switch to a Hub / lightweight backend.
 - Rerank quiet — set `RERANK_ENABLED=false`, or start the sidecar at

@@ -3,7 +3,7 @@
 ← [User guide home](README.md)
 
 Fetch local checkpoints only when you chose a local generative or rerank
-backend. Point helpers at one root (`LOCAL_MODELS_ROOT`, default
+backend. Point the app at one root (`LOCAL_MODELS_ROOT`, default
 `~/Codes/models`). Keep large weights out of git.
 
 Speech, Image Playground, RAG rerank and recommendation read paths under this
@@ -51,7 +51,7 @@ Recommendation reads `RECOMMENDATION_MODEL_DIR` (default
 `feed_ranker.pt` in that folder). Those files come from its own training
 jobs, not from a Hub download.
 
-Default ids the helpers expect:
+Default ids the modules expect:
 
 - ASR — `Qwen/Qwen3-ASR-1.7B`
 - TTS — `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`
@@ -135,9 +135,9 @@ hf download Qwen/Qwen3-Reranker-8B \
 ModelScope works the same way with `modelscope download --model … --local_dir …`
 when Hugging Face is unreachable.
 
-## Wire helpers (easiest config)
+## Wire modules (easiest config)
 
-Export the same root the helpers read:
+Export the same root the modules read:
 
 ```bash
 export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
@@ -147,7 +147,7 @@ Prefer defaults that resolve under that root. Override with a path or Hub id
 when needed. Swap away from local weights with backend flags—keep `/api/v1`
 routes unchanged.
 
-Per-helper overrides: `ASR_MODEL` and `TTS_MODEL` (Speech), `IMAGE_MODEL`
+Per-module overrides: `ASR_MODEL` and `TTS_MODEL` (Speech), `IMAGE_MODEL`
 and `IMAGE_LORA_PATH` (Image Playground), `COGVIDEOX_MODEL` (Video, Hub id).
 
 RAG rerank is on by default. It calls a sidecar that serves the reranker:
@@ -180,7 +180,7 @@ ollama pull qwen3-coder:30b
 
 ```bash
 ls "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
-curl -s "$HELPER/openapi.json"   # Speech has no /health route
+curl -s "$EXPLORE_ML_URL/health"   # speech lists its voice and asr backends
 ```
 
 Fail clearly when a required path is empty—do not hang on an unexpected Hub

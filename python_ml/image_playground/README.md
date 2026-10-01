@@ -1,10 +1,9 @@
 # Image Playground
 
 Local loopback image generation (Apple [Image Playground](https://developer.apple.com/documentation/imageplayground)–aligned name).
-Port: **8003** (`IMAGE_PLAYGROUND_PORT`, then `PORT`).
-
-Layout: `main.py` / `config.py` / `controller/` / `service/` / `domain/` /
-`infra/` / `tests/` / `training/`.
+Package `image_playground` in the single Explore ML app (port 8000):
+`module.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` /
+`tests/` / `training/`.
 
 | Capability | Default backend | Local path (under `LOCAL_MODELS_ROOT`) | Other |
 | ---------- | --------------- | -------------------------------------- | ----- |
@@ -15,20 +14,12 @@ Layout: `main.py` / `config.py` / `controller/` / `service/` / `domain/` /
 
 ## Setup
 
-```bash
-cd python_ml/image-playground
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8003
-```
-
-This helper does not load `.env`; export the variables from `.env.example` in
-your shell. The pipeline loads on the first generate request, not at startup.
+Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). The pipeline loads on the first generate request, not at startup.
 
 ## API
 
-There is no `/health` route; use `GET /openapi.json` as a liveness check.
+In the app's `GET /health` the module reports
+`{status: "ok", backend, lora}`.
 
 - `POST /api/v1/images:generate` with `{prompt, negative_prompt?}` →
   `{job_id}`
@@ -43,8 +34,8 @@ Poll the job until `status` is `succeeded`, then fetch `image_url`.
 
 | Variable | Default |
 | -------- | ------- |
-| `IMAGE_PLAYGROUND_HOST` / `IMAGE_PLAYGROUND_PORT` / `IMAGE_PLAYGROUND_BASE_URL` | `0.0.0.0` / `8003` / `http://localhost:<port>` |
-| `IMAGE_PLAYGROUND_OUTPUT_DIR` | `output` |
+| `BASE_URL` (shared) | `http://localhost:$PORT` |
+| `IMAGE_PLAYGROUND_OUTPUT_DIR` | `image_playground/output` |
 | `IMAGE_PLAYGROUND_DEVICE=cpu` | force CPU |
 | `IMAGE_BACKEND` / `IMAGE_MODEL` / `SD_MODEL` | `qwen` / per backend / — |
 | `IMAGE_LORA_PATH` / `IMAGE_LORA_SCALE` | — / `1.0` |
@@ -59,7 +50,7 @@ The adapter loads as `fine_tuned` together with the pipeline. Train one with
 model on fixed prompts and seeds:
 
 ```bash
-python -m training.compare_prompts --lora <dir> --prompts prompts.txt \
+python -m image_playground.training.compare_prompts --lora <dir> --prompts prompts.txt \
   [--out compare] [--seed 0] [--steps 20]
 ```
 
@@ -68,5 +59,6 @@ See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
 ## Tests
 
 ```bash
-pytest -q   # test_health.py, test_jobs_api.py, test_local_models_config.py, test_lora.py
+cd python_ml
+pytest -q image_playground/tests
 ```

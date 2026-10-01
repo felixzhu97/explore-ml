@@ -1,8 +1,9 @@
 # RAG Service
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
-`service/` / `domain/` / `infra/` / `tests/` / `training/`.
-Start: `uvicorn main:app --host 0.0.0.0 --port 8002`.
+Package `rag` in the single Explore ML app (port 8000): `module.py` /
+`config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/` /
+`training/`. Setup, `.env` and run commands:
+[`python_ml/README.md`](../README.md).
 
 Retrieval Augmented Generation (RAG) helper: index documents, webpages, posts
 and comments into Qdrant, then answer questions from the retrieved chunks.
@@ -13,7 +14,7 @@ and comments into Qdrant, then answer questions from the retrieved chunks.
   (max 50 MB)
 - **Webpages**: scrape one URL, or crawl a list of URLs (up to 5 at a time;
   links are not followed)
-- **Sync**: pull posts and comments from the content API at `DATABASE_URL`
+- **Sync**: pull posts and comments from the content API at `CONTENT_API_URL`
 - **Query**: answer a question from the top chunks, with optional sources
 - **Streaming**: the same answer as server-sent events
 - **Export vectors**: stored chunk vectors for client-side visualization
@@ -37,17 +38,17 @@ ollama pull qwen3-coder:30b   # or set LLM_MODEL to a smaller model
 ollama serve
 ```
 
-2. Install and run the helper:
+2. Install and run the app from `python_ml/` (RAG alone needs only
+   `rag/requirements.txt`):
 
 ```bash
-cd python_ml/rag
-python -m venv .venv && source .venv/bin/activate
-pip install -r requirements.txt
+cd python_ml
+pip install -r rag/requirements.txt
 cp .env.example .env          # loaded automatically
-uvicorn main:app --host 0.0.0.0 --port 8002
+EXPLORE_MODULES=rag uvicorn main:app --port 8000
 ```
 
-Qdrant needs no separate process: with `QDRANT_URL` empty the helper stores
+Qdrant needs no separate process: with `QDRANT_URL` empty the module stores
 vectors under `QDRANT_PATH` (`python_ml/rag/data/qdrant`). To use a server
 instead:
 
@@ -58,12 +59,10 @@ export QDRANT_URL=http://localhost:6333
 
 ## Configuration
 
-Read from the environment or `.env`:
+Read from the environment or `python_ml/.env`:
 
 | Variable                 | Description                                   | Default |
 | ------------------------ | --------------------------------------------- | ------- |
-| `HOST` / `PORT`          | Bind address and port                         | `0.0.0.0` / `8002` |
-| `DEBUG` / `WORKERS`      | Reload mode / uvicorn workers for `python main.py` | `false` / `4` |
 | `UPLOADS_DIR`            | Saved uploads                                 | `python_ml/rag/uploads` |
 | `QDRANT_URL`             | Qdrant server; empty means embedded           | (empty) |
 | `QDRANT_PATH`            | Embedded Qdrant directory                     | `python_ml/rag/data/qdrant` |
@@ -80,15 +79,14 @@ Read from the environment or `.env`:
 | `LLM_TIMEOUT`            | Ollama request timeout (seconds)              | `120` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | Chunk size and overlap (tokens)         | `256` / `50` |
 | `CRAWLER_TIMEOUT`        | Webpage fetch timeout (seconds)               | `30` |
-| `DATABASE_URL`           | Content API base URL for sync                 | (empty) |
+| `CONTENT_API_URL`        | Content API base URL for sync                 | (empty) |
 | `LOCAL_MODELS_ROOT`      | Local weights root                            | `~/Codes/models` (see [download guide](../../docs/user-guide/model-download.md)) |
 | `RERANK_ENABLED`         | Call the rerank sidecar; skipped if it is down | `true` |
 | `RERANK_URL`             | Rerank sidecar base URL                       | `http://127.0.0.1:8091` |
 | `RERANK_MODEL`           | Weight path the sidecar should load           | `…/rerank/models/Qwen3-Reranker-8B` |
 | `RERANK_TIMEOUT`         | Rerank request timeout (seconds)              | `30` |
 
-`config.py` also defines `DEFAULT_TOP_K`, `RAG_TIMEOUT`, `REDIS_URL`,
-`CACHE_TTL`, `RATE_LIMIT_*` and `CRAWLER_MAX_DEPTH`, but no code reads them
+`config.py` also defines `DEFAULT_TOP_K`, `RAG_TIMEOUT`, `CACHE_TTL`, `RATE_LIMIT_*` and `CRAWLER_MAX_DEPTH`, but no code reads them
 yet.
 
 ### Rerank sidecar
@@ -105,7 +103,7 @@ sidecar on port 8091, or set `RERANK_ENABLED=false`.
 - `train_embedding.py` — local embedding fine-tune
 - `to_ollama.sh` — import a GGUF into Ollama
 - `train_reranker.py` — LoRA reranker job on Hugging Face Jobs
-- `eval_retrieval.py` — recall@k / MRR against a running helper
+- `eval_retrieval.py` — recall@k / MRR against the running app
 - `train_sft.py` — QLoRA SFT of Qwen3-8B on Hugging Face Jobs
 - `eval_answers.py` — compare answers with an LLM judge
 
@@ -185,44 +183,41 @@ Export response: `{dimension, points: [{id, vector, text, metadata}]}`, text
 cut to 500 characters, `metadata.collection` set, and `dimension` 0 when
 nothing is stored.
 
-### Health and monitoring
+### Health
 
-```
-GET    /health                     {status: healthy|degraded, version, timestamp, services: {qdrant, embeddings}}
-GET    /health/live                {status: "alive"}
-GET    /health/ready               {status: "ready"}, or 503 {status: "not ready", reason}
-GET    /metrics                    Prometheus metrics
-GET    /                           Service name, version and links
-```
+The app serves `/health`, `/health/live`, `/health/ready` and `/metrics` for
+all modules (see [`python_ml/README.md`](../README.md)). RAG reports
+`{status: ok | degraded, qdrant, embeddings}` in `/health` and holds
+`/health/ready` at 503 until Qdrant answers.
 
 ## Usage Examples
 
 ```bash
 # Upload
-curl -X POST "http://localhost:8002/api/v1/documents" -F "file=@document.pdf"
+curl -X POST "http://localhost:8000/api/v1/documents" -F "file=@document.pdf"
 
 # Scrape
-curl -X POST "http://localhost:8002/api/v1/webpages:scrape" \
+curl -X POST "http://localhost:8000/api/v1/webpages:scrape" \
   -H "Content-Type: application/json" \
   -d '{"url": "https://en.wikipedia.org/wiki/Black_Myth_Wukong"}'
 
 # Query one collection
-curl -X POST "http://localhost:8002/api/v1/documents:query" \
+curl -X POST "http://localhost:8000/api/v1/documents:query" \
   -H "Content-Type: application/json" \
   -d '{"query": "What did users say about this post?", "collection": "comments", "top_k": 3}'
 
 # Stream
-curl -N -X POST "http://localhost:8002/api/v1/documents:streamQuery" \
+curl -N -X POST "http://localhost:8000/api/v1/documents:streamQuery" \
   -H "Content-Type: application/json" \
   -d '{"query": "Summarize the key points", "collection": "webpages"}'
 
 # Export vectors
-curl -X POST "http://localhost:8002/api/v1/documents:exportVectors" \
+curl -X POST "http://localhost:8000/api/v1/documents:exportVectors" \
   -H "Content-Type: application/json" -d '{"limit": 500}'
 ```
 
-Interactive docs: <http://localhost:8002/docs> (Swagger) and
-<http://localhost:8002/redoc>.
+Interactive docs: <http://localhost:8000/docs> (Swagger) and
+<http://localhost:8000/redoc>.
 
 ## Architecture
 
@@ -275,8 +270,9 @@ Query -> embed question -> search each collection (top_k)
 ## Development
 
 ```bash
-pytest -q                     # 8 test files under tests/
-uvicorn main:app --reload
+cd python_ml
+pytest -q rag/tests           # 8 test files
+EXPLORE_MODULES=rag uvicorn main:app --reload
 ```
 
 Tests cover the chunker, document parsing, query models, rerank scoring,

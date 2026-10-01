@@ -12,7 +12,12 @@ skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
 LAYOUT_TOP_DOWN()
-title [C4 Level 3] Explore ML - Components (RAG helper and Model Test UI)
+title [C4 Level 3] Explore ML - Components (ML app, RAG module and Model Test UI)
+
+Container_Boundary(app, "python_ml") {
+  Component(server, "server.py", "FastAPI app shell", "load_modules(EXPLORE_MODULES), module lifespans, aggregated /health, /health/live, /health/ready, /metrics")
+  Component(modules, "<module>/module.py", "module contract", "routers, lifespan, health, readiness, register_exception_handlers")
+}
 
 Container_Boundary(rag, "python_ml/rag") {
   Component(routers, "controller/", "FastAPI routers", "documents, query, crawler, sync, api (health); inline Pydantic DTOs; XServiceDependency")
@@ -24,14 +29,17 @@ Container_Boundary(rag, "python_ml/rag") {
 }
 
 Container_Boundary(ui, "ui/src/app") {
-  Component(shared, "shared/", "Angular", "helpers registry, proxy, HealthService, Call, SSE, polling, module page")
-  Component(pages, "<module>/", "Angular", "<module>.page.ts + <module>.service.ts (HttpClient, inline types) per helper")
+  Component(shared, "shared/", "Angular", "helpers registry, /ml proxy, HealthService, Call, SSE, polling, module page")
+  Component(charts, "shared/ charts", "Angular + d3", "bar, line, slope, histogram, scatter, job timeline, waveform; pure math in chart-math.ts")
+  Component(pages, "<module>/", "Angular", "<module>.page.ts + <module>.service.ts (HttpClient, inline types) per module")
 }
 
 Container_Ext(qdrant, "Qdrant", "Vector DB")
 Container_Ext(llm, "Ollama / OpenAI", "HTTP")
 Container_Ext(content_api, "Content API", "HTTP")
 
+Rel(server, modules, "imports and mounts")
+Rel(modules, routers, "exports routers + health")
 Rel(routers, services, "inject via Depends")
 Rel(errors, domain, "maps errors")
 Rel(services, indexer, "index chunks")
@@ -43,7 +51,9 @@ Rel(infra, qdrant, "HTTP / embedded")
 Rel(infra, llm, "HTTP")
 Rel(infra, content_api, "HTTP")
 Rel(pages, shared, "uses")
-Rel(pages, routers, "/svc/rag/api/v1/...", "HTTP + SSE")
+Rel(pages, charts, "renders results")
+Rel(shared, server, "/ml/health", "HTTP")
+Rel(pages, routers, "/ml/api/v1/...", "HTTP + SSE")
 
 SHOW_LEGEND()
 @enduml
