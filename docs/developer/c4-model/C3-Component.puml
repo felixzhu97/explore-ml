@@ -15,14 +15,14 @@ LAYOUT_TOP_DOWN()
 title [C4 Level 3] Explore ML - Components (ML app, RAG module and Model Test UI)
 
 Container_Boundary(app, "python_ml") {
-  Component(server, "server.py", "FastAPI app shell", "load_modules(EXPLORE_MODULES), module lifespans, aggregated /health, /health/live, /health/ready, /metrics")
-  Component(modules, "<module>/module.py", "module contract", "routers, lifespan, health, readiness, register_exception_handlers")
+  Component(server, "server.py", "FastAPI app shell", "build_app: module routers, lifespans, aggregated /health (main.py imports the six modules)")
+  Component(modules, "<module>/module.py", "module contract", "router, health, optional lifespan; RAG adds register_exception_handlers")
 }
 
 Container_Boundary(rag, "python_ml/rag") {
   Component(routers, "controller/", "FastAPI routers", "documents, query, crawler, sync, api (health); inline Pydantic DTOs; XServiceDependency")
   Component(errors, "controller/errors.py", "exception handlers", "Domain errors -> 400 / 404 / 503 / upstream status, {detail}")
-  Component(services, "service/", "XService classes", "DocumentService, QueryService, WebpageService, SyncService, HealthService; @lru_cache get_x_service()")
+  Component(services, "service/", "XService classes", "DocumentService, QueryService, WebpageService, SyncService; @lru_cache get_x_service()")
   Component(indexer, "service/indexing.py", "ChunkIndexer", "Embed in batches of 10, upsert one collection")
   Component(domain, "domain/", "dataclasses + rules", "Chunk, TextChunker, SearchHit, Answer, ExportedVectors, SyncResult, errors, system prompt")
   Component(infra, "infra/", "adapters", "QdrantService, EmbeddingService, LlmClient, ContentApiClient, DocumentProcessor, pdf_parser, web_fetcher, reranker")

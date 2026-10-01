@@ -3,7 +3,7 @@
 Package `recommendation` in the single Explore ML app (port 8000):
 `module.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` /
 `tests/` / `training/`, plus `celery_app.py`, `tasks.py` and the `run_*.py`
-batch entry points. Setup, `.env` and run commands:
+batch entry points. Setup and run commands:
 [`python_ml/README.md`](../README.md).
 
 Offline and online recommendation stack for Explore products:
@@ -19,9 +19,10 @@ Install from `python_ml/` as described there. LightFM is optional
 (`requirements-optional.txt`) because it does not build on Python 3.12;
 without it the suggestions job skips that source.
 
-Point `python_ml/.env` at the same Postgres (`DATABASE_URL`), Redis (`REDIS_URL`,
-`REDIS_PASSWORD`) and Cassandra (`CASSANDRA_CONTACT_POINTS`,
-`CASSANDRA_KEYSPACE`, `CASSANDRA_LOCAL_DC`) as the product backend.
+Use the same Postgres, Redis and Cassandra as the product backend. The
+secrets `DATABASE_URL` and `REDIS_PASSWORD` come from `python_ml/.env`;
+`REDIS_URL`, `CASSANDRA_CONTACT_POINTS`, `CASSANDRA_KEYSPACE` and
+`CASSANDRA_LOCAL_DC` are constants in [`config.py`](config.py).
 
 ## Batch jobs (CLI)
 
@@ -93,16 +94,15 @@ return `{items: [{id, score}]}`.
 All three rank routes use the same feed ranker; `explores:rank` does not read
 `explore:hot`, so pass the hot list as `candidate_ids`. When no model file is
 found, candidates come back in their original order with score `1.0`. Recall
-only works with the Redis store; with `VECTOR_BACKEND=faiss` it returns an
-empty list.
+only works with the Redis store; with `VECTOR_BACKEND = "faiss"` it returns
+an empty list.
 
-Environment variables:
+Constants in `config.py`:
 
-- `VECTOR_BACKEND` – `redis` (default) or `faiss`
-- `FAISS_DIM` (default `64`), `FAISS_INDEX_PATH`, `FAISS_IDS_PATH` – Faiss
-  index configuration
-- `FEED_RANKER_MODEL`, `RECOMMENDATION_MODEL_DIR`, `LOCAL_MODELS_ROOT` –
-  model paths
+- `VECTOR_BACKEND` – `"redis"` or `"faiss"`
+- `FAISS_DIM` (`64`), `FAISS_INDEX_PATH`, `FAISS_IDS_PATH` – Faiss index
+- `FEED_RANKER_MODEL`, `RECOMMENDATION_MODEL_DIR` – model paths under the
+  shared `LOCAL_MODELS_ROOT`
 
 ## Celery (optional)
 
@@ -123,8 +123,8 @@ run_suggestions.delay()
 run_explore.delay()
 ```
 
-`CELERY_BROKER_URL` falls back to the `REDIS_URL` env var, then to
-`redis://localhost:6379/0`.
+The broker is `CELERY_BROKER_URL` (`redis://localhost:6379/0`) in
+`config.py`.
 
 ## Tests
 

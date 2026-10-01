@@ -9,11 +9,11 @@ Video has no `training/`.
 
 ## Setup
 
-Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). The pipeline warms up at startup.
+Setup and run commands: [`python_ml/README.md`](../README.md). The pipeline
+warms up at startup.
 
 On macOS without CUDA, local generation is skipped: jobs fail with "Local
-video generation not supported on this platform". Set `VIDEO_FORCE_LOCAL=1`
-(or the legacy `VIDEO_GEN_FORCE_LOCAL=1`) to try anyway.
+video generation is skipped on macOS without CUDA".
 
 ## API
 
@@ -32,14 +32,16 @@ Poll the job until `status` is `succeeded`, then fetch `video_url`.
 
 ## Configuration
 
-| Variable | Default |
-| -------- | ------- |
-| `BASE_URL` (shared) | `http://localhost:$PORT` |
-| `VIDEO_OUTPUT_DIR` | `video/output` |
+Constants in [`config.py`](config.py); the device is CUDA, then MPS, then
+CPU.
+
+| Constant | Value |
+| -------- | ----- |
+| `BASE_URL` (shared, `python_ml/config.py`) | `http://localhost:8000` |
+| `VIDEO_OUTPUT` | `video/output/video` |
 | `COGVIDEOX_MODEL` | `THUDM/CogVideoX-2b` (Hugging Face id; `LOCAL_MODELS_ROOT` is not used) |
-| `VIDEO_DEVICE=cpu` | force CPU (otherwise CUDA, then MPS) |
-| `VIDEO_FORCE_LOCAL=1` | run locally on macOS without CUDA |
-| `HF_ENDPOINT` | `https://hf-mirror.com` when unset |
+
+The app sets `HF_ENDPOINT=https://hf-mirror.com` when it is unset.
 
 ## Tests
 

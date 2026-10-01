@@ -22,7 +22,7 @@ module contract: [`docs/developer/python-services.md`](../docs/developer/python-
 cd python_ml
 uv venv && source .venv/bin/activate
 uv pip install -r requirements.txt --override overrides.txt
-cp .env.example .env          # loaded automatically at startup
+cp .env.example .env          # secrets only; loaded at startup
 uvicorn main:app --port 8000  # or: python main.py
 ```
 
@@ -31,37 +31,29 @@ qwen-asr pins `4.57.6`; both work with `4.57.6`, so the override lets uv
 resolve one environment. LightFM does not build on Python 3.12, so it
 lives in `recommendation/requirements-optional.txt`.
 
-To run only some modules, set `EXPLORE_MODULES` to a comma-separated
-subset. Heavy model libraries load lazily, so the app starts without
-weights. RAG reports `degraded` in `/health` until its embedding model
-in Ollama is reachable.
-
-```bash
-EXPLORE_MODULES=rag,vision uvicorn main:app --port 8000
-```
+Heavy model libraries load lazily, so the app starts without weights.
+RAG reports `degraded` in `/health` until its embedding model in Ollama
+is reachable.
 
 ## Shared endpoints
 
 | Path | Purpose |
 | --- | --- |
 | `GET /health` | `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}` |
-| `GET /health/live` | Process is up |
-| `GET /health/ready` | 503 with per-module reasons until every module is ready |
-| `GET /metrics` | Prometheus metrics |
 | `GET /docs` | OpenAPI UI for all modules |
 
 ## Settings
 
-One `python_ml/.env` holds every module's variables;
-[`.env.example`](.env.example) groups them by module.
+Settings are constants in code; edit the file to change one.
 
-| Variable | Default | Purpose |
-| --- | --- | --- |
-| `HOST` / `PORT` | `0.0.0.0` / `8000` | Bind address |
-| `BASE_URL` | `http://localhost:$PORT` | Base for media URLs the image, speech and video modules return |
-| `EXPLORE_MODULES` | all six | Modules to load |
-| `CONTENT_API_URL` | — | Content API that RAG syncs posts and comments from |
-| `DATABASE_URL` | — | Postgres for recommendation |
+| File | Holds |
+| --- | --- |
+| [`config.py`](config.py) | `HOST`, `PORT`, `BASE_URL` (media URLs), `LOCAL_MODELS_ROOT` (`~/Codes/models`) |
+| `<module>/config.py` | Models, backends, thresholds and service URLs for that module |
+
+Only secrets come from `python_ml/.env` ([`.env.example`](.env.example)):
+`DATABASE_URL` and `REDIS_PASSWORD` (recommendation) and
+`OPENAI_API_KEY` (RAG with the OpenAI provider).
 
 ## Batch jobs and training
 

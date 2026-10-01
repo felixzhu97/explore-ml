@@ -7,14 +7,15 @@ Package `image_playground` in the single Explore ML app (port 8000):
 
 | Capability | Default backend | Local path (under `LOCAL_MODELS_ROOT`) | Other |
 | ---------- | --------------- | -------------------------------------- | ----- |
-| Image      | `qwen`          | `image/models/Qwen-Image`              | `IMAGE_BACKEND=sd` (default `runwayml/stable-diffusion-v1-5`) |
+| Image      | `qwen`          | `image/models/Qwen-Image`              | `IMAGE_BACKEND = "sd"` (`runwayml/stable-diffusion-v1-5`) |
 
-`IMAGE_MODEL` overrides the model for either backend; `SD_MODEL` is read when
-`IMAGE_MODEL` is unset.
+`IMAGE_MODEL` follows the backend; edit it in `config.py` to load another
+model.
 
 ## Setup
 
-Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). The pipeline loads on the first generate request, not at startup.
+Setup and run commands: [`python_ml/README.md`](../README.md). The pipeline
+loads on the first generate request, not at startup.
 
 ## API
 
@@ -32,15 +33,18 @@ Poll the job until `status` is `succeeded`, then fetch `image_url`.
 
 ## Configuration
 
-| Variable | Default |
-| -------- | ------- |
-| `BASE_URL` (shared) | `http://localhost:$PORT` |
-| `IMAGE_PLAYGROUND_OUTPUT_DIR` | `image_playground/output` |
-| `IMAGE_PLAYGROUND_DEVICE=cpu` | force CPU |
-| `IMAGE_BACKEND` / `IMAGE_MODEL` / `SD_MODEL` | `qwen` / per backend / — |
-| `IMAGE_LORA_PATH` / `IMAGE_LORA_SCALE` | — / `1.0` |
-| `LOCAL_MODELS_ROOT` | `~/Codes/models` |
-| `HF_ENDPOINT` | `https://hf-mirror.com` when unset |
+Constants in [`config.py`](config.py); the device is CUDA, then MPS, then
+CPU.
+
+| Constant | Value |
+| -------- | ----- |
+| `BASE_URL` (shared, `python_ml/config.py`) | `http://localhost:8000` |
+| `IMAGE_OUTPUT` | `image_playground/output/image` |
+| `IMAGE_BACKEND` / `IMAGE_MODEL` | `"qwen"` / per backend |
+| `IMAGE_LORA_PATH` / `IMAGE_LORA_SCALE` | `None` / `1.0` |
+| `LOCAL_MODELS_ROOT` (shared) | `~/Codes/models` |
+
+The app sets `HF_ENDPOINT=https://hf-mirror.com` when it is unset.
 
 ## LoRA
 

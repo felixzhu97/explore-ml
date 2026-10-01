@@ -22,7 +22,7 @@ these shapes over time.
 ```mermaid
 flowchart LR
   subgraph integrate [Integrate once]
-    Env[EXPLORE_ML_URL]
+    Env[One_base_URL]
     Client[HTTP_client_timeouts]
     Contract[OpenAPI_/api/v1]
   end
@@ -44,8 +44,9 @@ flowchart LR
 ```
 
 Every module runs in one FastAPI process on one port. Media Gen is three
-modules (Image Playground, Speech and Video) behind the same base URL;
-`EXPLORE_MODULES` decides which ones load.
+modules (Image Playground, Speech and Video) behind the same base URL.
+Settings are constants in each module's `config.py`; only secrets come from
+the environment.
 
 Prefer one base URL, one `.env` / YAML block on the product API, and stable
 `/api/v1` custom methods. Call the app only over loopback from the
@@ -117,7 +118,7 @@ contract.
 flowchart TB
   Root[LOCAL_MODELS_ROOT]
   API[Stable_/api/v1_contract]
-  subgraph backends [Swap with env only]
+  subgraph backends [Swap in config.py only]
     Local[Local_weights]
     Hub[Hub_id]
     Light[Lightweight_backend]
@@ -128,8 +129,9 @@ flowchart TB
   Light --> API
 ```
 
-Set `LOCAL_MODELS_ROOT` once. Change `IMAGE_BACKEND`, `VOICE_BACKEND`, or model
-ids without renaming routes.
+`LOCAL_MODELS_ROOT` lives in one place (`python_ml/config.py`). Change
+`IMAGE_BACKEND`, `VOICE_BACKEND`, or model ids in the module's `config.py`
+without renaming routes.
 
 ### Offline training and inference
 
@@ -177,7 +179,7 @@ flowchart LR
 
 **Tune adapters, not contracts.** Train small models locally and large ones on
 a single rented GPU. Write each result beside its base model under
-`LOCAL_MODELS_ROOT`, select it with one env var, and promote it only when it
+`LOCAL_MODELS_ROOT`, select it with one config constant, and promote it only when it
 beats the base model on the same held-out split. Prefer LoRA / QLoRA for
 billion-parameter models ([LoRA](https://arxiv.org/abs/2106.09685),
 [QLoRA](https://arxiv.org/abs/2305.14314)). Steps live in the
@@ -188,7 +190,7 @@ flowchart LR
   Base[Base_model]
   Train[Train_local_or_one_GPU]
   Ft[name-ft_beside_base]
-  Env[One_env_var]
+  Env[One_config_constant]
   Eval[Same_held_out_split]
   Base --> Train --> Ft --> Env --> Eval
   Eval -->|better| Promote[Promote]
@@ -238,12 +240,12 @@ there instead of hard-coding ad-hoc clients.
 
 ### Easiest product wiring
 
-**Prefer one env var and timeouts—nothing else for first connect.** The name
-matches the `ui/` proxy.
+**Prefer one base URL and timeouts—nothing else for first connect.** The
+`ui/` proxy points at the same `http://localhost:8000`.
 
 ```mermaid
 flowchart LR
-  URL[EXPLORE_ML_URL]
+  URL[Base_URL]
   App[localhost:8000]
   Health[GET_/health]
   URL --> App
@@ -251,8 +253,7 @@ flowchart LR
 ```
 
 Own connect timeouts and fallbacks in the product API. Read `GET /health`:
-degrade a feature when its module reports `degraded` or `error`, or the app is
-down; do not hang the main request forever.
+degrade a feature when its module reports `degraded`, or the app is down; do not hang the main request forever.
 
 ### Server-Sent Events
 
@@ -298,7 +299,7 @@ flowchart LR
   Query --> Store
 ```
 
-Point embedding and Qdrant URLs through env. Re-ingest after any embedding
+Keep embedding and Qdrant URLs in `rag/config.py`. Re-ingest after any embedding
 model change.
 
 ### Local LLM runtimes
@@ -378,8 +379,8 @@ flowchart LR
   Image --> Policy --> Decision
 ```
 
-Expose `images:predict` and `images:moderate` as separate methods. Configure
-thresholds in env—not in the client.
+Expose `images:predict` and `images:moderate` as separate methods. Keep
+thresholds in `vision/config.py`—not in the client.
 
 ### Video sampling
 
@@ -495,7 +496,7 @@ flowchart LR
     Asr[audios_transcribe]
     AsrWs[ws_audios_transcribe]
   end
-  Config[Backend_and_model_env]
+  Config[Backend_and_model_config]
   Config --> Img
   Config --> Vid
   Config --> Tts

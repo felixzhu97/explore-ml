@@ -22,21 +22,18 @@ flowchart LR
 
 ## Get started
 
-1. Start the app with the modules you need (see
-   [Operator setup](operator-setup.md)).
+1. Start the app (see [Operator setup](operator-setup.md)).
 2. Confirm health on the base URL:
 
 ```bash
-export EXPLORE_ML_URL=http://localhost:8000
-curl -s "$EXPLORE_ML_URL/health"
+curl -s http://localhost:8000/health
 ```
 
-   The response lists every loaded module with its `status` (`ok`,
-   `degraded` or `error`) and `latency_ms`. `/health/live` and
-   `/health/ready` serve process probes.
+   The response lists every module with its `status` (`ok` or
+   `degraded`) and `latency_ms`.
 
-3. Open `$EXPLORE_ML_URL/docs` and copy one request from OpenAPI.
-4. Set one env var on the product API to `$EXPLORE_ML_URL` (see
+3. Open `http://localhost:8000/docs` and copy one request from OpenAPI.
+4. Point the product API's upstream at `http://localhost:8000` (see
    [Loopback integration](loopback-integration.md)).
 5. Call the same route through the product API once.
 
@@ -64,8 +61,7 @@ flowchart TB
 
 Relative to the base URL:
 
-- Health — `GET /health` (every module), `/health/live`, `/health/ready`;
-  `GET /metrics` for Prometheus
+- Health — `GET /health` (every module)
 - Contract — `GET /docs` and `GET /openapi.json` (all modules in one
   document)
 - Recommendation — `POST /api/v1/feeds:rank`, `explores:rank`, `reels:rank`,

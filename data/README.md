@@ -7,7 +7,7 @@ Test and fixture data for Explore ML services.
 - Pass fixture paths to `training/` scripts relative to the repo root
   (`data/finetune/...`).
 - Runtime state is not fixture data: RAG's embedded Qdrant store defaults to
-  `python_ml/rag/data/qdrant` (`QDRANT_PATH`), and helpers write generated
+  `python_ml/rag/data/qdrant` (`QDRANT_PATH`), and modules write generated
   files under their own `output/`. Do not commit either.
 
 ## Fine-tuning

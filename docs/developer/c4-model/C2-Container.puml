@@ -20,8 +20,8 @@ System_Ext(sibling_api, "Sibling Explore API", "Product API boundary")
 
 System_Boundary(ml, "Explore ML") {
   Container(ui, "Model Test UI", "Angular 22, NG-ZORRO, Tailwind, d3", "ui/ :4200 (ng serve); module pages with D3 charts")
-  Container(proxy, "ML proxy", "ng serve proxy", "ui/proxy.conf.mjs + shared/proxy.ts; /ml -> ML app (prefix stripped, WS on), override with EXPLORE_ML_URL")
-  Container(app, "ML app", "FastAPI, uvicorn", "python_ml/main.py :8000; modules recommendation, vision, rag, image_playground, speech, video (EXPLORE_MODULES); GET /health aggregates them")
+  Container(proxy, "ML proxy", "ng serve proxy", "ui/proxy.conf.json; /ml -> ML app (prefix stripped, WS on)")
+  Container(app, "ML app", "FastAPI, uvicorn", "python_ml/main.py :8000; modules recommendation, vision, rag, image_playground, speech, video; GET /health aggregates them")
   ContainerDb(fixtures, "Fixture data", "JSONL", "data/finetune/ for training/ scripts")
 }
 

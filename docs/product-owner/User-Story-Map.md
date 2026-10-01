@@ -40,7 +40,7 @@ Health means `GET /health` on port 8000: one entry per loaded module with
 | Epic | Status | Notes |
 | ---- | ------ | ----- |
 | E1 | Done | Six services on separate ports (8000–8005) |
-| E2 | Done | One FastAPI app on port 8000 (modules under `python_ml/`, `EXPLORE_MODULES`) |
+| E2 | Done | One FastAPI app on port 8000 (modules under `python_ml/`) |
 | E3 | Done | `ui/` model-test front end with one page per module |
 
 ## Delivered stories
@@ -52,6 +52,7 @@ Health means `GET /health` on port 8000: one entry per loaded module with
 | Streaming ASR over WebSocket (`/ws/v1/audios:transcribe`) | E1 | Done |
 | Fine-tuning scripts (`training/` in every module except video) | E1 | Done |
 | Single app, aggregated `/health`, one requirements and `.env.example` | E2 | Done |
+| Inline non-secret settings; `.env` for secrets only | E2 | Done |
 | Vision prediction scores and per-frame video moderation | E2 | Done |
 | UI single `/ml` proxy and per-module health | E2 | Done |
 | UI module pages: recommendation, vision, RAG, image, speech, video | E3 | Done |
