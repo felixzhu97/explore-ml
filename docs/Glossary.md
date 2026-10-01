@@ -29,7 +29,7 @@ architecture naming. Chinese labels are for localization only.
 | Image Playground | 图像游乐场 | `python_ml/image-playground` | `:8003` | Image generation |
 | Speech           | 语音       | `python_ml/speech`           | `:8004` | ASR + TTS |
 | Video            | 视频生成   | `python_ml/video`            | `:8005` | Video generation |
-| Model Test UI  | 测模界面 | `ui/`                      | `:4200`        | Angular dev UI; proxies `/svc/<name>` |
+| Model Test UI  | 测模界面 | `ui/`                      | `:4200`        | Angular dev UI; proxies `/svc/<id>` |
 | Fixture Data   | 测试数据 | `data/`                    | —              | Small fixtures only                 |
 
 ```mermaid
@@ -53,10 +53,63 @@ flowchart LR
 | Explore ML        | Explore ML | Sibling repo of optional Python FastAPI helpers for Explore products    |
 | Loopback Upstream | 旁路上游   | Called only by a sibling API over localhost; never from product clients |
 | Fixture Data      | 测试数据   | Committed small files under `data/`; large weights stay gitignored      |
-| Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT`; obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground / Speech / Video and RAG rerank prefer those paths |
+| Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT` (default `~/Codes/models`); obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground, Speech, RAG rerank and the Recommendation feed ranker read it. Video loads the Hugging Face id in `COGVIDEOX_MODEL` instead |
 | ASR               | 语音识别   | Speech-to-text on Speech (`POST /api/v1/audios:transcribe`); default local Qwen3-ASR after download |
-| Service Proxy     | 服务代理   | `ng serve` route `/svc/<name>` → helper on loopback; target overridable via `<NAME>_URL` |
-| Module Page       | 模块页     | One UI page per helper module (`#/<name>`) with a card for every endpoint |
+| Streaming ASR     | 流式识别   | `WS /ws/v1/audios:transcribe`; client sends `audio` / `commit` / `stop`, server answers `partial` / `final` / `error`; buffered by `StreamingTranscriptionSession` |
+| TTS               | 语音合成   | Text-to-speech on Speech (`POST /api/v1/voices:synthesize`); returns `audio_url` directly (`.wav` with Qwen, `.mp3` with Edge) |
+| Service Proxy     | 服务代理   | `ng serve` route `/svc/<id>` → helper on loopback (`image` for Image Playground); target overridable via `RECOMMENDATION_URL`, `VISION_URL`, `RAG_URL`, `IMAGE_URL`, `SPEECH_URL`, `VIDEO_URL` |
+| Module Page       | 模块页     | One UI page per helper module (`#/<id>`) with a card for every endpoint |
+| Health Probe      | 健康探针   | Recommendation and Vision serve `GET /health`; RAG serves `/health`, `/health/live`, `/health/ready`; Image Playground, Speech and Video have none, so the UI probes `/openapi.json` |
+
+---
+
+## 4. Domain Terms by Helper | 各模块领域术语
+
+Each term is a class or constant in the helper's `domain/` (or `service/` /
+`infra/` where noted). Services are `XService` classes provided by an
+`@lru_cache` `get_x_service()` function.
+
+### RAG (`python_ml/rag`)
+
+| Preferred Term     | 中文       | Code                              | Definition |
+| ------------------ | ---------- | --------------------------------- | ---------- |
+| Chunk              | 文本块     | `domain/chunker.py` `Chunk`       | Token-bounded slice of a document with id, text and metadata |
+| Text Chunker       | 分块器     | `domain/chunker.py` `TextChunker` | Splits text or PDF pages into chunks (`CHUNK_SIZE`, `CHUNK_OVERLAP`) |
+| Chunk Indexer      | 块索引器   | `service/indexing.py` `ChunkIndexer` | Embeds chunks in batches of 10 and upserts them into one collection |
+| Collection         | 集合       | `domain/query.py` `SEARCHABLE_COLLECTIONS` | Qdrant collections `documents`, `posts`, `comments`, `webpages` |
+| Search Hit         | 检索命中   | `domain/query.py` `SearchHit`     | One retrieved chunk: id, score, payload |
+| Answer             | 回答       | `domain/query.py` `Answer`        | LLM text plus source hits, chunks searched and generation time |
+| Rerank Sidecar     | 重排旁路   | `infra/reranker.py`               | Optional HTTP reranker (`RERANK_URL`); rescores `top_k * 3` candidates |
+| Exported Vectors   | 导出向量   | `domain/query.py` `ExportedVectors` | Stored chunk vectors for `documents:exportVectors`; `dimension` 0 when empty |
+| Indexed Document   | 已索引文档 | `domain/document.py` `IndexedDocument` | Result of an upload: id, filename, size, chunk count |
+| Scraped Webpage    | 已抓取网页 | `domain/webpage.py` `ScrapedWebpage` | Result of one scrape; `status` is `completed` or `error: ...` |
+| Sync Result        | 同步结果   | `domain/sync.py` `SyncResult`     | Totals for a posts / comments sync from the content API |
+| Domain Error       | 领域错误   | `domain/errors.py`                | `InvalidRequestError` 400, `NotFoundError` 404, `ServiceUnavailableError` 503, `UpstreamError` upstream status |
+
+### Vision (`python_ml/vision`)
+
+| Preferred Term      | 中文     | Code                                    | Definition |
+| ------------------- | -------- | --------------------------------------- | ---------- |
+| Moderation Category | 审核类别 | `domain/moderation.py` `ModerationCategory` | One flagged label with its score |
+| Moderation Verdict  | 审核结论 | `domain/moderation.py` `ModerationVerdict`  | `safe` flag plus the flagged categories |
+
+### Image Playground and Video
+
+| Preferred Term | 中文     | Code                       | Definition |
+| -------------- | -------- | -------------------------- | ---------- |
+| Job            | 生成任务 | `domain/job.py` `Job`      | One generation request: id, status, url, error |
+| Job Status     | 任务状态 | `domain/job.py` `JobStatus` | `pending`, `succeeded` or `failed` |
+| Job Store      | 任务存储 | `domain/job.py` `JobStore` | In-memory store of jobs for polling (`imageJobs/{id}`, `videoJobs/{id}`) |
+| LoRA Adapter   | LoRA 适配器 | `infra/pipeline.py` `LORA_ADAPTER_NAME` | Image Playground loads `IMAGE_LORA_PATH` as adapter `fine_tuned` |
+
+### Recommendation (`python_ml/recommendation`)
+
+| Preferred Term   | 中文     | Code                                   | Definition |
+| ---------------- | -------- | -------------------------------------- | ---------- |
+| Rank             | 排序     | `feeds:rank`, `explores:rank`, `reels:rank` | Score caller-supplied candidates with the feed ranker; score 1.0 when no model is loaded |
+| Recall           | 召回     | `feeds:recall`                          | Nearest items for a user from the vector store |
+| Feature Registry | 特征注册 | `domain/feature_registry.py`            | Named feature definitions shared by training and serving |
+| Vector Store     | 向量存储 | `domain/vector_store.py` `VectorStore`  | Interface implemented by Redis and Faiss stores in `infra/` |
 
 ---
 
