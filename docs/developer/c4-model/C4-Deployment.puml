@@ -24,13 +24,14 @@ Deployment_Node(dev_machine, "Dev machine", "macOS / Linux") {
   Deployment_Node(data_node, "data/", "fixtures") {
     Container(fixtures, "fixtures", "Files", "Small files in git; large weights gitignored")
   }
-  Deployment_Node(ui_node, "ui/", "planned") {
-    Container(ui, "Model Test UI", "(not implemented)", "Sibling of python_ml")
+  Deployment_Node(ui_node, "ui/ (Node)", "ng serve :4200") {
+    Container(ui, "Model Test UI", "Angular", "Proxies /svc/<name> to :8000-:8005")
   }
 }
 
 Rel(rag, fixtures, "optional path")
-Rel(ui, rec, "HTTP", "planned")
+Rel(ui, rec, "HTTP", "/svc proxy, loopback")
+Rel(ui, rag, "HTTP", "/svc proxy, loopback")
 
 SHOW_LEGEND()
 @enduml

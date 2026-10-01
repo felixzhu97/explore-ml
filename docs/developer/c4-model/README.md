@@ -24,6 +24,7 @@ cd docs/developer/c4-model && docker run --rm -v "$PWD":/data plantuml/plantuml 
 | image-playground | `:8003` |
 | speech | `:8004` |
 | video | `:8005` |
+| Model Test UI (`ng serve`) | `:4200` |
 
 Sibling product APIs keep their own loopback upstream URLs pointed at these
 ports.

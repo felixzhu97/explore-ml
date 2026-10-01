@@ -31,3 +31,25 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
           pytest -q
+
+  ui:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: ui
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: ui/package-lock.json
+
+      - name: Install, test and build
+        run: |
+          npm ci
+          npm test
+          npm run build

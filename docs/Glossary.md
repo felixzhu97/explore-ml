@@ -29,13 +29,13 @@ architecture naming. Chinese labels are for localization only.
 | Image Playground | 图像游乐场 | `python_ml/image-playground` | `:8003` | Image generation |
 | Speech           | 语音       | `python_ml/speech`           | `:8004` | ASR + TTS |
 | Video            | 视频生成   | `python_ml/video`            | `:8005` | Video generation |
-| Model Test UI  | 测模界面 | `ui/`                      | —              | Placeholder; sibling of `python_ml` |
+| Model Test UI  | 测模界面 | `ui/`                      | `:4200`        | Angular dev UI; proxies `/svc/<name>` |
 | Fixture Data   | 测试数据 | `data/`                    | —              | Small fixtures only                 |
 
 ```mermaid
 flowchart LR
   siblingApi[explore-chat Spring] --> pyMl[python_ml]
-  testUi[ui future] --> pyMl
+  testUi[Model Test UI] -->|/svc proxy| pyMl
   pyMl --> rec[Recommendation]
   pyMl --> vis[Vision]
   pyMl --> ragSvc[RAG]
@@ -55,6 +55,9 @@ flowchart LR
 | Fixture Data      | 测试数据   | Committed small files under `data/`; large weights stay gitignored      |
 | Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT`; obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground / Speech / Video and RAG rerank prefer those paths |
 | ASR               | 语音识别   | Speech-to-text on Speech (`POST /api/v1/audios:transcribe`); default local Qwen3-ASR after download |
+| Service Proxy     | 服务代理   | `ng serve` route `/svc/<name>` → helper on loopback; target overridable via `<NAME>_URL` |
+| Embedding Atlas   | 向量地图   | UI page projecting RAG chunk vectors (`POST /api/v1/documents:exportVectors`) to 2-D with UMAP in the browser |
+| Eval Report       | 评估报告   | JSON printed by `python_ml/*/training/eval_*.py`; the UI detects its kind and compares fine-tuned vs base |
 
 ---
 
