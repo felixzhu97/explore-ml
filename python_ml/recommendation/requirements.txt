@@ -13,4 +13,4 @@ numpy>=2.5.3
 torch>=2.14.0
 torchvision>=0.29.0
 fastapi>=0.141.1
-uvicorn[standard]>=0.53.0
+uvicorn[standard]>=0.54.0
