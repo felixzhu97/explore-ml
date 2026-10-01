@@ -95,6 +95,11 @@ most for a full stack; one var for a single feature.
 **Follow [Model download](model-download.md).** Only when local weights are the
 chosen backend.
 
+### Adapt a model
+
+**Follow [Fine-tuning](fine-tuning.md).** Train, compare with the base model,
+and promote with one env var.
+
 ## Related
 
 [Operator setup](operator-setup.md)
@@ -102,6 +107,8 @@ chosen backend.
 [Loopback integration](loopback-integration.md)
 
 [Model download](model-download.md)
+
+[Fine-tuning](fine-tuning.md)
 
 [Guideline](../Guideline.md)
 
