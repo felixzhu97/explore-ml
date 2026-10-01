@@ -1,10 +1,10 @@
 # ui
 
 The model test UI is a local Angular app for exercising the helpers under
-`../python_ml/`. You can check helper health, call each helper from a
-playground, explore RAG embeddings on a 2-D map, and compare fine-tuning eval
-reports. Charts use [d3](https://d3js.org/). The embedding map uses
-[embedding-atlas](https://github.com/apple/embedding-atlas).
+`../python_ml/`. Each helper module gets one page, and every endpoint of that
+module can be called from its page. Styles are inline
+[Tailwind CSS](https://tailwindcss.com/) classes; score charts use
+[d3](https://d3js.org/).
 
 Keep this directory a sibling of `python_ml/`. Do not nest the UI under the
 API tree.
@@ -51,15 +51,19 @@ elsewhere, put the same `/svc/<name>` rewrites in front of it.
 
 ## Pages
 
-| Route                 | What it does                                                                                                                                                        |
-| --------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `#/`                  | Polls every helper's health endpoint and charts the latency.                                                                                                        |
-| `#/playground/<name>` | One playground per helper: ranking, image or video moderation, RAG upload and streaming Q&A, image and video jobs, TTS, and file or live ASR with a waveform.       |
-| `#/atlas`             | Exports RAG vectors (`POST /api/v1/documents:exportVectors`), projects them with UMAP in the browser, highlights query hits, and lists nearest neighbours on click. |
-| `#/evaluation`        | Drop JSON from `python_ml/*/training/eval_*.py` (or click **加载示例报告**) to compare fine-tuned and base results.                                                 |
+| Route      | Endpoints you can call                                                                                       |
+| ---------- | ------------------------------------------------------------------------------------------------------------ |
+| `#/`       | Health of every module, with a d3 latency chart.                                                             |
+| `#/rec`    | `{feeds,explores,reels}:rank`, `feeds:recall`                                                                |
+| `#/vision` | `images:predict`, `images:moderate`, `videos:moderate` (file upload or URL)                                  |
+| `#/rag`    | collections, documents (upload, list, get, delete), query, stream query, export vectors, scrape, crawl, sync |
+| `#/image`  | `images:generate`, then polls `imageJobs/{id}` and shows the image                                           |
+| `#/speech` | `voices:synthesize`, `audios:transcribe`, live ASR over `WS /ws/v1/audios:transcribe`                        |
+| `#/video`  | `videos:generate`, then polls `videoJobs/{id}` and plays the video                                           |
 
-The atlas keeps all computation in the browser. When a store holds more than
-2000 points, the page draws a deterministic sample and shows a "已抽样" notice.
+Every module page starts with a health check and lists one card per endpoint:
+the form, the elapsed time, any error, and the raw JSON response. Image, speech
+and video have no health route, so their check reads `/openapi.json`.
 
 ## Checks
 
@@ -74,11 +78,12 @@ CI runs both on every pull request.
 
 ```text
 src/app/
-├── core/      helper registry, /svc proxy rules, typed API clients, report parsing
-├── charts/    d3 components (bars, grouped bars, confusion matrix, waveform)
-└── pages/     overview, playground, atlas, evaluation
-public/samples/  example eval reports
+├── core/      helper registry, /svc proxy rules, typed API clients, Call state
+├── charts/    d3 bar chart
+├── ui/        module page frame and endpoint card
+└── pages/     home plus one page per module
 ```
 
-Styling follows the Apple design tokens in `src/styles.css`: one accent colour
+Components style themselves with inline Tailwind classes. `src/styles.css` only
+maps the Apple design tokens into the Tailwind theme: one accent colour
 (`#0066cc`), 17px body text, pill buttons, no shadows and no gradients.

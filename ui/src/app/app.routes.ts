@@ -4,23 +4,37 @@ export const routes: Routes = [
   {
     path: '',
     title: 'Explore ML',
-    loadComponent: () => import('./pages/overview/overview').then((m) => m.Overview),
-  },
-  { path: 'playground', redirectTo: 'playground/rec' },
-  {
-    path: 'playground/:helper',
-    title: '调试台 · Explore ML',
-    loadComponent: () => import('./pages/playground/playground').then((m) => m.Playground),
+    loadComponent: () => import('./pages/home').then((m) => m.Home),
   },
   {
-    path: 'atlas',
-    title: '向量地图 · Explore ML',
-    loadComponent: () => import('./pages/atlas/atlas').then((m) => m.Atlas),
+    path: 'rec',
+    title: '推荐 · Explore ML',
+    loadComponent: () => import('./pages/rec').then((m) => m.RecPage),
   },
   {
-    path: 'evaluation',
-    title: '评估看板 · Explore ML',
-    loadComponent: () => import('./pages/evaluation/evaluation').then((m) => m.Evaluation),
+    path: 'vision',
+    title: '视觉 · Explore ML',
+    loadComponent: () => import('./pages/vision').then((m) => m.VisionPage),
+  },
+  {
+    path: 'rag',
+    title: 'RAG · Explore ML',
+    loadComponent: () => import('./pages/rag').then((m) => m.RagPage),
+  },
+  {
+    path: 'image',
+    title: '图像生成 · Explore ML',
+    loadComponent: () => import('./pages/image').then((m) => m.ImagePage),
+  },
+  {
+    path: 'speech',
+    title: '语音 · Explore ML',
+    loadComponent: () => import('./pages/speech').then((m) => m.SpeechPage),
+  },
+  {
+    path: 'video',
+    title: '视频生成 · Explore ML',
+    loadComponent: () => import('./pages/video').then((m) => m.VideoPage),
   },
   { path: '**', redirectTo: '' },
 ];

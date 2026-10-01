@@ -40,7 +40,7 @@ export const SERVICES: readonly Service[] = [
     dir: 'image-playground',
     port: 8003,
     envVar: 'IMAGE_URL',
-    healthPath: '/health',
+    healthPath: '/openapi.json',
   },
   {
     id: 'speech',
@@ -48,7 +48,7 @@ export const SERVICES: readonly Service[] = [
     dir: 'speech',
     port: 8004,
     envVar: 'SPEECH_URL',
-    healthPath: '/health',
+    healthPath: '/openapi.json',
   },
   {
     id: 'video',
@@ -56,7 +56,7 @@ export const SERVICES: readonly Service[] = [
     dir: 'video',
     port: 8005,
     envVar: 'VIDEO_URL',
-    healthPath: '/health',
+    healthPath: '/openapi.json',
   },
 ];
 

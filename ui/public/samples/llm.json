@@ -1,4 +1,0 @@
-{
-  "judge": "qwen2.5:7b",
-  "mean_score": { "rag-qlora": 4.1, "qwen2.5:7b": 3.6 }
-}

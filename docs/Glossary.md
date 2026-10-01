@@ -56,8 +56,7 @@ flowchart LR
 | Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT`; obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground / Speech / Video and RAG rerank prefer those paths |
 | ASR               | 语音识别   | Speech-to-text on Speech (`POST /api/v1/audios:transcribe`); default local Qwen3-ASR after download |
 | Service Proxy     | 服务代理   | `ng serve` route `/svc/<name>` → helper on loopback; target overridable via `<NAME>_URL` |
-| Embedding Atlas   | 向量地图   | UI page projecting RAG chunk vectors (`POST /api/v1/documents:exportVectors`) to 2-D with UMAP in the browser |
-| Eval Report       | 评估报告   | JSON printed by `python_ml/*/training/eval_*.py`; the UI detects its kind and compares fine-tuned vs base |
+| Module Page       | 模块页     | One UI page per helper module (`#/<name>`) with a card for every endpoint |
 
 ---
 

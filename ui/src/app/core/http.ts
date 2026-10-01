@@ -18,7 +18,8 @@ async function parse<T>(res: Response): Promise<T> {
     }
     throw new HttpError(res.status, `${res.status} ${detail}`);
   }
-  return (await res.json()) as T;
+  const text = await res.text();
+  return (text ? JSON.parse(text) : { status: res.status }) as T;
 }
 
 export async function getJson<T>(url: string, init?: RequestInit): Promise<T> {
@@ -38,6 +39,10 @@ export async function postJson<T>(url: string, body: unknown, init?: RequestInit
 
 export async function postForm<T>(url: string, form: FormData): Promise<T> {
   return parse<T>(await fetch(url, { method: 'POST', body: form }));
+}
+
+export async function deleteJson<T>(url: string): Promise<T> {
+  return parse<T>(await fetch(url, { method: 'DELETE' }));
 }
 
 export function errorMessage(e: unknown): string {

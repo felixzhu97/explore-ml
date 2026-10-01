@@ -63,8 +63,8 @@ npm start
 ```
 
 This serves the UI at <http://localhost:4200>. It proxies `/svc/<name>` to the
-helpers above, so you get health checks, playgrounds, a RAG embedding atlas,
-and a fine-tuning eval dashboard without configuring CORS. See
+helpers above without CORS setup. Each helper module has one page where you
+can call all of its endpoints. See
 [ui/README.md](ui/README.md).
 
 ### Configuration
@@ -103,7 +103,7 @@ GitHub Actions.
 
 ```text
 python_ml/     FastAPI helpers (recommendation / vision / rag / image-playground / speech / video)
-ui/            Model-test UI (Angular, d3, embedding-atlas)
+ui/            Model-test UI (Angular, Tailwind, d3)
 data/          Test / fixture data
 docs/          Glossary, Guideline, user-guide, C4, product-owner
 ```

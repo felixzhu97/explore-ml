@@ -18,7 +18,7 @@ const ROW_HEIGHT = 32;
 @Component({
   selector: 'app-bar-chart',
   changeDetection: ChangeDetectionStrategy.OnPush,
-  host: { class: 'chart' },
+  host: { class: 'block w-full text-xs [&_text]:fill-ink-80' },
   template: `<svg #svg role="img" [attr.aria-label]="ariaLabel()"></svg>`,
 })
 export class BarChart {

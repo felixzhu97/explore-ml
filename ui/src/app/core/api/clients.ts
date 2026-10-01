@@ -1,4 +1,4 @@
-import { HttpError, getJson, postForm, postJson } from '../http';
+import { HttpError, deleteJson, getJson, postForm, postJson } from '../http';
 import { svcUrl, toProxyUrl } from '../services';
 import { pollJob, type JobStatus, type PollOptions } from './poll';
 import { readSse } from './sse';
@@ -126,6 +126,53 @@ export function ragUpload(file: File) {
   return postForm<{ id: string; filename: string; status: string; chunks_count: number }>(
     svcUrl('rag', '/api/v1/documents'),
     form,
+  );
+}
+
+export function ragListDocuments(pageSize = 20, pageToken = '') {
+  const params = new URLSearchParams({ page_size: String(pageSize) });
+  if (pageToken) params.set('page_token', pageToken);
+  return getJson<{ documents: unknown[]; next_page_token?: string }>(
+    svcUrl('rag', `/api/v1/documents?${params}`),
+  );
+}
+
+export function ragGetDocument(id: string) {
+  return getJson<unknown>(svcUrl('rag', `/api/v1/documents/${encodeURIComponent(id)}`));
+}
+
+export function ragDeleteDocument(id: string) {
+  return deleteJson<unknown>(svcUrl('rag', `/api/v1/documents/${encodeURIComponent(id)}`));
+}
+
+export function ragScrape(url: string) {
+  return postJson<unknown>(svcUrl('rag', '/api/v1/webpages:scrape'), { url });
+}
+
+export function ragCrawl(urls: string[], max_depth = 1) {
+  return postJson<unknown>(svcUrl('rag', '/api/v1/webpages:crawl'), { urls, max_depth });
+}
+
+export type SyncTarget = 'posts' | 'comments' | 'resources';
+
+export function ragSync(target: SyncTarget, limit = 1000) {
+  return postJson<unknown>(
+    svcUrl('rag', `/api/v1/${target}:sync`),
+    target === 'resources' ? {} : { limit },
+  );
+}
+
+export interface ExportedPoint {
+  id: string;
+  vector: number[];
+  text: string;
+  metadata: Record<string, unknown>;
+}
+
+export function ragExportVectors(collection: string, limit: number) {
+  return postJson<{ dimension: number; points: ExportedPoint[] }>(
+    svcUrl('rag', '/api/v1/documents:exportVectors'),
+    { collection: collection || undefined, limit },
   );
 }
 

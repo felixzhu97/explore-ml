@@ -27,7 +27,7 @@ export interface AsrEvent {
 
 export interface LiveAsrHandlers {
   onEvent: (event: AsrEvent) => void;
-  onSamples: (samples: Float32Array) => void;
+  onSamples?: (samples: Float32Array) => void;
 }
 
 /** Streams microphone audio to the speech helper's WebSocket ASR endpoint. */
@@ -52,7 +52,7 @@ export class LiveAsr {
     this.processor = this.ctx.createScriptProcessor(4096, 1, 1);
     this.processor.onaudioprocess = (e) => {
       const samples = new Float32Array(e.inputBuffer.getChannelData(0));
-      this.handlers.onSamples(samples);
+      this.handlers.onSamples?.(samples);
       if (this.socket?.readyState === WebSocket.OPEN) {
         this.socket.send(
           JSON.stringify({
