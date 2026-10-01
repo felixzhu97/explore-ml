@@ -49,6 +49,7 @@ export class LineChart {
   readonly thresholds = input<Rule[]>([]);
   readonly markers = input<Rule[]>([]);
   readonly highlights = input<Point[]>([]);
+  readonly xMin = input<number>();
   readonly yMax = input<number>();
   readonly height = input(200);
   readonly compact = input(false);
@@ -81,7 +82,8 @@ export class LineChart {
     const innerHeight = Math.max(20, height - margin.top - margin.bottom);
     const points = series.flatMap((item) => item.points);
 
-    const [xMin = 0, xMax = 1] = d3.extent(points, (point) => point.x);
+    const [dataXMin = 0, xMax = 1] = d3.extent(points, (point) => point.x);
+    const xMin = this.xMin() ?? dataXMin;
     const xScale = d3
       .scaleLinear()
       .domain(xMin === xMax ? [xMin, xMin + 1] : [xMin, xMax])
@@ -171,9 +173,9 @@ export class LineChart {
       x2: xScale(rule.value),
       y1: 0,
       y2: innerHeight,
-      textX: xScale(rule.value) + 4,
+      textX: xScale(rule.value) + (xScale(rule.value) > innerWidth * 0.8 ? -4 : 4),
       textY: 10,
-      anchor: 'start',
+      anchor: xScale(rule.value) > innerWidth * 0.8 ? 'end' : 'start',
     }));
   }
 
