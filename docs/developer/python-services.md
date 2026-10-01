@@ -47,10 +47,18 @@ uvicorn main:app --host 0.0.0.0 --port $PORT
 
 ## Layering
 
-- **controller/** — request/response only; call `service`
-- **service/** — orchestration; call `domain` and `infra`
-- **domain/** — models and business rules; no torch / redis / qdrant / httpx
+- **controller/** — routers plus inline Pydantic request/response models;
+  inject the service with
+  `XServiceDependency = Annotated[XService, Depends(get_x_service)]`
+- **service/** — one `XService` class per use case, built by an
+  `@lru_cache` `get_x_service()` provider; orchestrates `domain` and `infra`
+- **domain/** — plain dataclasses, enums, errors and pure rules; no torch /
+  redis / qdrant / httpx / pydantic
 - **infra/** — everything that touches models, stores, networks or files
+
+Tests swap a service through `app.dependency_overrides[get_x_service]`.
+Domain errors (e.g. RAG's `NotFoundError`) map to HTTP status codes in one
+exception-handler module, keeping the `{"detail": ...}` body.
 
 Routes follow Google AIP (resource paths, `:customMethod`, `page_size` /
 `page_token`, standard status codes) directly in `controller/`; there is no

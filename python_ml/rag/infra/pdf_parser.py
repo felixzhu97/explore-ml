@@ -1,7 +1,6 @@
 """Document processing utilities."""
 import io
 import logging
-from typing import Optional
 from pathlib import Path
 
 import fitz  # PyMuPDF
@@ -28,24 +27,24 @@ class PDFParser:
         """
         pages = []
         try:
-            doc = fitz.open(stream=file_content, filetype="pdf")
+            pdf_document = fitz.open(stream=file_content, filetype="pdf")
 
-            for page_num in range(len(doc)):
-                page = doc[page_num]
+            for page_index in range(len(pdf_document)):
+                page = pdf_document[page_index]
                 text = page.get_text("text")
 
                 if text.strip():
                     pages.append({
-                        "page_number": page_num + 1,
+                        "page_number": page_index + 1,
                         "text": text.strip(),
-                        "source": f"page_{page_num + 1}",
+                        "source": f"page_{page_index + 1}",
                     })
 
-            doc.close()
+            pdf_document.close()
             logger.info(f"Parsed PDF with {len(pages)} pages")
 
-        except Exception as e:
-            logger.error(f"Failed to parse PDF: {e}")
+        except Exception as error:
+            logger.error(f"Failed to parse PDF: {error}")
             raise
 
         return pages
@@ -54,10 +53,10 @@ class PDFParser:
     def get_metadata(file_content: bytes) -> dict[str, any]:
         """Extract metadata from PDF."""
         try:
-            doc = fitz.open(stream=file_content, filetype="pdf")
-            metadata = doc.metadata
-            page_count = len(doc)
-            doc.close()
+            pdf_document = fitz.open(stream=file_content, filetype="pdf")
+            metadata = pdf_document.metadata
+            page_count = len(pdf_document)
+            pdf_document.close()
 
             return {
                 "title": metadata.get("title", ""),
@@ -65,8 +64,8 @@ class PDFParser:
                 "subject": metadata.get("subject", ""),
                 "page_count": page_count,
             }
-        except Exception as e:
-            logger.error(f"Failed to extract PDF metadata: {e}")
+        except Exception as error:
+            logger.error(f"Failed to extract PDF metadata: {error}")
             return {}
 
 
@@ -88,8 +87,8 @@ class HTMLParser:
             soup = BeautifulSoup(content, "html.parser")
 
             # Remove script and style elements
-            for script in soup(["script", "style", "nav", "footer", "header"]):
-                script.decompose()
+            for element in soup(["script", "style", "nav", "footer", "header"]):
+                element.decompose()
 
             # Get title
             title = ""
@@ -97,12 +96,12 @@ class HTMLParser:
                 title = soup.title.string or ""
 
             # Convert HTML to markdown-like text
-            h2t = html2text.HTML2Text()
-            h2t.ignore_links = False
-            h2t.ignore_images = True
-            h2t.body_width = 0  # No wrapping
+            html_converter = html2text.HTML2Text()
+            html_converter.ignore_links = False
+            html_converter.ignore_images = True
+            html_converter.body_width = 0  # No wrapping
 
-            text = h2t.handle(str(soup))
+            text = html_converter.handle(str(soup))
 
             # Clean up the text
             lines = []
@@ -129,8 +128,8 @@ class HTMLParser:
                 "links": links,
             }
 
-        except Exception as e:
-            logger.error(f"Failed to parse HTML: {e}")
+        except Exception as error:
+            logger.error(f"Failed to parse HTML: {error}")
             raise
 
     @staticmethod
@@ -217,7 +216,7 @@ class MarkdownParser:
         for section in sections:
             section["content"] = section["content"].strip()
 
-        full_text = "\n\n".join(s["content"] for s in sections)
+        full_text = "\n\n".join(section["content"] for section in sections)
 
         return {
             "title": sections[0]["title"] if sections else "",
@@ -241,17 +240,17 @@ class DocxParser:
             Dictionary with paragraphs
         """
         try:
-            doc = DocxDocument(io.BytesIO(file_content))
+            docx_document = DocxDocument(io.BytesIO(file_content))
 
             paragraphs = []
             full_text = []
 
-            for para in doc.paragraphs:
-                text = para.text.strip()
+            for paragraph in docx_document.paragraphs:
+                text = paragraph.text.strip()
                 if text:
                     paragraphs.append({
                         "text": text,
-                        "style": para.style.name if para.style else "Normal",
+                        "style": paragraph.style.name if paragraph.style else "Normal",
                     })
                     full_text.append(text)
 
@@ -262,8 +261,8 @@ class DocxParser:
                 "text": "\n\n".join(full_text),
             }
 
-        except Exception as e:
-            logger.error(f"Failed to parse DOCX: {e}")
+        except Exception as error:
+            logger.error(f"Failed to parse DOCX: {error}")
             raise
 
 
@@ -285,18 +284,18 @@ class TextParser:
 
         # Group into paragraphs (separated by empty lines)
         paragraphs = []
-        current_para = []
+        current_paragraph = []
 
         for line in lines:
             if line:
-                current_para.append(line)
+                current_paragraph.append(line)
             else:
-                if current_para:
-                    paragraphs.append(" ".join(current_para))
-                    current_para = []
+                if current_paragraph:
+                    paragraphs.append(" ".join(current_paragraph))
+                    current_paragraph = []
 
-        if current_para:
-            paragraphs.append(" ".join(current_para))
+        if current_paragraph:
+            paragraphs.append(" ".join(current_paragraph))
 
         return {
             "lines": lines,
@@ -319,32 +318,32 @@ def parse_file(
     Returns:
         Parsed content
     """
-    ext = Path(filename).suffix.lower()
+    extension = Path(filename).suffix.lower()
 
-    if ext == ".pdf":
+    if extension == ".pdf":
         return {
             "type": "pdf",
             "pages": PDFParser.parse(file_content),
             "metadata": PDFParser.get_metadata(file_content),
         }
-    elif ext in [".html", ".htm"]:
+    elif extension in [".html", ".htm"]:
         text = file_content.decode("utf-8", errors="replace")
         return {
             "type": "html",
             **HTMLParser.parse(text),
         }
-    elif ext == ".md":
+    elif extension == ".md":
         text = file_content.decode("utf-8", errors="replace")
         return {
             "type": "markdown",
             **MarkdownParser.parse(text),
         }
-    elif ext in [".docx", ".doc"]:
+    elif extension in [".docx", ".doc"]:
         return {
             "type": "docx",
             **DocxParser.parse(file_content),
         }
-    elif ext in [".txt", ".text"]:
+    elif extension in [".txt", ".text"]:
         text = file_content.decode("utf-8", errors="replace")
         return {
             "type": "text",
@@ -359,4 +358,4 @@ def parse_file(
                 **TextParser.parse(text),
             }
         except Exception:
-            raise ValueError(f"Unsupported file type: {ext}")
+            raise ValueError(f"Unsupported file type: {extension}")

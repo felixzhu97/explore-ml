@@ -5,8 +5,8 @@ import threading
 
 import config
 
-video_pipe = None
-pipe_lock = threading.Lock()
+video_pipeline = None
+pipeline_lock = threading.Lock()
 
 
 def _ensure_torch_xpu_stub():
@@ -47,7 +47,7 @@ def _ensure_torch_distributed_device_mesh():
     from types import ModuleType, SimpleNamespace
 
     stub_module = ModuleType("device_mesh")
-    _mesh_stub = SimpleNamespace(get_group=lambda *a, **k: None)
+    mesh_stub = SimpleNamespace(get_group=lambda *args, **kwargs: None)
 
     class _DeviceMeshStub:
         def get_group(self, *args, **kwargs):
@@ -56,26 +56,26 @@ def _ensure_torch_distributed_device_mesh():
     stub_module.DeviceMesh = _DeviceMeshStub
 
     def _init_device_mesh(*args, **kwargs):
-        return _mesh_stub
+        return mesh_stub
 
     stub_module.init_device_mesh = _init_device_mesh
     torch.distributed.device_mesh = stub_module
 
 
-def _device():
+def _select_device() -> str:
     import torch
 
     if os.environ.get("VIDEO_DEVICE") == "cpu":
         return "cpu"
     if torch.cuda.is_available():
         return "cuda"
-    mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
+    mps_backend = getattr(torch.backends, "mps", None)
+    if mps_backend is not None and mps_backend.is_available():
         return "mps"
     return "cpu"
 
 
-def skip_video_local():
+def skip_video_local() -> bool:
     if os.environ.get("VIDEO_GEN_FORCE_LOCAL") == "1":
         return False
     if os.environ.get("VIDEO_FORCE_LOCAL") == "1":
@@ -92,11 +92,11 @@ def skip_video_local():
 
 
 def get_video_pipeline():
-    global video_pipe
+    global video_pipeline
     if skip_video_local():
         return None
-    with pipe_lock:
-        if video_pipe is None:
+    with pipeline_lock:
+        if video_pipeline is None:
             import torch
 
             _ensure_torch_xpu_stub()
@@ -107,29 +107,29 @@ def get_video_pipeline():
             from diffusers import CogVideoXPipeline
 
             model_id = config.COGVIDEOX_MODEL
-            device = _device()
-            video_pipe = CogVideoXPipeline.from_pretrained(
+            device = _select_device()
+            video_pipeline = CogVideoXPipeline.from_pretrained(
                 model_id,
                 torch_dtype=torch.float16,
             )
             if device == "cuda":
-                video_pipe.enable_model_cpu_offload()
+                video_pipeline.enable_model_cpu_offload()
             else:
-                video_pipe = video_pipe.to(device)
-    return video_pipe
+                video_pipeline = video_pipeline.to(device)
+    return video_pipeline
 
 
-def generate(prompt: str, out_path) -> bool:
-    """Write the video to out_path; False when local generation is skipped."""
-    pipe = get_video_pipeline()
-    if pipe is None:
+def generate(prompt: str, output_path) -> bool:
+    """Write the video to output_path; False when local generation is skipped."""
+    diffusion_pipeline = get_video_pipeline()
+    if diffusion_pipeline is None:
         return False
     from diffusers.utils import export_to_video
 
-    video = pipe(
+    frames = diffusion_pipeline(
         prompt=prompt,
         num_inference_steps=50,
         guidance_scale=6.0,
     ).frames[0]
-    export_to_video(video, str(out_path), fps=8)
+    export_to_video(frames, str(output_path), fps=8)
     return True

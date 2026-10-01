@@ -1,4 +1,4 @@
-from typing import Dict, Iterable, List, Tuple, Optional
+from collections.abc import Iterable
 
 import math
 import numpy as np
@@ -12,92 +12,90 @@ class RedisVectorStore(VectorStore):
         self.user_key_prefix = user_key_prefix
         self.item_key_prefix = item_key_prefix
 
-    def upsert_user_vectors(self, vectors: Dict[str, List[float]]) -> None:
-        pipe = self.client.pipeline()
-        for user_id, vec in vectors.items():
+    def upsert_user_vectors(self, vectors: dict[str, list[float]]) -> None:
+        redis_pipeline = self.client.pipeline()
+        for user_id, vector in vectors.items():
             key = f"{self.user_key_prefix}{user_id}"
-            pipe.set(key, ",".join(str(x) for x in vec))
-        pipe.execute()
+            redis_pipeline.set(key, ",".join(str(component) for component in vector))
+        redis_pipeline.execute()
 
-    def upsert_item_vectors(self, vectors: Dict[str, List[float]]) -> None:
-        pipe = self.client.pipeline()
-        for item_id, vec in vectors.items():
+    def upsert_item_vectors(self, vectors: dict[str, list[float]]) -> None:
+        redis_pipeline = self.client.pipeline()
+        for item_id, vector in vectors.items():
             key = f"{self.item_key_prefix}{item_id}"
-            pipe.set(key, ",".join(str(x) for x in vec))
-        pipe.execute()
+            redis_pipeline.set(key, ",".join(str(component) for component in vector))
+        redis_pipeline.execute()
 
-    def query_similar_items(self, user_vector: List[float], top_k: int) -> List[Tuple[str, float]]:
+    def query_similar_items(self, user_vector: list[float], top_k: int) -> list[tuple[str, float]]:
         keys = list(self.client.scan_iter(f"{self.item_key_prefix}*"))
         if not keys:
             return []
         scores = []
-        uv = user_vector
         for key in keys:
-            raw = self.client.get(key)
-            if not raw:
+            stored_vector = self.client.get(key)
+            if not stored_vector:
                 continue
-            parts = raw.split(",")
-            item_vec = [float(x) for x in parts if x]
-            score = self._cosine_similarity(uv, item_vec)
+            parts = stored_vector.split(",")
+            item_vector = [float(part) for part in parts if part]
+            score = self._cosine_similarity(user_vector, item_vector)
             item_id = key.replace(self.item_key_prefix, "", 1)
             scores.append((item_id, score))
-        scores.sort(key=lambda x: x[1], reverse=True)
+        scores.sort(key=lambda item_and_score: item_and_score[1], reverse=True)
         return scores[:top_k]
 
-    def _cosine_similarity(self, a: Iterable[float], b: Iterable[float]) -> float:
-        ax = list(a)
-        bx = list(b)
-        if not ax or not bx or len(ax) != len(bx):
+    def _cosine_similarity(self, left_vector: Iterable[float], right_vector: Iterable[float]) -> float:
+        left = list(left_vector)
+        right = list(right_vector)
+        if not left or not right or len(left) != len(right):
             return 0.0
-        dot = sum(x * y for x, y in zip(ax, bx))
-        na = math.sqrt(sum(x * x for x in ax))
-        nb = math.sqrt(sum(x * x for x in bx))
-        if na == 0.0 or nb == 0.0:
+        dot_product = sum(left_value * right_value for left_value, right_value in zip(left, right))
+        left_norm = math.sqrt(sum(value * value for value in left))
+        right_norm = math.sqrt(sum(value * value for value in right))
+        if left_norm == 0.0 or right_norm == 0.0:
             return 0.0
-        return dot / (na * nb)
+        return dot_product / (left_norm * right_norm)
 
 
 class FaissVectorStore(VectorStore):
-    def __init__(self, dim: int, index_path: Optional[str] = None, ids_path: Optional[str] = None):
+    def __init__(self, dimension: int, index_path: str | None = None, ids_path: str | None = None):
         import faiss
 
         self.faiss = faiss
-        self.dim = dim
-        self.index = faiss.IndexFlatIP(dim)
-        self.id_map: List[str] = []
+        self.dimension = dimension
+        self.index = faiss.IndexFlatIP(dimension)
+        self.item_ids: list[str] = []
         if index_path and ids_path:
             self.index = faiss.read_index(index_path)
-            with open(ids_path, "r", encoding="utf-8") as f:
-                self.id_map = [line.strip() for line in f if line.strip()]
+            with open(ids_path, encoding="utf-8") as ids_file:
+                self.item_ids = [line.strip() for line in ids_file if line.strip()]
 
-    def upsert_user_vectors(self, vectors: Dict[str, List[float]]) -> None:
+    def upsert_user_vectors(self, vectors: dict[str, list[float]]) -> None:
         return
 
-    def upsert_item_vectors(self, vectors: Dict[str, List[float]]) -> None:
-        ids = []
-        vecs = []
-        for item_id, vec in vectors.items():
-            if len(vec) != self.dim:
+    def upsert_item_vectors(self, vectors: dict[str, list[float]]) -> None:
+        item_ids = []
+        item_vectors = []
+        for item_id, vector in vectors.items():
+            if len(vector) != self.dimension:
                 continue
-            ids.append(item_id)
-            vecs.append(vec)
-        if not vecs:
+            item_ids.append(item_id)
+            item_vectors.append(vector)
+        if not item_vectors:
             return
-        x = np.array(vecs, dtype="float32")
-        self.index.add(x)
-        self.id_map.extend(ids)
+        vector_matrix = np.array(item_vectors, dtype="float32")
+        self.index.add(vector_matrix)
+        self.item_ids.extend(item_ids)
 
-    def query_similar_items(self, user_vector: List[float], top_k: int) -> List[Tuple[str, float]]:
-        if not self.id_map or self.index.ntotal == 0:
+    def query_similar_items(self, user_vector: list[float], top_k: int) -> list[tuple[str, float]]:
+        if not self.item_ids or self.index.ntotal == 0:
             return []
-        if len(user_vector) != self.dim:
+        if len(user_vector) != self.dimension:
             return []
-        x = np.array([user_vector], dtype="float32")
-        scores, idx = self.index.search(x, top_k)
-        result: List[Tuple[str, float]] = []
-        for i, s in zip(idx[0], scores[0]):
-            if i < 0 or i >= len(self.id_map):
+        query_matrix = np.array([user_vector], dtype="float32")
+        scores, indices = self.index.search(query_matrix, top_k)
+        similar_items: list[tuple[str, float]] = []
+        for item_index, score in zip(indices[0], scores[0]):
+            if item_index < 0 or item_index >= len(self.item_ids):
                 continue
-            result.append((self.id_map[i], float(s)))
-        return result
-
+            similar_items.append((self.item_ids[item_index], float(score)))
+        return similar_items

@@ -1,4 +1,3 @@
-from typing import Dict, Tuple
 
 from infra.engagement_features import build_user_recent_engagement_features
 from domain.feature_registry import FeatureDefinition, registry
@@ -14,13 +13,13 @@ def register_offline_features() -> None:
     )
 
 
-def build_all_offline_features() -> Dict[str, Dict[Tuple[str, str], Dict[str, float]]]:
+def build_all_offline_features() -> dict[str, dict[tuple[str, str], dict[str, float]]]:
     register_offline_features()
-    features: Dict[str, Dict[Tuple[str, str], Dict[str, float]]] = {}
-    for feat in registry.all():
-        if feat.compute_offline is None:
+    features: dict[str, dict[tuple[str, str], dict[str, float]]] = {}
+    for feature in registry.all():
+        if feature.compute_offline is None:
             continue
-        value = feat.compute_offline()
-        features[feat.name] = value
+        value = feature.compute_offline()
+        features[feature.name] = value
     return features
 

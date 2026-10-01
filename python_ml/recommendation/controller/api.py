@@ -1,23 +1,32 @@
-"""HTTP routes for recommendation ranking/recall (AIP REST)."""
+"""HTTP routes for recommendation ranking and recall (AIP custom methods)."""
 
-from typing import List, Optional
+from typing import Annotated
 
-from fastapi import APIRouter
+from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from service import recommendation as rec_service
+from service.recommendation import RecommendationService, get_recommendation_service
 
 router = APIRouter()
+
+RecommendationServiceDependency = Annotated[
+    RecommendationService, Depends(get_recommendation_service)
+]
 
 
 class RankRequest(BaseModel):
     user_id: str
-    candidate_ids: List[str]
-    limit: Optional[int] = 50
-    region: Optional[str] = None
-    language: Optional[str] = None
-    experiment_id: Optional[str] = None
-    variant_id: Optional[str] = None
+    candidate_ids: list[str]
+    limit: int | None = 50
+    region: str | None = None
+    language: str | None = None
+    experiment_id: str | None = None
+    variant_id: str | None = None
+
+
+class RecallRequest(BaseModel):
+    user_id: str
+    limit: int | None = 100
 
 
 class RankedItem(BaseModel):
@@ -25,53 +34,58 @@ class RankedItem(BaseModel):
     score: float
 
 
-class RankResponse(BaseModel):
-    items: List[RankedItem]
+class RankedItemsResponse(BaseModel):
+    items: list[RankedItem]
 
-
-class RecallRequest(BaseModel):
-    user_id: str
-    limit: Optional[int] = 100
-
-
-class RecallResponse(BaseModel):
-    items: List[RankedItem]
+    @classmethod
+    def from_pairs(cls, scored_ids: list[tuple[str, float]]) -> "RankedItemsResponse":
+        return cls(items=[RankedItem(id=item_id, score=score) for item_id, score in scored_ids])
 
 
 @router.get("/health")
-def health():
+def health() -> dict[str, str]:
     return {"status": "ok", "service": "recommendation"}
 
 
-def _rank(body: RankRequest) -> RankResponse:
-    ranked = rec_service.rank_candidates(
-        body.user_id,
-        body.candidate_ids,
-        limit=body.limit or 50,
-        region=body.region,
-        language=body.language,
-        experiment_id=body.experiment_id,
-        variant_id=body.variant_id,
+def _rank(
+    request: RankRequest, recommendation_service: RecommendationService
+) -> RankedItemsResponse:
+    ranked = recommendation_service.rank_candidates(
+        request.user_id,
+        request.candidate_ids,
+        limit=request.limit or 50,
+        region=request.region,
+        language=request.language,
+        experiment_id=request.experiment_id,
+        variant_id=request.variant_id,
     )
-    return RankResponse(items=[RankedItem(id=i, score=s) for i, s in ranked])
+    return RankedItemsResponse.from_pairs(ranked)
 
 
-@router.post("/api/v1/feeds:rank", response_model=RankResponse)
-async def rank_feed(body: RankRequest) -> RankResponse:
-    return _rank(body)
+@router.post("/api/v1/feeds:rank")
+def rank_feeds(
+    request: RankRequest, recommendation_service: RecommendationServiceDependency
+) -> RankedItemsResponse:
+    return _rank(request, recommendation_service)
 
 
-@router.post("/api/v1/explores:rank", response_model=RankResponse)
-async def rank_explore(body: RankRequest) -> RankResponse:
-    return _rank(body)
+@router.post("/api/v1/explores:rank")
+def rank_explores(
+    request: RankRequest, recommendation_service: RecommendationServiceDependency
+) -> RankedItemsResponse:
+    return _rank(request, recommendation_service)
 
 
-@router.post("/api/v1/reels:rank", response_model=RankResponse)
-async def rank_reels(body: RankRequest) -> RankResponse:
-    return _rank(body)
+@router.post("/api/v1/reels:rank")
+def rank_reels(
+    request: RankRequest, recommendation_service: RecommendationServiceDependency
+) -> RankedItemsResponse:
+    return _rank(request, recommendation_service)
 
 
-@router.post("/api/v1/feeds:recall", response_model=RecallResponse)
-async def recall_feed(body: RecallRequest) -> RecallResponse:
-    items = rec_service.recall_from_store(body.user_id, body.limit or 100)
-    return RecallResponse(items=[RankedItem(id=i, score=s) for i, s in items])
+@router.post("/api/v1/feeds:recall")
+def recall_feeds(
+    request: RecallRequest, recommendation_service: RecommendationServiceDependency
+) -> RankedItemsResponse:
+    items = recommendation_service.recall_similar_items(request.user_id, request.limit or 100)
+    return RankedItemsResponse.from_pairs(items)

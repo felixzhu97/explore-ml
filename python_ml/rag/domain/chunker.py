@@ -2,7 +2,6 @@
 import logging
 import re
 import uuid
-from typing import Optional
 from dataclasses import dataclass
 
 from config import get_settings
@@ -36,8 +35,8 @@ class TextChunker:
 
     def __init__(
         self,
-        chunk_size: Optional[int] = None,
-        chunk_overlap: Optional[int] = None,
+        chunk_size: int | None = None,
+        chunk_overlap: int | None = None,
     ) -> None:
         settings = get_settings()
         self.chunk_size = chunk_size or settings.chunk_size
@@ -46,8 +45,8 @@ class TextChunker:
     def chunk_text(
         self,
         text: str,
-        metadata: Optional[dict] = None,
-        source_id: Optional[str] = None,
+        metadata: dict | None = None,
+        source_id: str | None = None,
     ) -> list[Chunk]:
         """
         Split text into chunks.
@@ -85,8 +84,8 @@ class TextChunker:
     def chunk_documents(
         self,
         documents: list[dict],
-        metadata: Optional[dict] = None,
-        source_id: Optional[str] = None,
+        metadata: dict | None = None,
+        source_id: str | None = None,
     ) -> list[Chunk]:
         """
         Chunk multiple documents (e.g., PDF pages).
@@ -101,24 +100,24 @@ class TextChunker:
         """
         all_chunks = []
 
-        for idx, doc in enumerate(documents):
-            doc_text = doc.get("text", "")
-            doc_metadata = {**(metadata or {}), **(doc.get("metadata", {}))}
+        for index, document in enumerate(documents):
+            document_text = document.get("text", "")
+            document_metadata = {**(metadata or {}), **(document.get("metadata", {}))}
 
-            if doc.get("page_number"):
-                doc_metadata["page"] = doc["page_number"]
+            if document.get("page_number"):
+                document_metadata["page"] = document["page_number"]
 
             chunks = self.chunk_text(
-                doc_text,
-                doc_metadata,
+                document_text,
+                document_metadata,
                 source_id,
             )
 
             # Store page number in metadata (only if not already set)
-            page_num = doc.get("page_number", idx + 1)
+            page_number = document.get("page_number", index + 1)
             for chunk in chunks:
                 if "page" not in chunk.metadata:
-                    chunk.metadata["page"] = page_num
+                    chunk.metadata["page"] = page_number
 
             all_chunks.extend(chunks)
 
@@ -136,14 +135,14 @@ class TextChunker:
         """Split text into paragraphs."""
         # Split on double newlines or single newlines for lists
         paragraphs = re.split(r"\n{2,}|\n(?=[\-\*•])", text)
-        paragraphs = [p.strip() for p in paragraphs if p.strip()]
+        paragraphs = [paragraph.strip() for paragraph in paragraphs if paragraph.strip()]
         return paragraphs
 
     def _create_chunks(
         self,
         paragraphs: list[str],
         metadata: dict,
-        source_id: Optional[str],
+        source_id: str | None,
     ) -> list[Chunk]:
         """Create chunks from paragraphs."""
         chunks = []
@@ -191,21 +190,21 @@ class TextChunker:
                 # Keep last paragraph as overlap
                 overlap_text = current_chunk_text[-1:] if current_chunk_text else []
                 current_chunk_text = overlap_text
-                current_char_count = sum(len(t) for t in current_chunk_text) if current_chunk_text else 0
+                current_char_count = sum(len(part) for part in current_chunk_text) if current_chunk_text else 0
                 start_char = end_char - current_char_count
 
-        for para in paragraphs:
-            para_len = len(para)
-            para_tokens = estimate_tokens(para)
+        for paragraph in paragraphs:
+            paragraph_length = len(paragraph)
+            paragraph_tokens = estimate_tokens(paragraph)
 
             # If single paragraph exceeds max chars, split it further
-            if para_len > self.MAX_CHARS_PER_CHUNK:
+            if paragraph_length > self.MAX_CHARS_PER_CHUNK:
                 # Save current chunk if not empty
                 save_current_chunk()
 
                 # Split the long paragraph into smaller pieces
-                for i in range(0, len(para), self.MAX_CHARS_PER_CHUNK):
-                    sub_text = para[i:i + self.MAX_CHARS_PER_CHUNK]
+                for offset in range(0, len(paragraph), self.MAX_CHARS_PER_CHUNK):
+                    sub_text = paragraph[offset:offset + self.MAX_CHARS_PER_CHUNK]
                     end_char = start_char + len(sub_text)
                     chunks.append(Chunk(
                         id=str(uuid.uuid4()),
@@ -220,25 +219,25 @@ class TextChunker:
                 continue
 
             # Check if adding this paragraph exceeds chunk size or max chars
-            if (current_char_count + para_len + 1 > self.MAX_CHARS_PER_CHUNK or
-                    para_tokens > self.chunk_size):
+            if (current_char_count + paragraph_length + 1 > self.MAX_CHARS_PER_CHUNK or
+                    paragraph_tokens > self.chunk_size):
                 save_current_chunk()
                 # Start new chunk with overlap
                 overlap_tokens = 0
                 overlap_texts = []
-                for t in reversed(current_chunk_text):
-                    if overlap_tokens + estimate_tokens(t) <= self.chunk_overlap:
-                        overlap_texts.insert(0, t)
-                        overlap_tokens += estimate_tokens(t)
+                for previous_text in reversed(current_chunk_text):
+                    if overlap_tokens + estimate_tokens(previous_text) <= self.chunk_overlap:
+                        overlap_texts.insert(0, previous_text)
+                        overlap_tokens += estimate_tokens(previous_text)
                     else:
                         break
 
-                current_chunk_text = overlap_texts + [para]
-                current_char_count = sum(len(t) for t in current_chunk_text)
+                current_chunk_text = overlap_texts + [paragraph]
+                current_char_count = sum(len(part) for part in current_chunk_text)
                 start_char = start_char  # start_char is already set by save_current_chunk
             else:
-                current_chunk_text.append(para)
-                current_char_count += para_len + 1
+                current_chunk_text.append(paragraph)
+                current_char_count += paragraph_length + 1
 
         # Don't forget the last chunk
         if current_chunk_text:
@@ -266,13 +265,13 @@ class TextChunker:
         chunks = []
         sentences = self._split_sentences(text)
         current_text = []
-        current_len = 0
-        char_pos = start_char
+        current_length = 0
+        char_position = start_char
 
         for sentence in sentences:
-            sentence_len = len(sentence)
+            sentence_length = len(sentence)
 
-            if current_len + sentence_len > self.chunk_size * 4:
+            if current_length + sentence_length > self.chunk_size * 4:
                 if current_text:
                     chunk_text = " ".join(current_text)
                     chunks.append(Chunk(
@@ -280,21 +279,21 @@ class TextChunker:
                         text=chunk_text,
                         metadata=metadata.copy(),
                         token_count=len(chunk_text) // 4,
-                        start_char=char_pos,
-                        end_char=char_pos + len(chunk_text),
+                        start_char=char_position,
+                        end_char=char_position + len(chunk_text),
                     ))
 
                     # Keep last sentence as overlap
                     overlap = current_text[-1:] if current_text else []
                     current_text = overlap + [sentence]
-                    current_len = sum(len(t) for t in current_text)
-                    char_pos = char_pos + len(chunk_text) + 1 - sum(len(t) for t in overlap)
+                    current_length = sum(len(part) for part in current_text)
+                    char_position = char_position + len(chunk_text) + 1 - sum(len(part) for part in overlap)
                 else:
                     current_text = [sentence]
-                    current_len = sentence_len
+                    current_length = sentence_length
             else:
                 current_text.append(sentence)
-                current_len += sentence_len
+                current_length += sentence_length
 
         # Last chunk
         if current_text:
@@ -304,8 +303,8 @@ class TextChunker:
                 text=chunk_text,
                 metadata=metadata.copy(),
                 token_count=len(chunk_text) // 4,
-                start_char=char_pos,
-                end_char=char_pos + len(chunk_text),
+                start_char=char_position,
+                end_char=char_position + len(chunk_text),
             ))
 
         return chunks
@@ -315,11 +314,11 @@ class TextChunker:
         # Simple sentence splitting
         sentence_endings = re.compile(r"(?<=[.!?])\s+")
         sentences = sentence_endings.split(text)
-        return [s.strip() for s in sentences if s.strip()]
+        return [sentence.strip() for sentence in sentences if sentence.strip()]
 
 
 # Singleton instance
-_chunker: Optional[TextChunker] = None
+_chunker: TextChunker | None = None
 
 
 def get_chunker() -> TextChunker:

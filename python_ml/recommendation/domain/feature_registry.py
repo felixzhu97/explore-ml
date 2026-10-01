@@ -1,5 +1,6 @@
 from dataclasses import dataclass
-from typing import Any, Callable, Dict, List, Literal, Optional
+from typing import Any, Literal
+from collections.abc import Callable
 
 
 EntityType = Literal["user", "post", "reel"]
@@ -9,21 +10,21 @@ EntityType = Literal["user", "post", "reel"]
 class FeatureDefinition:
     name: str
     entity: EntityType
-    compute_offline: Optional[Callable[..., Any]] = None
-    compute_online: Optional[Callable[..., Any]] = None
+    compute_offline: Callable[..., Any] | None = None
+    compute_online: Callable[..., Any] | None = None
 
 
 class FeatureRegistry:
     def __init__(self) -> None:
-        self._features: Dict[str, FeatureDefinition] = {}
+        self._features: dict[str, FeatureDefinition] = {}
 
     def register(self, feature: FeatureDefinition) -> None:
         self._features[feature.name] = feature
 
-    def get(self, name: str) -> Optional[FeatureDefinition]:
+    def get(self, name: str) -> FeatureDefinition | None:
         return self._features.get(name)
 
-    def all(self) -> List[FeatureDefinition]:
+    def all(self) -> list[FeatureDefinition]:
         return list(self._features.values())
 
 

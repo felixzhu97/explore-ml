@@ -5,10 +5,10 @@ from fastapi.testclient import TestClient
 
 from controller.api import router
 from main import app
-from infra.streaming_asr import StreamingAsrSession, pcm16_le_to_wav_bytes
+from infra.streaming_transcription import StreamingTranscriptionSession, pcm16_le_to_wav_bytes
 
 
-def test_should_register_streaming_asr_websocket_route():
+def test_should_register_streaming_transcription_websocket_route():
     paths = {getattr(r, "path", None) for r in router.routes}
     assert "/ws/v1/audios:transcribe" in paths
 
@@ -20,16 +20,16 @@ def test_should_emit_partial_then_final_when_audio_committed():
         calls.append((path, language))
         return {"text": f"hello-{len(calls)}"}
 
-    session = StreamingAsrSession(
-        transcribe_fn=fake_transcribe,
+    session = StreamingTranscriptionSession(
+        transcribe=fake_transcribe,
         sample_rate=16000,
         partial_interval_sec=0.0,
         min_partial_bytes=2,
     )
     pcm = b"\x00\x01" * 100
-    b64 = base64.b64encode(pcm).decode("ascii")
+    base64_audio = base64.b64encode(pcm).decode("ascii")
 
-    partial = session.append_audio(b64)
+    partial = session.append_audio(base64_audio)
     assert partial is not None
     assert partial["type"] == "partial"
     assert partial["text"].startswith("hello-")
@@ -40,15 +40,15 @@ def test_should_emit_partial_then_final_when_audio_committed():
     assert calls, "transcribe should have been called"
 
 
-def test_should_reject_non_json_on_streaming_asr_websocket():
+def test_should_reject_non_json_on_streaming_transcription_websocket():
     client = TestClient(app)
-    with client.websocket_connect("/ws/v1/audios:transcribe") as ws:
-        ws.send_text("not-json")
-        message = ws.receive_json()
+    with client.websocket_connect("/ws/v1/audios:transcribe") as websocket:
+        websocket.send_text("not-json")
+        message = websocket.receive_json()
         assert message["type"] == "error"
         assert "invalid JSON" in message["text"]
-        ws.send_text(json.dumps({"type": "stop"}))
-        final = ws.receive_json()
+        websocket.send_text(json.dumps({"type": "stop"}))
+        final = websocket.receive_json()
         assert final["type"] == "final"
 
 

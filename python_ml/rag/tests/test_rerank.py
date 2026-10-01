@@ -8,5 +8,5 @@ def test_should_sort_by_rerank_score_descending():
         {"id": "c", "score": 0.3, "payload": {"text": "c"}},
     ]
     ranked = apply_rerank_scores(results, [0.4, 0.9, 0.1])
-    assert [r["id"] for r in ranked] == ["b", "a", "c"]
+    assert [result["id"] for result in ranked] == ["b", "a", "c"]
     assert ranked[0]["score"] == 0.9

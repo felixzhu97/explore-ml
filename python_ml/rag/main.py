@@ -1,7 +1,5 @@
 """RAG FastAPI entrypoint — uvicorn main:app."""
 
-from __future__ import annotations
-
 import logging
 import time
 from contextlib import asynccontextmanager
@@ -9,9 +7,10 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from controller.api import router
 from config import get_settings
-from service import rag as rag_service
+from controller.api import router
+from controller.errors import register_exception_handlers
+from service.health import get_health_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -25,7 +24,7 @@ async def lifespan(_app: FastAPI):
     logger.info("Starting RAG Service...")
     settings = get_settings()
     settings.ensure_directories()
-    await rag_service.startup()
+    await get_health_service().startup()
     logger.info("RAG Service started successfully")
     yield
     logger.info("Shutting down RAG Service...")
@@ -48,18 +47,19 @@ app.add_middleware(
 
 @app.middleware("http")
 async def log_requests(request: Request, call_next):
-    start = time.time()
+    start_time = time.time()
     response = await call_next(request)
     logger.info(
         "%s %s - %s - %.3fs",
         request.method,
         request.url.path,
         response.status_code,
-        time.time() - start,
+        time.time() - start_time,
     )
     return response
 
 
+register_exception_handlers(app)
 app.include_router(router)
 
 

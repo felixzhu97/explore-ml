@@ -3,12 +3,12 @@ import sys
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 from celery import Celery
-import config as cfg
+import config
 
 app = Celery(
     "recommendation",
-    broker=cfg.CELERY_BROKER_URL,
-    backend=cfg.CELERY_BROKER_URL,
+    broker=config.CELERY_BROKER_URL,
+    backend=config.CELERY_BROKER_URL,
     include=["tasks"],
 )
 app.conf.update(

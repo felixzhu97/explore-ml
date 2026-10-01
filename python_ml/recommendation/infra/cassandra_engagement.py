@@ -1,23 +1,22 @@
 import math
-from datetime import datetime, timezone
-from typing import List, Tuple
-import config as cfg
+from datetime import datetime, UTC
+import config
 
 
 def get_cassandra_session():
     from cassandra.cluster import Cluster
     cluster = Cluster(
-        contact_points=cfg.CASSANDRA_CONTACT_POINTS,
-        local_dc=cfg.CASSANDRA_LOCAL_DC,
+        contact_points=config.CASSANDRA_CONTACT_POINTS,
+        local_dc=config.CASSANDRA_LOCAL_DC,
     )
-    session = cluster.connect(cfg.CASSANDRA_KEYSPACE)
+    session = cluster.connect(config.CASSANDRA_KEYSPACE)
     return session, cluster
 
 
 def load_engagement_and_posts(
     session,
     max_posts: int = 2000,
-) -> List[Tuple[str, str, str, int, int]]:
+) -> list[tuple[str, str, str, int, int]]:
     rows = session.execute(
         "SELECT post_id, like_count, comment_count FROM post_engagement_counts",
     )
@@ -47,7 +46,7 @@ def load_engagement_and_posts(
 def load_post_likes(
     session,
     max_rows: int = 500000,
-) -> List[Tuple[str, str, str]]:
+) -> list[tuple[str, str, str]]:
     rows = session.execute(
         "SELECT user_id, post_id, created_at FROM post_likes",
     )
@@ -65,11 +64,11 @@ def load_post_likes(
 
 def hot_score(created_at_iso: str, like_count: int, comment_count: int) -> float:
     try:
-        created = datetime.fromisoformat(created_at_iso.replace("Z", "+00:00"))
+        created_at_datetime = datetime.fromisoformat(created_at_iso.replace("Z", "+00:00"))
     except Exception:
-        created = datetime.now(timezone.utc)
-    now = datetime.now(created.tzinfo or timezone.utc)
-    age_hours = (now - created).total_seconds() / 3600
+        created_at_datetime = datetime.now(UTC)
+    now = datetime.now(created_at_datetime.tzinfo or UTC)
+    age_hours = (now - created_at_datetime).total_seconds() / 3600
     recency = math.exp(-age_hours * math.log(2) / 24)
     engagement = math.log(1 + like_count + comment_count)
     return recency + 2.0 * engagement

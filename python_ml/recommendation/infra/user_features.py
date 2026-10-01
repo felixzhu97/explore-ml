@@ -1,41 +1,42 @@
 import psycopg2
-from typing import List, Tuple
 from datetime import datetime
 import numpy as np
-import config as cfg
+import config
 
 
-def load_user_features() -> List[Tuple[str, int]]:
-    conn = psycopg2.connect(cfg.DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute("SELECT id, created_at FROM users")
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
-    out = []
-    for uid, created in rows:
-        if created and hasattr(created, "month"):
-            bucket = created.month % 4
+def load_user_features() -> list[tuple[str, int]]:
+    connection = psycopg2.connect(config.DATABASE_URL)
+    cursor = connection.cursor()
+    cursor.execute("SELECT id, created_at FROM users")
+    rows = cursor.fetchall()
+    cursor.close()
+    connection.close()
+    user_buckets = []
+    for user_id, created_at in rows:
+        if created_at and hasattr(created_at, "month"):
+            bucket = created_at.month % 4
         else:
             try:
-                dt = datetime.fromisoformat(str(created).replace("Z", "+00:00")) if created else None
-                bucket = (dt.month % 4) if dt else 0
+                created_at_datetime = (
+                    datetime.fromisoformat(str(created_at).replace("Z", "+00:00")) if created_at else None
+                )
+                bucket = (created_at_datetime.month % 4) if created_at_datetime else 0
             except Exception:
                 bucket = 0
-        out.append((uid, bucket))
-    return out
+        user_buckets.append((user_id, bucket))
+    return user_buckets
 
 
 def build_item_features_matrix(
-    user_ids: List[str],
+    user_ids: list[str],
     user_buckets: dict,
     n_buckets: int = 4,
 ) -> np.ndarray:
-    n = len(user_ids)
-    feats = np.zeros((n, n_buckets + 1), dtype=np.float32)
-    for i, uid in enumerate(user_ids):
-        feats[i, 0] = 1.0
-        b = user_buckets.get(uid, 0)
-        if 0 <= b < n_buckets:
-            feats[i, 1 + b] = 1.0
-    return feats
+    user_count = len(user_ids)
+    features = np.zeros((user_count, n_buckets + 1), dtype=np.float32)
+    for user_index, user_id in enumerate(user_ids):
+        features[user_index, 0] = 1.0
+        bucket = user_buckets.get(user_id, 0)
+        if 0 <= bucket < n_buckets:
+            features[user_index, 1 + bucket] = 1.0
+    return features

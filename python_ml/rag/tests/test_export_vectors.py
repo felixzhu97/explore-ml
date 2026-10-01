@@ -5,8 +5,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from service import rag as rag_service
 from controller.query import router as query_router
+from service.query import QueryService, get_query_service
 
 
 def _record(i: int, collection: str, text: str = "chunk") -> dict:
@@ -31,7 +31,8 @@ def qdrant():
 def client(qdrant):
     app = FastAPI()
     app.include_router(query_router, prefix="/api/v1")
-    app.dependency_overrides[rag_service.get_qdrant] = lambda: qdrant
+    query_service = QueryService(embeddings=AsyncMock(), qdrant=qdrant, llm=AsyncMock())
+    app.dependency_overrides[get_query_service] = lambda: query_service
     return TestClient(app)
 
 

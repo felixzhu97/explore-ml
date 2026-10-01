@@ -5,7 +5,7 @@ from infra import pipeline
 from training.train_lora import build_command, parse_args
 
 
-class FakePipe:
+class FakeDiffusionPipeline:
     def __init__(self):
         self.calls = []
 
@@ -18,23 +18,23 @@ class FakePipe:
 
 def test_should_skip_lora_when_path_is_unset(monkeypatch):
     monkeypatch.setattr(config, "IMAGE_LORA_PATH", None)
-    pipe = FakePipe()
+    diffusion_pipeline = FakeDiffusionPipeline()
 
-    pipeline.apply_lora(pipe)
+    pipeline.apply_lora(diffusion_pipeline)
 
-    assert pipe.calls == []
+    assert diffusion_pipeline.calls == []
 
 
 def test_should_load_lora_with_scale_when_path_is_set(monkeypatch):
     monkeypatch.setattr(config, "IMAGE_LORA_PATH", "/loras/my-style")
     monkeypatch.setattr(config, "IMAGE_LORA_SCALE", 0.8)
-    pipe = FakePipe()
+    diffusion_pipeline = FakeDiffusionPipeline()
 
-    pipeline.apply_lora(pipe)
+    pipeline.apply_lora(diffusion_pipeline)
 
-    assert pipe.calls == [
-        ("load", "/loras/my-style", "ft"),
-        ("set", ["ft"], [0.8]),
+    assert diffusion_pipeline.calls == [
+        ("load", "/loras/my-style", "fine_tuned"),
+        ("set", ["fine_tuned"], [0.8]),
     ]
 
 

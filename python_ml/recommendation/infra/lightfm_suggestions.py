@@ -1,62 +1,64 @@
-from typing import List, Tuple, Dict
 import numpy as np
 from scipy.sparse import csr_matrix
 
 
 def build_lightfm_suggestions(
-    follows: List[Tuple[str, str]],
-    user_ids: List[str],
-    user_buckets: Dict[str, int],
+    follows: list[tuple[str, str]],
+    user_ids: list[str],
+    user_buckets: dict[str, int],
     n_recommend: int = 50,
     epochs: int = 20,
-) -> Dict[str, List[str]]:
+) -> dict[str, list[str]]:
     try:
         from lightfm import LightFM
     except ImportError:
         return {}
     follow_set = set(follows)
-    n_users = len(user_ids)
-    uid_to_idx = {u: i for i, u in enumerate(user_ids)}
+    user_count = len(user_ids)
+    user_id_to_index = {user_id: index for index, user_id in enumerate(user_ids)}
     interactions = []
-    for a, b in follow_set:
-        if a in uid_to_idx and b in uid_to_idx:
-            i, j = uid_to_idx[a], uid_to_idx[b]
-            interactions.append((i, j, 1.0))
+    for follower_id, followee_id in follow_set:
+        if follower_id in user_id_to_index and followee_id in user_id_to_index:
+            follower_index = user_id_to_index[follower_id]
+            followee_index = user_id_to_index[followee_id]
+            interactions.append((follower_index, followee_index, 1.0))
     if not interactions:
-        return {u: [] for u in user_ids}
-    ui = np.array(interactions, dtype=np.int32)
-    if ui.size == 0:
-        return {u: [] for u in user_ids}
-    row = ui[:, 0]
-    col = ui[:, 1]
-    data = np.ones(len(interactions), dtype=np.float32)
-    inter = csr_matrix((data, (row, col)), shape=(n_users, n_users))
-    item_features = np.zeros((n_users, 5), dtype=np.float32)
-    for i, uid in enumerate(user_ids):
-        item_features[i, 0] = 1.0
-        b = user_buckets.get(uid, 0)
-        if 0 <= b < 4:
-            item_features[i, 1 + b] = 1.0
+        return {user_id: [] for user_id in user_ids}
+    interaction_array = np.array(interactions, dtype=np.int32)
+    if interaction_array.size == 0:
+        return {user_id: [] for user_id in user_ids}
+    row_indices = interaction_array[:, 0]
+    column_indices = interaction_array[:, 1]
+    values = np.ones(len(interactions), dtype=np.float32)
+    interaction_matrix = csr_matrix((values, (row_indices, column_indices)), shape=(user_count, user_count))
+    item_features = np.zeros((user_count, 5), dtype=np.float32)
+    for user_index, user_id in enumerate(user_ids):
+        item_features[user_index, 0] = 1.0
+        bucket = user_buckets.get(user_id, 0)
+        if 0 <= bucket < 4:
+            item_features[user_index, 1 + bucket] = 1.0
     model = LightFM(loss="warp", no_components=64)
-    model.fit(inter, item_features=csr_matrix(item_features), epochs=epochs, num_threads=2)
-    out = {}
-    for uid in user_ids:
-        u_idx = uid_to_idx.get(uid)
-        if u_idx is None:
-            out[uid] = []
+    model.fit(interaction_matrix, item_features=csr_matrix(item_features), epochs=epochs, num_threads=2)
+    recommendations_by_user = {}
+    for user_id in user_ids:
+        user_index = user_id_to_index.get(user_id)
+        if user_index is None:
+            recommendations_by_user[user_id] = []
             continue
-        known = set()
-        for a, b in follow_set:
-            if a == uid:
-                known.add(uid_to_idx.get(b))
-        known.discard(None)
+        followed_indices = set()
+        for follower_id, followee_id in follow_set:
+            if follower_id == user_id:
+                followed_indices.add(user_id_to_index.get(followee_id))
+        followed_indices.discard(None)
         try:
-            scores = model.predict(u_idx, np.arange(n_users), item_features=csr_matrix(item_features))
-            for j in known:
-                scores[j] = -1e9
-            scores[u_idx] = -1e9
-            top = np.argsort(-scores)[:n_recommend]
-            out[uid] = [user_ids[j] for j in top if scores[j] > -1e8]
+            scores = model.predict(user_index, np.arange(user_count), item_features=csr_matrix(item_features))
+            for followed_index in followed_indices:
+                scores[followed_index] = -1e9
+            scores[user_index] = -1e9
+            top_indices = np.argsort(-scores)[:n_recommend]
+            recommendations_by_user[user_id] = [
+                user_ids[candidate_index] for candidate_index in top_indices if scores[candidate_index] > -1e8
+            ]
         except Exception:
-            out[uid] = []
-    return out
+            recommendations_by_user[user_id] = []
+    return recommendations_by_user

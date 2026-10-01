@@ -1,37 +1,66 @@
 """Document management API routes (AIP REST)."""
+
 import base64
 import binascii
-import logging
-import time
-from typing import Annotated, Optional
+from datetime import datetime
+from typing import Annotated
 
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
+from pydantic import BaseModel
 
-from service import rag as rag_service
-from infra.document_processor import DocumentProcessor
-from infra.embedding import EmbeddingService
-from infra.qdrant_client import QdrantService
-from domain.document import (
-    DocumentInfo,
-    DocumentListResponse,
-    DocumentUploadResponse,
-)
-
-logger = logging.getLogger(__name__)
+from domain.document import DEFAULT_CONTENT_TYPE, DocumentSummary, validate_filename
+from service.documents import DocumentService, get_document_service
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
+
+DocumentServiceDependency = Annotated[DocumentService, Depends(get_document_service)]
 
 DEFAULT_PAGE_SIZE = 20
 
 
-def _decode_offset(page_token: Optional[str]) -> int:
+class DocumentUploadResponse(BaseModel):
+    id: str
+    filename: str
+    file_size: int
+    content_type: str
+    status: str = "completed"
+    chunks_count: int = 0
+
+
+class DocumentInfo(BaseModel):
+    id: str
+    filename: str | None = None
+    source_url: str | None = None
+    content_type: str
+    file_size: int = 0
+    status: str = "indexed"
+    chunks_count: int
+    created_at: datetime | None = None
+    updated_at: datetime | None = None
+
+    @classmethod
+    def from_summary(cls, summary: DocumentSummary) -> "DocumentInfo":
+        return cls(
+            id=summary.id,
+            filename=summary.filename,
+            content_type=summary.content_type,
+            chunks_count=summary.chunks_count,
+        )
+
+
+class DocumentListResponse(BaseModel):
+    documents: list[DocumentInfo]
+    next_page_token: str | None = None
+
+
+def _decode_offset(page_token: str | None) -> int:
     if not page_token:
         return 0
     try:
         padded = page_token + "=" * (-len(page_token) % 4)
         return max(0, int(base64.urlsafe_b64decode(padded).decode("ascii")))
-    except (binascii.Error, UnicodeDecodeError, ValueError):
-        raise HTTPException(status_code=400, detail="Invalid page_token")
+    except (binascii.Error, UnicodeDecodeError, ValueError) as error:
+        raise HTTPException(status_code=400, detail="Invalid page_token") from error
 
 
 def _encode_offset(offset: int) -> str:
@@ -41,233 +70,51 @@ def _encode_offset(offset: int) -> str:
 @router.post("", response_model=DocumentUploadResponse, status_code=status.HTTP_201_CREATED)
 async def create_document(
     file: Annotated[UploadFile, File(description="Document to upload")],
-    processor: DocumentProcessor = Depends(rag_service.get_processor),
-    embeddings: EmbeddingService = Depends(rag_service.get_embeddings),
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+    document_service: DocumentServiceDependency,
+) -> DocumentUploadResponse:
     """Create (upload and index) a document. Supports PDF, HTML, Markdown, DOCX, TXT."""
-    start_time = time.time()
-
-    if not file.filename:
-        raise HTTPException(status_code=400, detail="No filename provided")
-
-    allowed_extensions = {".pdf", ".html", ".htm", ".md", ".txt", ".docx", ".doc"}
-    ext = file.filename.lower().split(".")[-1]
-    if f".{ext}" not in allowed_extensions:
-        raise HTTPException(
-            status_code=400,
-            detail=f"Unsupported file type. Allowed: {', '.join(allowed_extensions)}",
-        )
-
-    content = await file.read()
-    if len(content) == 0:
-        raise HTTPException(status_code=400, detail="Empty file")
-
-    max_size = 50 * 1024 * 1024
-    if len(content) > max_size:
-        raise HTTPException(status_code=400, detail="File too large (max 50MB)")
-
-    try:
-        result = await processor.process_uploaded_file(
-            content,
-            file.filename,
-            file.content_type or "application/octet-stream",
-        )
-
-        from domain.chunker import get_chunker
-        from infra.pdf_parser import parse_file
-
-        chunker = get_chunker()
-        parsed = parse_file(content, file.filename)
-
-        if parsed["type"] == "pdf":
-            pages = parsed.get("pages", [])
-            text_parts = [
-                {"text": p["text"], "page_number": p["page_number"]}
-                for p in pages
-            ]
-        else:
-            text_parts = [{"text": parsed.get("text", ""), "page_number": None}]
-
-        metadata = {
-            "filename": file.filename,
-            "content_type": file.content_type or "application/octet-stream",
-            "source_type": "document",
-            "doc_id": result["id"],
-            "created_at": result["metadata"].get("created_at", ""),
-        }
-
-        chunks = chunker.chunk_documents(text_parts, metadata, result["id"])
-
-        batch_size = 10
-        points = []
-
-        for i in range(0, len(chunks), batch_size):
-            batch = chunks[i:i + batch_size]
-            texts = [chunk.text for chunk in batch]
-            vectors = await embeddings.embed(texts)
-
-            for chunk, vector in zip(batch, vectors):
-                points.append({
-                    "id": chunk.id,
-                    "vector": vector,
-                    "payload": {
-                        "text": chunk.text,
-                        "doc_id": result["id"],
-                        "filename": file.filename,
-                        "source_type": "document",
-                        "created_at": metadata["created_at"],
-                        "page": chunk.metadata.get("page"),
-                    },
-                })
-
-        if points:
-            await qdrant.upsert("documents", points)
-
-        elapsed = (time.time() - start_time) * 1000
-
-        logger.info(
-            "Document '%s' processed in %.2fms: %s chunks",
-            file.filename,
-            elapsed,
-            len(chunks),
-        )
-
-        return DocumentUploadResponse(
-            id=result["id"],
-            filename=file.filename,
-            file_size=len(content),
-            content_type=file.content_type or "application/octet-stream",
-            status="completed",
-            chunks_count=len(chunks),
-        )
-
-    except Exception as e:
-        logger.error("Failed to process document: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    filename = validate_filename(file.filename)
+    document = await document_service.create_document(
+        filename, file.content_type or DEFAULT_CONTENT_TYPE, await file.read()
+    )
+    return DocumentUploadResponse(
+        id=document.id,
+        filename=document.filename,
+        file_size=document.file_size,
+        content_type=document.content_type,
+        chunks_count=document.chunks_count,
+    )
 
 
 @router.get("", response_model=DocumentListResponse)
 async def list_documents(
-    page_size: Optional[int] = Query(default=None, ge=1, le=100),
-    page_token: Optional[str] = Query(default=None),
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+    document_service: DocumentServiceDependency,
+    page_size: Annotated[int | None, Query(ge=1, le=100)] = None,
+    page_token: Annotated[str | None, Query()] = None,
+) -> DocumentListResponse:
     """List uploaded documents (AIP-158 pagination)."""
     size = page_size or DEFAULT_PAGE_SIZE
     offset = _decode_offset(page_token)
-    try:
-
-        results = await qdrant.search(
-            collection="documents",
-            query_vector=[0] * 768,
-            top_k=1000,
-        )
-
-        doc_info: dict[str, dict] = {}
-        for result in results:
-            payload = result.get("payload", {})
-            doc_id = payload.get("doc_id")
-            if doc_id:
-                if doc_id not in doc_info:
-                    doc_info[doc_id] = {
-                        "filename": payload.get("filename"),
-                        "source_type": payload.get("source_type"),
-                        "created_at": payload.get("created_at"),
-                        "chunk_count": 0,
-                    }
-                doc_info[doc_id]["chunk_count"] += 1
-
-        documents = []
-        for doc_id, info in doc_info.items():
-            documents.append(DocumentInfo(
-                id=doc_id,
-                filename=info.get("filename"),
-                content_type="",
-                file_size=0,
-                status="indexed",
-                chunks_count=info["chunk_count"],
-                created_at=None,
-                updated_at=None,
-            ))
-
-        page = documents[offset:offset + size]
-        has_more = offset + size < len(documents)
-        next_token = _encode_offset(offset + size) if has_more else None
-
-        return DocumentListResponse(
-            documents=page,
-            next_page_token=next_token,
-        )
-    except Exception as e:
-        logger.error("Failed to list documents: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    documents = await document_service.list_documents()
+    has_more = offset + size < len(documents)
+    return DocumentListResponse(
+        documents=[DocumentInfo.from_summary(item) for item in documents[offset : offset + size]],
+        next_page_token=_encode_offset(offset + size) if has_more else None,
+    )
 
 
-@router.get("/{doc_id}", response_model=DocumentInfo)
+@router.get("/{document_id}", response_model=DocumentInfo)
 async def get_document(
-    doc_id: str,
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+    document_id: str, document_service: DocumentServiceDependency
+) -> DocumentInfo:
     """Get document details by ID."""
-    try:
-        results = await qdrant.search(
-            collection="documents",
-            query_vector=[0] * 768,
-            top_k=1000,
-        )
-
-        doc_chunks = [r for r in results if r["payload"].get("doc_id") == doc_id]
-
-        if not doc_chunks:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        first_chunk = doc_chunks[0]
-
-        return DocumentInfo(
-            id=doc_id,
-            filename=first_chunk["payload"].get("filename"),
-            content_type=first_chunk["payload"].get("content_type", ""),
-            file_size=0,
-            status="indexed",
-            chunks_count=len(doc_chunks),
-            created_at=None,
-            updated_at=None,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Failed to get document: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    return DocumentInfo.from_summary(await document_service.get_document(document_id))
 
 
-@router.delete("/{doc_id}", status_code=status.HTTP_204_NO_CONTENT)
+@router.delete("/{document_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_document(
-    doc_id: str,
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+    document_id: str, document_service: DocumentServiceDependency
+) -> Response:
     """Delete a document and all its chunks (AIP-135)."""
-    try:
-        results = await qdrant.search(
-            collection="documents",
-            query_vector=[0] * 768,
-            top_k=1000,
-        )
-
-        doc_chunks = [r for r in results if r["payload"].get("doc_id") == doc_id]
-
-        if not doc_chunks:
-            raise HTTPException(status_code=404, detail="Document not found")
-
-        point_ids = [chunk["id"] for chunk in doc_chunks]
-        await qdrant.delete_points("documents", point_ids)
-
-        logger.info("Deleted document '%s' with %s chunks", doc_id, len(point_ids))
-        return Response(status_code=status.HTTP_204_NO_CONTENT)
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Failed to delete document: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    await document_service.delete_document(document_id)
+    return Response(status_code=status.HTTP_204_NO_CONTENT)

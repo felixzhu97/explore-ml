@@ -1,7 +1,6 @@
-from typing import Dict, List, Optional, Tuple
 
 import math
-from datetime import datetime, timezone
+from datetime import datetime, UTC
 import os
 
 import torch
@@ -33,19 +32,19 @@ class FeedRanker(nn.Module):
         )
 
     def forward(self, user_indices: torch.Tensor, post_indices: torch.Tensor, features: torch.Tensor) -> torch.Tensor:
-        u = self.user_embedding(user_indices)
-        p = self.post_embedding(post_indices)
-        x = torch.cat([u, p, features], dim=-1)
-        return self.mlp(x).squeeze(-1)
+        user_vectors = self.user_embedding(user_indices)
+        post_vectors = self.post_embedding(post_indices)
+        combined_input = torch.cat([user_vectors, post_vectors, features], dim=-1)
+        return self.mlp(combined_input).squeeze(-1)
 
 
 class FeedRankingService:
-    def __init__(self, model_path: str, device: Optional[str] = None) -> None:
+    def __init__(self, model_path: str, device: str | None = None) -> None:
         self.device = torch.device(device or ("cuda" if torch.cuda.is_available() else "cpu"))
         self.base_model_path = model_path
-        self.models: Dict[str, FeedRanker] = {}
-        self.user_index: Dict[str, int] = {}
-        self.post_index: Dict[str, int] = {}
+        self.models: dict[str, FeedRanker] = {}
+        self.user_index: dict[str, int] = {}
+        self.post_index: dict[str, int] = {}
         self._session = None
         self._cluster = None
         self._load_model("default", model_path)
@@ -65,7 +64,7 @@ class FeedRankingService:
             self.user_index = user_index
             self.post_index = post_index
 
-    def _select_model_key(self, region: Optional[str], language: Optional[str], experiment_id: Optional[str], variant_id: Optional[str]) -> str:
+    def _select_model_key(self, region: str | None, language: str | None, experiment_id: str | None, variant_id: str | None) -> str:
         if experiment_id and variant_id:
             return f"{experiment_id}_{variant_id}"
         if region and language:
@@ -95,14 +94,14 @@ class FeedRankingService:
             self._cluster = cluster
         return self._session
 
-    def _load_post_features(self, post_ids: List[str]) -> Dict[str, Tuple[float, float, float]]:
+    def _load_post_features(self, post_ids: list[str]) -> dict[str, tuple[float, float, float]]:
         session = self._get_cassandra()
         if not session or not post_ids:
             return {}
         placeholders = ", ".join(["%s"] * len(post_ids))
         query = f"SELECT post_id, like_count, comment_count, created_at FROM post_engagement_counts WHERE post_id IN ({placeholders})"
         rows = session.execute(query, tuple(post_ids))
-        now = datetime.now(timezone.utc)
+        now = datetime.now(UTC)
         features = {}
         for row in rows:
             post_id = row.post_id
@@ -110,38 +109,38 @@ class FeedRankingService:
             comment_count = float(row.comment_count or 0)
             created_at = row.created_at
             if hasattr(created_at, "isoformat"):
-                created_dt = created_at
+                created_at_datetime = created_at
             else:
                 try:
-                    created_dt = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
+                    created_at_datetime = datetime.fromisoformat(str(created_at).replace("Z", "+00:00"))
                 except Exception:
-                    created_dt = now
-            age_hours = max(0.0, (now - created_dt).total_seconds() / 3600.0)
+                    created_at_datetime = now
+            age_hours = max(0.0, (now - created_at_datetime).total_seconds() / 3600.0)
             features[post_id] = (like_count, comment_count, age_hours)
         return features
 
     def rank(
         self,
         user_id: str,
-        candidate_ids: List[str],
-        region: Optional[str] = None,
-        language: Optional[str] = None,
-        experiment_id: Optional[str] = None,
-        variant_id: Optional[str] = None,
-    ) -> List[Tuple[str, float]]:
+        candidate_ids: list[str],
+        region: str | None = None,
+        language: str | None = None,
+        experiment_id: str | None = None,
+        variant_id: str | None = None,
+    ) -> list[tuple[str, float]]:
         if not candidate_ids:
             return []
         key = self._select_model_key(region, language, experiment_id, variant_id)
         model = self._get_model(key)
-        user_idx = self.user_index.get(user_id, 0)
+        user_embedding_index = self.user_index.get(user_id, 0)
         post_features = self._load_post_features(candidate_ids)
         user_indices = []
         post_indices = []
         feature_rows = []
-        id_list = []
+        ranked_post_ids = []
         for post_id in candidate_ids:
-            post_idx = self.post_index.get(post_id)
-            if post_idx is None:
+            post_embedding_index = self.post_index.get(post_id)
+            if post_embedding_index is None:
                 continue
             like_count, comment_count, age_hours = post_features.get(post_id, (0.0, 0.0, 0.0))
             feature_rows.append(
@@ -151,18 +150,18 @@ class FeedRankingService:
                     age_hours,
                 ]
             )
-            user_indices.append(user_idx)
-            post_indices.append(post_idx)
-            id_list.append(post_id)
-        if not id_list:
+            user_indices.append(user_embedding_index)
+            post_indices.append(post_embedding_index)
+            ranked_post_ids.append(post_id)
+        if not ranked_post_ids:
             return []
         user_tensor = torch.tensor(user_indices, dtype=torch.long, device=self.device)
         post_tensor = torch.tensor(post_indices, dtype=torch.long, device=self.device)
         feature_tensor = torch.tensor(feature_rows, dtype=torch.float32, device=self.device)
         with torch.no_grad():
             scores = model(user_tensor, post_tensor, feature_tensor)
-        result = list(zip(id_list, scores.detach().cpu().tolist()))
-        result.sort(key=lambda x: x[1], reverse=True)
-        return result
+        scored_posts = list(zip(ranked_post_ids, scores.detach().cpu().tolist()))
+        scored_posts.sort(key=lambda post_and_score: post_and_score[1], reverse=True)
+        return scored_posts
 
 

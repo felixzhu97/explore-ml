@@ -1,6 +1,5 @@
 """Embedding service for generating text embeddings."""
 import logging
-from typing import Optional
 
 import ollama
 from openai import AsyncOpenAI
@@ -73,8 +72,8 @@ class EmbeddingService:
                     prompt=text,
                 )
                 embeddings.append(response["embedding"])
-            except Exception as e:
-                logger.error(f"Ollama embedding failed for text: {e}")
+            except Exception as error:
+                logger.error(f"Ollama embedding failed for text: {error}")
                 raise
 
         return embeddings
@@ -87,8 +86,8 @@ class EmbeddingService:
                 input=texts,
             )
             return [item.embedding for item in response.data]
-        except Exception as e:
-            logger.error(f"OpenAI embedding failed: {e}")
+        except Exception as error:
+            logger.error(f"OpenAI embedding failed: {error}")
             raise
 
     async def get_embedding_dimension(self) -> int:
@@ -105,8 +104,8 @@ class EmbeddingService:
                 info = await self._ollama_client.show(
                     model=self._model,
                 )
-                info_dict = info if isinstance(info, dict) else {"dimension": settings.qdrant_vector_size}
-                return info_dict.get("dimension", settings.qdrant_vector_size)
+                model_info = info if isinstance(info, dict) else {"dimension": settings.qdrant_vector_size}
+                return model_info.get("dimension", settings.qdrant_vector_size)
             except Exception:
                 return settings.qdrant_vector_size
         else:
@@ -123,13 +122,13 @@ class EmbeddingService:
         try:
             test_embedding = await self.embed_single("health check")
             return len(test_embedding) > 0
-        except Exception as e:
-            logger.error(f"Embedding service health check failed: {e}")
+        except Exception as error:
+            logger.error(f"Embedding service health check failed: {error}")
             return False
 
 
 # Singleton instance
-_embedding_service: Optional[EmbeddingService] = None
+_embedding_service: EmbeddingService | None = None
 
 
 def get_embedding_service() -> EmbeddingService:
