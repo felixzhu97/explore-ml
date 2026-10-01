@@ -1,48 +1,56 @@
-import { HELPERS, findHelper, helperUrl, toProxyUrl } from './helpers';
+import { HELPERS, findHelper, mlUrl, toProxyUrl } from './helpers';
 import { buildProxy, proxyTarget } from './proxy';
 
 describe('helper registry', () => {
-  it('should map six helpers to contiguous ports 8000-8005', () => {
-    expect(HELPERS.map((helper) => helper.port)).toEqual([8000, 8001, 8002, 8003, 8004, 8005]);
+  it('should key every helper by its python_ml package name', () => {
+    expect(HELPERS.map((helper) => helper.module)).toEqual([
+      'recommendation',
+      'vision',
+      'rag',
+      'image_playground',
+      'speech',
+      'video',
+    ]);
   });
 
-  it('should build proxied urls under /svc/<id>', () => {
-    expect(helperUrl('rag', '/api/v1/documents:query')).toBe('/svc/rag/api/v1/documents:query');
-    expect(helperUrl('recommendation', 'health')).toBe('/svc/recommendation/health');
+  it('should build proxied urls under /ml', () => {
+    expect(mlUrl('/api/v1/documents:query')).toBe('/ml/api/v1/documents:query');
+    expect(mlUrl('health')).toBe('/ml/health');
   });
 
-  it('should rewrite absolute helper urls onto the proxy', () => {
-    expect(toProxyUrl('image', 'http://localhost:8003/output/image/job-1.png')).toBe(
-      '/svc/image/output/image/job-1.png',
+  it('should rewrite absolute backend urls onto the proxy', () => {
+    expect(toProxyUrl('http://localhost:8000/output/image/job-1.png')).toBe(
+      '/ml/output/image/job-1.png',
     );
-    expect(toProxyUrl('image', '/svc/image/output/a.png')).toBe('/svc/image/output/a.png');
-    expect(toProxyUrl('speech', '/output/voice/a.mp3')).toBe('/svc/speech/output/voice/a.mp3');
+    expect(toProxyUrl('/ml/output/a.png')).toBe('/ml/output/a.png');
+    expect(toProxyUrl('/output/voice/a.mp3')).toBe('/ml/output/voice/a.mp3');
   });
 
   it('should return undefined for unknown helper ids', () => {
     expect(findHelper('nope')).toBeUndefined();
-    expect(findHelper('vision')?.port).toBe(8001);
+    expect(findHelper('image')?.module).toBe('image_playground');
   });
 });
 
 describe('buildProxy', () => {
-  it('should default every target to loopback with the helper port', () => {
-    const rules = buildProxy(HELPERS, {});
-    expect(Object.keys(rules)).toHaveLength(6);
-    expect(rules['/svc/recommendation'].target).toBe('http://127.0.0.1:8000');
-    expect(rules['/svc/video'].target).toBe('http://127.0.0.1:8005');
+  it('should send /ml to the single app on loopback port 8000 by default', () => {
+    const rules = buildProxy({});
+    expect(Object.keys(rules)).toEqual(['/ml']);
+    expect(rules['/ml'].target).toBe('http://127.0.0.1:8000');
+    expect(rules['/ml'].ws).toBe(true);
   });
 
-  it('should honour <NAME>_URL overrides and strip trailing slashes', () => {
-    const rules = buildProxy(HELPERS, { RAG_URL: 'http://gpu-box:9002/' });
-    expect(rules['/svc/rag'].target).toBe('http://gpu-box:9002');
+  it('should honour EXPLORE_ML_URL and strip trailing slashes', () => {
+    expect(buildProxy({ EXPLORE_ML_URL: 'http://gpu-box:9000/' })['/ml'].target).toBe(
+      'http://gpu-box:9000',
+    );
     expect(proxyTarget(8000, '  ')).toBe('http://127.0.0.1:8000');
   });
 
-  it('should strip the /svc/<id> prefix when rewriting', () => {
-    const { pathRewrite } = buildProxy(HELPERS, {})['/svc/speech'];
+  it('should strip the /ml prefix when rewriting', () => {
+    const { pathRewrite } = buildProxy({})['/ml'];
     const [pattern, replacement] = Object.entries(pathRewrite)[0];
-    expect('/svc/speech/api/v1/voices:synthesize'.replace(new RegExp(pattern), replacement)).toBe(
+    expect('/ml/api/v1/voices:synthesize'.replace(new RegExp(pattern), replacement)).toBe(
       '/api/v1/voices:synthesize',
     );
   });

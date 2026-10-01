@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { helperUrl, toProxyUrl } from '../shared/helpers';
+import { mlUrl, toProxyUrl } from '../shared/helpers';
 import { pollJob, type JobStatus, type PollOptions } from '../shared/poll';
 
 export interface ImageJob extends JobStatus {
@@ -23,16 +23,15 @@ export class ImageService {
     pollOptions?: PollOptions,
   ): Promise<GeneratedImage> {
     const { job_id: jobId } = await firstValueFrom(
-      this.http.post<{ job_id: string }>(helperUrl('image', '/api/v1/images:generate'), {
+      this.http.post<{ job_id: string }>(mlUrl('/api/v1/images:generate'), {
         prompt,
         negative_prompt: negativePrompt || undefined,
       }),
     );
     const job = await pollJob(
-      () =>
-        firstValueFrom(this.http.get<ImageJob>(helperUrl('image', `/api/v1/imageJobs/${jobId}`))),
+      () => firstValueFrom(this.http.get<ImageJob>(mlUrl(`/api/v1/imageJobs/${jobId}`))),
       pollOptions,
     );
-    return { jobId, url: toProxyUrl('image', job.image_url ?? `/output/image/${jobId}.png`) };
+    return { jobId, url: toProxyUrl(job.image_url ?? `/output/image/${jobId}.png`) };
   }
 }

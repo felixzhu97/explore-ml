@@ -1,5 +1,7 @@
-import type { Helper } from './helpers';
-
+// Imported by proxy.conf.mjs under Node, so this file must not import other modules.
+export const ML_BASE_PATH = '/ml';
+export const ML_PORT = 8000;
+export const ML_URL_ENVIRONMENT_VARIABLE = 'EXPLORE_ML_URL';
 export interface ProxyRule {
   target: string;
   changeOrigin: boolean;
@@ -13,21 +15,17 @@ export function proxyTarget(port: number, overrideUrl?: string): string {
   return trimmedUrl ? trimmedUrl.replace(/\/+$/, '') : `http://127.0.0.1:${port}`;
 }
 
-/** Dev-server proxy: `/svc/<id>/*` → helper root, overridable via `<NAME>_URL`. */
+/** Dev-server proxy: `/ml/*` → the python_ml app root, overridable via `EXPLORE_ML_URL`. */
 export function buildProxy(
-  helpers: readonly Helper[],
   environment: Record<string, string | undefined>,
 ): Record<string, ProxyRule> {
-  const rules: Record<string, ProxyRule> = {};
-  for (const helper of helpers) {
-    const prefix = `/svc/${helper.id}`;
-    rules[prefix] = {
-      target: proxyTarget(helper.port, environment[helper.urlEnvironmentVariable]),
+  return {
+    [ML_BASE_PATH]: {
+      target: proxyTarget(ML_PORT, environment[ML_URL_ENVIRONMENT_VARIABLE]),
       changeOrigin: true,
       ws: true,
       secure: false,
-      pathRewrite: { [`^${prefix}`]: '' },
-    };
-  }
-  return rules;
+      pathRewrite: { [`^${ML_BASE_PATH}`]: '' },
+    },
+  };
 }

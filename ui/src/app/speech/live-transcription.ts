@@ -25,7 +25,7 @@ export function floatToPcm16Base64(samples: Float32Array): string {
 
 export function transcriptionSocketUrl(location: Pick<Location, 'protocol' | 'host'>): string {
   const scheme = location.protocol === 'https:' ? 'wss' : 'ws';
-  return `${scheme}://${location.host}/svc/speech/ws/v1/audios:transcribe`;
+  return `${scheme}://${location.host}/ml/ws/v1/audios:transcribe`;
 }
 
 export interface TranscriptionEvent {

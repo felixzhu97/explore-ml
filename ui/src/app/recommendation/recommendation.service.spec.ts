@@ -19,7 +19,7 @@ describe('RecommendationService', () => {
 
   it('should post rank requests to the surface custom method', async () => {
     const ranked = service.rank('reels', { user_id: 'u', candidate_ids: ['p1'] });
-    const request = httpTesting.expectOne('/svc/recommendation/api/v1/reels:rank');
+    const request = httpTesting.expectOne('/ml/api/v1/reels:rank');
     expect(request.request.method).toBe('POST');
     expect(request.request.body).toEqual({ user_id: 'u', candidate_ids: ['p1'] });
     request.flush({ items: [{ id: 'p1', score: 0.9 }] });
@@ -28,7 +28,7 @@ describe('RecommendationService', () => {
 
   it('should send the user id as user_id when recalling feeds', async () => {
     const recalled = service.recall('u1', 5);
-    const request = httpTesting.expectOne('/svc/recommendation/api/v1/feeds:recall');
+    const request = httpTesting.expectOne('/ml/api/v1/feeds:recall');
     expect(request.request.body).toEqual({ user_id: 'u1', limit: 5 });
     request.flush({ items: [] });
     expect((await recalled).items).toEqual([]);

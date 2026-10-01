@@ -4,7 +4,13 @@ import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { BarChart } from '../shared/bar-chart';
-import { HealthService, type HealthResult } from '../shared/health';
+import {
+  HealthService,
+  STATUS_LABELS,
+  badgeStatus,
+  type HealthReport,
+  type ModuleHealth,
+} from '../shared/health';
 import { HELPERS } from '../shared/helpers';
 
 @Component({
@@ -35,12 +41,14 @@ import { HELPERS } from '../shared/helpers';
                   <span class="font-display text-tagline font-semibold text-ink">{{
                     helper.name
                   }}</span>
-                  <span class="text-caption text-muted"
-                    >python_ml/{{ helper.directory }} · {{ helper.port }}</span
-                  >
+                  <span class="text-caption text-muted">python_ml/{{ helper.module }}</span>
                   <nz-badge
-                    [nzStatus]="health ? (health.ok ? 'success' : 'default') : 'processing'"
-                    [nzText]="health ? (health.ok ? '在线' : '离线 · ' + health.detail) : '检查中…'"
+                    [nzStatus]="health ? badgeStatus(health.status) : 'processing'"
+                    [nzText]="
+                      health
+                        ? statusLabels[health.status] + (health.detail ? ' · ' + health.detail : '')
+                        : '检查中…'
+                    "
                   />
                 </div>
               </nz-card>
@@ -64,14 +72,18 @@ import { HELPERS } from '../shared/helpers';
 export class Home {
   private readonly healthService = inject(HealthService);
   protected readonly helpers = HELPERS;
-  protected readonly results = signal<HealthResult[]>([]);
+  protected readonly report = signal<HealthReport | undefined>(undefined);
   protected readonly checking = signal(false);
-  protected readonly upCount = computed(() => this.results().filter((health) => health.ok).length);
+  protected readonly statusLabels = STATUS_LABELS;
+  protected readonly badgeStatus = badgeStatus;
+  protected readonly upCount = computed(
+    () => this.report()?.modules.filter((health) => health.status === 'ok').length ?? 0,
+  );
   protected readonly latency = computed(() =>
-    HELPERS.map((helper) => {
-      const health = this.result(helper.id);
-      return { label: helper.name, value: health?.ok ? health.latencyMs : null };
-    }),
+    HELPERS.map((helper) => ({
+      label: helper.name,
+      value: this.result(helper.id)?.latencyMs ?? null,
+    })),
   );
   protected readonly formatLatency = (latencyMs: number) => `${latencyMs} ms`;
 
@@ -79,13 +91,13 @@ export class Home {
     void this.refresh();
   }
 
-  protected result(id: string): HealthResult | undefined {
-    return this.results().find((health) => health.helper.id === id);
+  protected result(id: string): ModuleHealth | undefined {
+    return this.report()?.modules.find((health) => health.helper.id === id);
   }
 
   protected async refresh(): Promise<void> {
     this.checking.set(true);
-    this.results.set(await this.healthService.checkAll());
+    this.report.set(await this.healthService.check());
     this.checking.set(false);
   }
 }
