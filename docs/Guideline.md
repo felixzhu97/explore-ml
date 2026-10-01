@@ -168,6 +168,28 @@ flowchart LR
   Smoke --> Gate
 ```
 
+### Fine-tuning
+
+**Tune adapters, not contracts.** Train small models locally and large ones on
+a single rented GPU. Write each result beside its base model under
+`LOCAL_MODELS_ROOT`, select it with one env var, and promote it only when it
+beats the base model on the same held-out split. Prefer LoRA / QLoRA for
+billion-parameter models ([LoRA](https://arxiv.org/abs/2106.09685),
+[QLoRA](https://arxiv.org/abs/2305.14314)). Steps live in the
+[fine-tuning guide](user-guide/fine-tuning.md).
+
+```mermaid
+flowchart LR
+  Base[Base_model]
+  Train[Train_local_or_one_GPU]
+  Ft[name-ft_beside_base]
+  Env[One_env_var]
+  Eval[Same_held_out_split]
+  Base --> Train --> Ft --> Env --> Eval
+  Eval -->|better| Promote[Promote]
+  Eval -->|worse| Rollback[Rollback]
+```
+
 ### Resource bounds
 
 **Bound inputs and device memory.** Cap image size, video frame counts, ASR
