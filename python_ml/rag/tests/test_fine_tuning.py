@@ -1,5 +1,6 @@
 import json
 
+from training.eval_answers import build_question, parse_score
 from training.eval_retrieval import first_hit_rank, score
 from training.train_embedding import load_pairs
 from training.train_reranker import format_pair
@@ -28,3 +29,13 @@ def test_should_find_first_relevant_source_case_insensitively():
 
 def test_should_score_recall_and_mrr():
     assert score([1, 2, None, 6], k=5) == {"recall@5": 0.5, "mrr": 0.375}
+
+
+def test_should_parse_first_judge_digit():
+    assert parse_score("Score: 4") == 4
+    assert parse_score("no score") is None
+
+
+def test_should_ground_question_in_context_when_present():
+    assert build_question({"question": "q"}) == "q"
+    assert "Context:\nc" in build_question({"question": "q", "context": "c"})
