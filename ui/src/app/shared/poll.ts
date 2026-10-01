@@ -8,12 +8,13 @@ export interface PollOptions {
   timeoutMs?: number;
   signal?: AbortSignal;
   onStatus?: (status: string) => void;
-  sleep?: (ms: number) => Promise<void>;
+  sleep?: (durationMs: number) => Promise<void>;
 }
 
-const TERMINAL = new Set(['succeeded', 'failed']);
+const TERMINAL_STATUSES = new Set(['succeeded', 'failed']);
 
-const defaultSleep = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+const defaultSleep = (durationMs: number) =>
+  new Promise<void>((resolve) => setTimeout(resolve, durationMs));
 
 /** Polls an async job resource until it reaches `succeeded` or `failed`. */
 export async function pollJob<T extends JobStatus>(
@@ -26,17 +27,17 @@ export async function pollJob<T extends JobStatus>(
     sleep = defaultSleep,
   }: PollOptions = {},
 ): Promise<T> {
-  let waited = 0;
+  let waitedMs = 0;
   for (;;) {
     if (signal?.aborted) throw new Error('已取消');
     const job = await fetchStatus();
     onStatus?.(job.status);
-    if (TERMINAL.has(job.status)) {
+    if (TERMINAL_STATUSES.has(job.status)) {
       if (job.status === 'failed') throw new Error(job.error || '任务失败');
       return job;
     }
-    if (waited >= timeoutMs) throw new Error('任务超时');
+    if (waitedMs >= timeoutMs) throw new Error('任务超时');
     await sleep(intervalMs);
-    waited += intervalMs;
+    waitedMs += intervalMs;
   }
 }

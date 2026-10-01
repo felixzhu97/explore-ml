@@ -1,14 +1,14 @@
-import { buildProxy, serviceTarget } from './proxy';
-import { SERVICES, getService, svcUrl, toProxyUrl } from './services';
+import { HELPERS, findHelper, helperUrl, toProxyUrl } from './helpers';
+import { buildProxy, proxyTarget } from './proxy';
 
-describe('service registry', () => {
+describe('helper registry', () => {
   it('should map six helpers to contiguous ports 8000-8005', () => {
-    expect(SERVICES.map((s) => s.port)).toEqual([8000, 8001, 8002, 8003, 8004, 8005]);
+    expect(HELPERS.map((helper) => helper.port)).toEqual([8000, 8001, 8002, 8003, 8004, 8005]);
   });
 
   it('should build proxied urls under /svc/<id>', () => {
-    expect(svcUrl('rag', '/api/v1/documents:query')).toBe('/svc/rag/api/v1/documents:query');
-    expect(svcUrl('rec', 'health')).toBe('/svc/rec/health');
+    expect(helperUrl('rag', '/api/v1/documents:query')).toBe('/svc/rag/api/v1/documents:query');
+    expect(helperUrl('recommendation', 'health')).toBe('/svc/recommendation/health');
   });
 
   it('should rewrite absolute helper urls onto the proxy', () => {
@@ -19,28 +19,28 @@ describe('service registry', () => {
     expect(toProxyUrl('speech', '/output/voice/a.mp3')).toBe('/svc/speech/output/voice/a.mp3');
   });
 
-  it('should return undefined for unknown service ids', () => {
-    expect(getService('nope')).toBeUndefined();
-    expect(getService('vision')?.port).toBe(8001);
+  it('should return undefined for unknown helper ids', () => {
+    expect(findHelper('nope')).toBeUndefined();
+    expect(findHelper('vision')?.port).toBe(8001);
   });
 });
 
 describe('buildProxy', () => {
   it('should default every target to loopback with the helper port', () => {
-    const rules = buildProxy(SERVICES, {});
+    const rules = buildProxy(HELPERS, {});
     expect(Object.keys(rules)).toHaveLength(6);
-    expect(rules['/svc/rec'].target).toBe('http://127.0.0.1:8000');
+    expect(rules['/svc/recommendation'].target).toBe('http://127.0.0.1:8000');
     expect(rules['/svc/video'].target).toBe('http://127.0.0.1:8005');
   });
 
   it('should honour <NAME>_URL overrides and strip trailing slashes', () => {
-    const rules = buildProxy(SERVICES, { RAG_URL: 'http://gpu-box:9002/' });
+    const rules = buildProxy(HELPERS, { RAG_URL: 'http://gpu-box:9002/' });
     expect(rules['/svc/rag'].target).toBe('http://gpu-box:9002');
-    expect(serviceTarget(8000, '  ')).toBe('http://127.0.0.1:8000');
+    expect(proxyTarget(8000, '  ')).toBe('http://127.0.0.1:8000');
   });
 
   it('should strip the /svc/<id> prefix when rewriting', () => {
-    const { pathRewrite } = buildProxy(SERVICES, {})['/svc/speech'];
+    const { pathRewrite } = buildProxy(HELPERS, {})['/svc/speech'];
     const [pattern, replacement] = Object.entries(pathRewrite)[0];
     expect('/svc/speech/api/v1/voices:synthesize'.replace(new RegExp(pattern), replacement)).toBe(
       '/api/v1/voices:synthesize',

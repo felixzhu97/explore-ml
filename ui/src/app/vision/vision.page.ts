@@ -1,45 +1,51 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import { BarChart } from '../shared/bar-chart';
-import {
-  moderateImage,
-  moderateVideo,
-  predictImage,
-} from './vision.api';
-import type { ModerationResult, VisionInput } from './vision.model';
 import { Call } from '../shared/call';
 import { Endpoint } from '../shared/endpoint';
 import { FilePick } from '../shared/file-pick';
 import { ModulePage } from '../shared/module-page';
+import {
+  VisionService,
+  type ModerationResult,
+  type PredictionResult,
+  type VisionInput,
+} from './vision.service';
 
 type Target = 'predict' | 'moderateImage' | 'moderateVideo';
 
-function bars(r: ModerationResult | undefined) {
-  return (r?.categories ?? []).map((c) => ({ label: c.label, value: c.score }));
+function categoryBars(result: ModerationResult | undefined) {
+  return (result?.categories ?? []).map((category) => ({
+    label: category.label,
+    value: category.score,
+  }));
 }
 
 @Component({
   selector: 'app-vision-page',
   imports: [BarChart, Endpoint, FilePick, ModulePage, NzButtonModule, NzInputModule, NzTagModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="vision">
-      @for (e of endpoints; track e.target) {
-        <app-endpoint [title]="e.title" [path]="e.path" [call]="calls[e.target]">
+      @for (endpoint of endpoints; track endpoint.target) {
+        <app-endpoint
+          [title]="endpoint.title"
+          [path]="endpoint.path"
+          [call]="calls[endpoint.target]"
+        >
           <div class="grid gap-4 sm:grid-cols-2">
             <div class="flex flex-col gap-1">
               <span class="text-caption font-semibold text-ink-80">上传文件</span>
-              <app-file-pick [accept]="e.accept" (picked)="pick(e.target, $event)" />
+              <app-file-pick [accept]="endpoint.accept" (picked)="pick(endpoint.target, $event)" />
             </div>
             <label class="flex flex-col gap-1">
               <span class="text-caption font-semibold text-ink-80">或填写 URL</span>
               <input
                 nz-input
-                [placeholder]="e.placeholder"
-                [value]="urls()[e.target]"
-                (input)="setUrl(e.target, $event)"
+                [placeholder]="endpoint.placeholder"
+                [value]="urls()[endpoint.target]"
+                (input)="setUrl(endpoint.target, $event)"
               />
             </label>
           </div>
@@ -48,27 +54,27 @@ function bars(r: ModerationResult | undefined) {
               nz-button
               nzType="primary"
               nzShape="round"
-              [nzLoading]="calls[e.target].busy()"
-              [disabled]="!input(e.target)"
-              (click)="run(e.target)"
+              [nzLoading]="calls[endpoint.target].busy()"
+              [disabled]="!input(endpoint.target)"
+              (click)="run(endpoint.target)"
             >
               发送
             </button>
           </div>
-          @if (e.target === 'predict') {
+          @if (endpoint.target === 'predict') {
             @if (labels().length) {
               <div class="flex flex-wrap gap-2">
-                @for (l of labels(); track $index) {
+                @for (label of labels(); track $index) {
                   <nz-tag [nzColor]="$first ? 'processing' : 'default'"
-                    >{{ $index + 1 }}. {{ l }}</nz-tag
+                    >{{ $index + 1 }}. {{ label }}</nz-tag
                   >
                 }
               </div>
             }
           } @else {
-            @let b = e.target === 'moderateImage' ? imageBars() : videoBars();
-            @if (b.length) {
-              <app-bar-chart [data]="b" [max]="1" ariaLabel="审核类别分数" />
+            @let moderationBars = endpoint.target === 'moderateImage' ? imageBars() : videoBars();
+            @if (moderationBars.length) {
+              <app-bar-chart [data]="moderationBars" [max]="1" ariaLabel="审核类别分数" />
             }
           }
         </app-endpoint>
@@ -77,6 +83,7 @@ function bars(r: ModerationResult | undefined) {
   `,
 })
 export class VisionPage {
+  private readonly visionService = inject(VisionService);
   protected readonly endpoints = [
     {
       target: 'predict',
@@ -101,7 +108,7 @@ export class VisionPage {
     },
   ] as const;
   protected readonly calls = {
-    predict: new Call<{ labels: string[] }>(),
+    predict: new Call<PredictionResult>(),
     moderateImage: new Call<ModerationResult>(),
     moderateVideo: new Call<ModerationResult>(),
   };
@@ -116,16 +123,16 @@ export class VisionPage {
     moderateVideo: '',
   });
   protected readonly labels = computed(() => this.calls.predict.value()?.labels ?? []);
-  protected readonly imageBars = computed(() => bars(this.calls.moderateImage.value()));
-  protected readonly videoBars = computed(() => bars(this.calls.moderateVideo.value()));
+  protected readonly imageBars = computed(() => categoryBars(this.calls.moderateImage.value()));
+  protected readonly videoBars = computed(() => categoryBars(this.calls.moderateVideo.value()));
 
   protected pick(target: Target, file: File | null): void {
-    this.files.update((f) => ({ ...f, [target]: file }));
+    this.files.update((files) => ({ ...files, [target]: file }));
   }
 
-  protected setUrl(target: Target, e: Event): void {
-    const url = (e.target as HTMLInputElement).value;
-    this.urls.update((u) => ({ ...u, [target]: url }));
+  protected setUrl(target: Target, inputEvent: Event): void {
+    const url = (inputEvent.target as HTMLInputElement).value;
+    this.urls.update((urls) => ({ ...urls, [target]: url }));
   }
 
   protected input(target: Target): VisionInput | null {
@@ -137,8 +144,12 @@ export class VisionPage {
 
   protected run(target: Target): Promise<void> {
     const input = this.input(target)!;
-    if (target === 'predict') return this.calls.predict.run(() => predictImage(input));
-    if (target === 'moderateImage') return this.calls.moderateImage.run(() => moderateImage(input));
-    return this.calls.moderateVideo.run(() => moderateVideo(input));
+    if (target === 'predict') {
+      return this.calls.predict.run(() => this.visionService.predictImage(input));
+    }
+    if (target === 'moderateImage') {
+      return this.calls.moderateImage.run(() => this.visionService.moderateImage(input));
+    }
+    return this.calls.moderateVideo.run(() => this.visionService.moderateVideo(input));
   }
 }

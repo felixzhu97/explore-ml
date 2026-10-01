@@ -1,38 +1,37 @@
 import { JsonPipe } from '@angular/common';
-import { ChangeDetectionStrategy, Component, input } from '@angular/core';
+import { Component, input } from '@angular/core';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTagModule } from 'ng-zorro-antd/tag';
 import type { Call } from '../shared/call';
 
-type CallState = Pick<Call<unknown>, 'busy' | 'value' | 'error' | 'ms'>;
+type CallState = Pick<Call<unknown>, 'busy' | 'value' | 'error' | 'elapsedMs'>;
 
 /** One testable endpoint: projected form controls, then status and the raw JSON response. */
 @Component({
   selector: 'app-endpoint',
   imports: [JsonPipe, NzAlertModule, NzCardModule, NzTagModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nz-card [nzTitle]="header">
       <div class="flex flex-col gap-4">
         <ng-content />
-        @let c = call();
-        @if (c.busy()) {
+        @let request = call();
+        @if (request.busy()) {
           <span><nz-tag nzColor="processing">请求中…</nz-tag></span>
-        } @else if (c.ms() !== null) {
+        } @else if (request.elapsedMs() !== null) {
           <span>
-            <nz-tag [nzColor]="c.error() ? 'error' : 'success'">
-              {{ c.error() ? '失败' : '完成' }} · {{ c.ms() }} ms
+            <nz-tag [nzColor]="request.error() ? 'error' : 'success'">
+              {{ request.error() ? '失败' : '完成' }} · {{ request.elapsedMs() }} ms
             </nz-tag>
           </span>
         }
-        @if (c.error()) {
-          <nz-alert nzType="error" nzShowIcon [nzMessage]="c.error()" />
+        @if (request.error()) {
+          <nz-alert nzType="error" nzShowIcon [nzMessage]="request.error()" />
         }
-        @if (c.value() !== undefined) {
+        @if (request.value() !== undefined) {
           <pre
             class="m-0 max-h-80 overflow-auto rounded-md bg-parchment p-4 font-mono text-caption"
-            >{{ c.value() | json }}</pre>
+            >{{ request.value() | json }}</pre>
         }
       </div>
     </nz-card>

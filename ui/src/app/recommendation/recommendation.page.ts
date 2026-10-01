@@ -1,29 +1,37 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { BarChart } from '../shared/bar-chart';
-import { rank, recall } from './rec.api';
-import type { RankSurface, RankedItem } from './rec.model';
 import { Call } from '../shared/call';
 import { Endpoint } from '../shared/endpoint';
 import { ModulePage } from '../shared/module-page';
+import {
+  RecommendationService,
+  type RankSurface,
+  type RankedItem,
+  type RankedItemsResponse,
+} from './recommendation.service';
+
+const MAX_CHART_BARS = 20;
 
 function splitIds(text: string): string[] {
   return text
     .split(/[\s,]+/)
-    .map((s) => s.trim())
+    .map((id) => id.trim())
     .filter(Boolean);
 }
 
 function toBars(items: RankedItem[] | undefined) {
-  return (items ?? []).slice(0, 20).map((i) => ({ label: i.id, value: i.score }));
+  return (items ?? [])
+    .slice(0, MAX_CHART_BARS)
+    .map((item) => ({ label: item.id, value: item.score }));
 }
 
 @Component({
-  selector: 'app-rec-page',
+  selector: 'app-recommendation-page',
   imports: [
     BarChart,
     Endpoint,
@@ -34,14 +42,17 @@ function toBars(items: RankedItem[] | undefined) {
     NzInputNumberModule,
     NzSelectModule,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <app-module-page module="rec">
-      <app-endpoint title="排序" [path]="'/api/v1/' + m().surface + ':rank'" [call]="rankCall">
+    <app-module-page module="recommendation">
+      <app-endpoint
+        title="排序"
+        [path]="'/api/v1/' + formModel().surface + ':rank'"
+        [call]="rankCall"
+      >
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">场景</span>
-            <nz-select [formField]="f.surface">
+            <nz-select [formField]="requestForm.surface">
               <nz-option nzValue="feeds" nzLabel="feeds" />
               <nz-option nzValue="explores" nzLabel="explores" />
               <nz-option nzValue="reels" nzLabel="reels" />
@@ -49,35 +60,35 @@ function toBars(items: RankedItem[] | undefined) {
           </div>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">user_id</span>
-            <input nz-input [formField]="f.userId" />
+            <input nz-input [formField]="requestForm.userId" />
           </label>
           <label class="flex flex-col gap-1 sm:col-span-2">
             <span class="text-caption font-semibold text-ink-80"
               >candidate_ids（逗号或换行分隔）</span
             >
-            <textarea nz-input rows="3" [formField]="f.candidates"></textarea>
+            <textarea nz-input rows="3" [formField]="requestForm.candidates"></textarea>
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">limit</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.limit" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.limit" />
           </label>
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
               <span class="text-caption font-semibold text-ink-80">region（可选）</span>
-              <input nz-input placeholder="CN" [formField]="f.region" />
+              <input nz-input placeholder="CN" [formField]="requestForm.region" />
             </label>
             <label class="flex flex-col gap-1">
               <span class="text-caption font-semibold text-ink-80">language（可选）</span>
-              <input nz-input placeholder="zh" [formField]="f.language" />
+              <input nz-input placeholder="zh" [formField]="requestForm.language" />
             </label>
           </div>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">experiment_id（可选）</span>
-            <input nz-input [formField]="f.experimentId" />
+            <input nz-input [formField]="requestForm.experimentId" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">variant_id（可选）</span>
-            <input nz-input [formField]="f.variantId" />
+            <input nz-input [formField]="requestForm.variantId" />
           </label>
         </div>
         <div>
@@ -101,11 +112,11 @@ function toBars(items: RankedItem[] | undefined) {
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">user_id</span>
-            <input nz-input [formField]="f.userId" />
+            <input nz-input [formField]="requestForm.userId" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">limit</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.recallLimit" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.recallLimit" />
           </label>
         </div>
         <div>
@@ -114,7 +125,7 @@ function toBars(items: RankedItem[] | undefined) {
             nzType="primary"
             nzShape="round"
             [nzLoading]="recallCall.busy()"
-            [disabled]="!m().userId.trim()"
+            [disabled]="!formModel().userId.trim()"
             (click)="runRecall()"
           >
             召回
@@ -127,8 +138,9 @@ function toBars(items: RankedItem[] | undefined) {
     </app-module-page>
   `,
 })
-export class RecPage {
-  protected readonly m = signal({
+export class RecommendationPage {
+  private readonly recommendationService = inject(RecommendationService);
+  protected readonly formModel = signal({
     surface: 'feeds' as RankSurface,
     userId: 'u1',
     candidates: 'p1, p2, p3, p4, p5',
@@ -139,30 +151,32 @@ export class RecPage {
     variantId: '',
     recallLimit: 20,
   });
-  protected readonly f = form(this.m);
-  protected readonly rankCall = new Call<{ items: RankedItem[] }>();
-  protected readonly recallCall = new Call<{ items: RankedItem[] }>();
-  protected readonly candidateIds = computed(() => splitIds(this.m().candidates));
+  protected readonly requestForm = form(this.formModel);
+  protected readonly rankCall = new Call<RankedItemsResponse>();
+  protected readonly recallCall = new Call<RankedItemsResponse>();
+  protected readonly candidateIds = computed(() => splitIds(this.formModel().candidates));
   protected readonly rankBars = computed(() => toBars(this.rankCall.value()?.items));
   protected readonly recallBars = computed(() => toBars(this.recallCall.value()?.items));
 
   protected runRank(): Promise<void> {
-    const m = this.m();
+    const values = this.formModel();
     return this.rankCall.run(() =>
-      rank(m.surface, {
-        user_id: m.userId.trim(),
+      this.recommendationService.rank(values.surface, {
+        user_id: values.userId.trim(),
         candidate_ids: this.candidateIds(),
-        limit: m.limit,
-        region: m.region.trim() || undefined,
-        language: m.language.trim() || undefined,
-        experiment_id: m.experimentId.trim() || undefined,
-        variant_id: m.variantId.trim() || undefined,
+        limit: values.limit,
+        region: values.region.trim() || undefined,
+        language: values.language.trim() || undefined,
+        experiment_id: values.experimentId.trim() || undefined,
+        variant_id: values.variantId.trim() || undefined,
       }),
     );
   }
 
   protected runRecall(): Promise<void> {
-    const m = this.m();
-    return this.recallCall.run(() => recall(m.userId.trim(), m.recallLimit));
+    const values = this.formModel();
+    return this.recallCall.run(() =>
+      this.recommendationService.recall(values.userId.trim(), values.recallLimit),
+    );
   }
 }

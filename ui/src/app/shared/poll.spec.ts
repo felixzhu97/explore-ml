@@ -8,7 +8,7 @@ describe('pollJob', () => {
     const seen: string[] = [];
     const job = await pollJob(async () => ({ status: statuses.shift()!, image_url: 'x' }), {
       sleep: noSleep,
-      onStatus: (s) => seen.push(s),
+      onStatus: (status) => seen.push(status),
     });
     expect(seen).toEqual(['pending', 'running', 'succeeded']);
     expect(job.image_url).toBe('x');

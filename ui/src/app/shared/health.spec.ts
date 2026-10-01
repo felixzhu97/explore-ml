@@ -1,28 +1,41 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
-import { checkHealth } from './health';
-import { SERVICES } from './services';
+import { provideHttpClient } from '@angular/common/http';
+import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
+import { TestBed } from '@angular/core/testing';
+import { HealthService } from './health';
+import { findHelper } from './helpers';
 
-afterEach(() => vi.unstubAllGlobals());
+describe('HealthService', () => {
+  let service: HealthService;
+  let httpTesting: HttpTestingController;
 
-describe('checkHealth', () => {
-  it('should report latency when the helper answers ok', async () => {
-    const fetchMock = vi.fn().mockResolvedValue(new Response('{"status":"ok"}', { status: 200 }));
-    vi.stubGlobal('fetch', fetchMock);
-    const ticks = [100, 142];
-    const result = await checkHealth(SERVICES[0], 1000, () => ticks.shift()!);
-    expect(fetchMock.mock.calls[0][0]).toBe('/svc/rec/health');
-    expect(result).toMatchObject({ ok: true, latencyMs: 42 });
+  beforeEach(() => {
+    TestBed.configureTestingModule({
+      providers: [provideHttpClient(), provideHttpClientTesting()],
+    });
+    service = TestBed.inject(HealthService);
+    httpTesting = TestBed.inject(HttpTestingController);
   });
 
-  it('should mark the helper offline when fetch rejects', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')));
-    const result = await checkHealth(SERVICES[2]);
-    expect(result).toMatchObject({ ok: false, latencyMs: null, detail: 'TypeError' });
+  afterEach(() => httpTesting.verify());
+
+  it('should report latency when the helper answers ok', async () => {
+    const ticks = [100, 142];
+    const checked = service.check(findHelper('recommendation')!, { clock: () => ticks.shift()! });
+    httpTesting.expectOne('/svc/recommendation/health').flush('{"status":"ok"}');
+    expect(await checked).toMatchObject({ ok: true, latencyMs: 42, detail: '{"status":"ok"}' });
+  });
+
+  it('should mark the helper offline when the network fails', async () => {
+    const checked = service.check(findHelper('rag')!);
+    httpTesting.expectOne('/svc/rag/health/ready').error(new ProgressEvent('error'));
+    expect(await checked).toMatchObject({ ok: false, latencyMs: null, detail: '网络错误' });
   });
 
   it('should mark the helper offline on non-2xx status', async () => {
-    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('', { status: 502 })));
-    const result = await checkHealth(SERVICES[1]);
-    expect(result).toMatchObject({ ok: false, detail: '502' });
+    const checked = service.check(findHelper('vision')!);
+    httpTesting
+      .expectOne('/svc/vision/health')
+      .flush('', { status: 502, statusText: 'Bad Gateway' });
+    expect(await checked).toMatchObject({ ok: false, detail: '502' });
   });
 });
