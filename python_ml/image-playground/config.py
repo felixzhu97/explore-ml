@@ -35,3 +35,5 @@ IMAGE_MODEL = (
     or os.environ.get("SD_MODEL")
     or _DEFAULT_IMAGE_MODEL.get(IMAGE_BACKEND, _DEFAULT_IMAGE_MODEL["qwen"])
 )
+IMAGE_LORA_PATH = os.environ.get("IMAGE_LORA_PATH") or None
+IMAGE_LORA_SCALE = float(os.environ.get("IMAGE_LORA_SCALE", "1.0"))
