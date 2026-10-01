@@ -1,322 +1,288 @@
 # RAG Service
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
+Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
+`service/` / `domain/` / `infra/` / `tests/` / `training/`.
 Start: `uvicorn main:app --host 0.0.0.0 --port 8002`.
 
-Retrieval Augmented Generation (RAG) service for Chat, providing semantic search and AI-powered question answering capabilities.
+Retrieval Augmented Generation (RAG) helper: index documents, webpages, posts
+and comments into Qdrant, then answer questions from the retrieved chunks.
 
 ## Features
 
-- **Document Processing**: Upload and index PDF, HTML, Markdown, DOCX, and TXT files
-- **Web Crawling**: Scrape and index content from URLs
-- **Database Sync**: Synchronize posts and comments from the main database
-- **RAG Query**: Ask questions and get AI-generated answers with context from your data
-- **Multi-source Search**: Query across documents, posts, comments, and webpages
-- **Streaming Responses**: Get real-time streaming answers from the LLM
+- **Documents**: upload and index PDF, HTML/HTM, Markdown, DOCX/DOC and TXT
+  (max 50 MB)
+- **Webpages**: scrape one URL, or crawl a list of URLs (up to 5 at a time;
+  links are not followed)
+- **Sync**: pull posts and comments from the content API at `DATABASE_URL`
+- **Query**: answer a question from the top chunks, with optional sources
+- **Streaming**: the same answer as server-sent events
+- **Export vectors**: stored chunk vectors for client-side visualization
+- **Rerank**: optional HTTP reranker rescores candidates before answering
 
 ## Tech Stack
 
-- **Framework**: FastAPI (Python 3.11+ recommended)
-- **Vector Database**: Qdrant
-- **Embedding Models**: Ollama (local) or OpenAI (cloud)
-- **LLM**: Ollama (qwen3-coder:30b, deepseek-r1:70b, etc.) or OpenAI for answer generation
-- **Document Parsing**: PyMuPDF, BeautifulSoup, python-docx
+- **Framework**: FastAPI (Python 3.11+)
+- **Vector database**: Qdrant, embedded on disk by default
+- **Embeddings and LLM**: Ollama (local) or OpenAI
+- **Parsing**: PyMuPDF, BeautifulSoup, html2text, python-docx
 
 ## Quick Start
 
-### Prerequisites
-
-1. **Ollama** (for local embeddings and LLM):
+1. Start Ollama and pull the default models:
 
 ```bash
-# Install Ollama
 brew install ollama
-
-# Pull required models
 ollama pull nomic-embed-text
-ollama pull qwen3-coder:30b  # or your preferred LLM
-
-# Start Ollama service
+ollama pull qwen3-coder:30b   # or set LLM_MODEL to a smaller model
 ollama serve
 ```
 
-2. **Qdrant** (vector database):
+2. Install and run the helper:
 
 ```bash
-docker run -d -p 6333:6333 -p 6334:6334 qdrant/qdrant
-```
-
-3. **Redis** (optional, for caching):
-
-```bash
-docker run -d -p 6379:6379 redis:alpine
-```
-
-### Using Docker Compose
-
-```bash
-cd src/main/ml/rag
-docker-compose up -d
-```
-
-### Manual Setup
-
-1. **Install dependencies**:
-
-```bash
-cd src/main/ml/rag
+cd python_ml/rag
+python -m venv .venv && source .venv/bin/activate
 pip install -r requirements.txt
-```
-
-2. **Configure environment**:
-
-```bash
-cp .env.example .env
-# Edit .env with your settings
-```
-
-3. **Start the service**:
-
-```bash
-cd src/main/ml/rag
+cp .env.example .env          # loaded automatically
 uvicorn main:app --host 0.0.0.0 --port 8002
+```
+
+Qdrant needs no separate process: with `QDRANT_URL` empty the helper stores
+vectors under `QDRANT_PATH` (`python_ml/rag/data/qdrant`). To use a server
+instead:
+
+```bash
+docker run -d -p 6333:6333 qdrant/qdrant
+export QDRANT_URL=http://localhost:6333
 ```
 
 ## Configuration
 
-Configure via environment variables or `.env` file:
+Read from the environment or `.env`:
 
-| Variable             | Description                   | Default                  |
-| -------------------- | ----------------------------- | ------------------------ |
-| `QDRANT_URL`         | Qdrant server URL             | `http://localhost:6333`  |
-| `OLLAMA_BASE_URL`    | Ollama server URL             | `http://localhost:11434` |
-| `OPENAI_API_KEY`     | OpenAI API key                | (empty)                  |
-| `EMBEDDING_PROVIDER` | `ollama` or `openai`          | `ollama`                 |
-| `LLM_PROVIDER`       | `ollama` or `openai`          | `ollama`                 |
-| `EMBEDDING_MODEL`    | Ollama embedding model        | `nomic-embed-text`       |
-| `LLM_MODEL`          | Ollama LLM model              | `qwen3-coder:30b`        |
-| `LLM_TIMEOUT`        | LLM request timeout (seconds) | `120`                    |
-| `CHUNK_SIZE`         | Text chunk size (tokens)      | `256`                    |
-| `CHUNK_OVERLAP`      | Overlap between chunks        | `50`                     |
-| `LOCAL_MODELS_ROOT`  | Local Qwen weights root       | `$HOME/Codes/models` (see [download guide](../../docs/user-guide/model-download.md)) |
-| `RERANK_ENABLED`     | Call local rerank HTTP serve  | `true` (skips if down)   |
-| `RERANK_URL`         | Rerank serve base URL         | `http://127.0.0.1:8091`  |
-| `RERANK_MODEL`       | Documented local weight path  | `…/rerank/models/Qwen3-Reranker-8B` |
+| Variable                 | Description                                   | Default |
+| ------------------------ | --------------------------------------------- | ------- |
+| `HOST` / `PORT`          | Bind address and port                         | `0.0.0.0` / `8002` |
+| `DEBUG` / `WORKERS`      | Reload mode / uvicorn workers for `python main.py` | `false` / `4` |
+| `UPLOADS_DIR`            | Saved uploads                                 | `python_ml/rag/uploads` |
+| `QDRANT_URL`             | Qdrant server; empty means embedded           | (empty) |
+| `QDRANT_PATH`            | Embedded Qdrant directory                     | `python_ml/rag/data/qdrant` |
+| `QDRANT_TIMEOUT`         | Qdrant client timeout (seconds)               | `30` |
+| `QDRANT_VECTOR_SIZE`     | Read but unused; collections are created with 768 dimensions | `768` |
+| `EMBEDDING_PROVIDER`     | `ollama` or `openai`                          | `ollama` |
+| `EMBEDDING_MODEL`        | Ollama embedding model                        | `nomic-embed-text` |
+| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model                        | `text-embedding-3-small` |
+| `OLLAMA_BASE_URL`        | Ollama server                                 | `http://localhost:11434` |
+| `OPENAI_API_KEY`         | OpenAI key                                    | (empty) |
+| `LLM_PROVIDER`           | `ollama` or `openai`                          | `ollama` |
+| `LLM_MODEL`              | Ollama chat model                             | `qwen3-coder:30b` |
+| `OPENAI_LLM_MODEL`       | OpenAI chat model                             | `gpt-4-turbo-preview` |
+| `LLM_TIMEOUT`            | Ollama request timeout (seconds)              | `120` |
+| `CHUNK_SIZE` / `CHUNK_OVERLAP` | Chunk size and overlap (tokens)         | `256` / `50` |
+| `CRAWLER_TIMEOUT`        | Webpage fetch timeout (seconds)               | `30` |
+| `DATABASE_URL`           | Content API base URL for sync                 | (empty) |
+| `LOCAL_MODELS_ROOT`      | Local weights root                            | `~/Codes/models` (see [download guide](../../docs/user-guide/model-download.md)) |
+| `RERANK_ENABLED`         | Call the rerank sidecar; skipped if it is down | `true` |
+| `RERANK_URL`             | Rerank sidecar base URL                       | `http://127.0.0.1:8091` |
+| `RERANK_MODEL`           | Weight path the sidecar should load           | `…/rerank/models/Qwen3-Reranker-8B` |
+| `RERANK_TIMEOUT`         | Rerank request timeout (seconds)              | `30` |
 
-Download rerank weights, then start the sidecar:
+`config.py` also defines `DEFAULT_TOP_K`, `RAG_TIMEOUT`, `REDIS_URL`,
+`CACHE_TTL`, `RATE_LIMIT_*` and `CRAWLER_MAX_DEPTH`, but no code reads them
+yet.
 
-```bash
-# after following docs/user-guide/model-download.md
-python serve.py --port 8091 --model "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
-```
+### Rerank sidecar
 
-Set `RERANK_ENABLED=false` to disable.
+The reranker is a separate HTTP server, not part of this repo. It must answer
+`POST {RERANK_URL}/rerank`. Download the weights with the
+[model download guide](../../docs/user-guide/model-download.md) and start your
+sidecar on port 8091, or set `RERANK_ENABLED=false`.
 
-### Fine-tuning retrieval
+### Fine-tuning
 
-`training/` holds a local embedding fine-tune (`train_embedding.py`), a GGUF-to-Ollama import (`to_ollama.sh`), a LoRA reranker job for Hugging Face Jobs (`train_reranker.py`), and a recall@k / MRR check against a running helper (`eval_retrieval.py`). After switching `EMBEDDING_MODEL`, re-index every document.
+`training/` holds:
 
-For the chat model, `train_sft.py` runs QLoRA SFT on Qwen3-8B on Hugging Face Jobs and merges the adapter. Then `to_ollama.sh <dir> rag-llm-ft Q4_K_M` registers it and `LLM_MODEL=rag-llm-ft` selects it. `eval_answers.py` compares it with the base model using an LLM judge. See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
+- `train_embedding.py` — local embedding fine-tune
+- `to_ollama.sh` — import a GGUF into Ollama
+- `train_reranker.py` — LoRA reranker job on Hugging Face Jobs
+- `eval_retrieval.py` — recall@k / MRR against a running helper
+- `train_sft.py` — QLoRA SFT of Qwen3-8B on Hugging Face Jobs
+- `eval_answers.py` — compare answers with an LLM judge
 
-### Recommended Ollama Models
+After switching `EMBEDDING_MODEL`, re-index every document. For the chat
+model, `to_ollama.sh <dir> rag-llm-ft Q4_K_M` registers the merged model and
+`LLM_MODEL=rag-llm-ft` selects it. See the
+[fine-tuning guide](../../docs/user-guide/fine-tuning.md).
 
-**Embedding Models:**
-
-- `nomic-embed-text` (default, ~137M params)
-
-**LLM Models:**
-
-- `qwen3-coder:30b` (recommended, good for code and general tasks)
-- `deepseek-r1:70b` (powerful, larger model)
-- `qwen3.5:35b` (balanced performance)
-
-> **Note**: Ensure your chunk size doesn't exceed the embedding model's context length (~2000 chars for nomic-embed-text).
+> Keep chunks within the embedding model's context (~2000 characters for
+> `nomic-embed-text`).
 
 ## API Endpoints
+
+All resource routes are under `/api/v1`. Errors return `{"detail": "..."}`:
+400 for invalid input (unsupported or empty file, bad `page_token`), 404 for a
+missing document, 503 when the LLM is unavailable, the upstream status when a
+fetched URL or the content API fails, and 422 for schema validation.
 
 ### Documents
 
 ```
-POST   /api/v1/documents           Create/upload a document (multipart)
-GET    /api/v1/documents           List documents (page_size, page_token)
-GET    /api/v1/documents/{id}      Get document details
-DELETE /api/v1/documents/{id}      Delete a document (204)
+POST   /api/v1/documents           Upload and index a file (multipart "file"), 201
+GET    /api/v1/documents           List documents (page_size 1-100, default 20; page_token)
+GET    /api/v1/documents/{id}      Get one document
+DELETE /api/v1/documents/{id}      Delete a document and its chunks, 204
 ```
 
-### Crawler
+Upload response: `{id, filename, file_size, content_type, status, chunks_count}`.
+List response: `{documents: [{id, filename, source_url, content_type,
+file_size, status, chunks_count, created_at, updated_at}], next_page_token}`.
+
+### Webpages
 
 ```
-POST   /api/v1/webpages:scrape     Scrape and index a single URL
-POST   /api/v1/webpages:crawl      Crawl and index multiple URLs
+POST   /api/v1/webpages:scrape     {url} -> {id, url, title, content_length, chunks_count, status}
+POST   /api/v1/webpages:crawl      {urls: [1-50]} -> {total_urls, successful, failed, results: [...]}
 ```
+
+Only `text/html` and `text/plain` pages are accepted, and text is truncated to
+100,000 characters. `max_depth` and `include_subpages` are accepted but
+ignored. A failed URL in a crawl gets `status: "error: ..."`.
 
 ### Sync
 
 ```
-POST   /api/v1/posts:sync          Sync posts from database
-POST   /api/v1/comments:sync       Sync comments from database
-POST   /api/v1/resources:sync      Sync all content types
+POST   /api/v1/posts:sync          {post_ids?, limit (1000), since_hours?}
+POST   /api/v1/comments:sync       {comment_ids?, post_ids?, limit (1000)}
+POST   /api/v1/resources:sync      posts then comments, limit 1000 each
 ```
+
+Each returns `{total, successful, failed, skipped, errors, duration_ms}`;
+`resources:sync` returns `{posts, comments, status: "completed"}`. Records
+without content count as skipped.
 
 ### Query
 
 ```
-POST   /api/v1/documents:query           RAG query (non-streaming)
-POST   /api/v1/documents:streamQuery     RAG query (streaming, SSE)
-GET    /api/v1/collections               List available collections
+POST   /api/v1/documents:query           Answer with sources
+POST   /api/v1/documents:streamQuery     Answer as server-sent events
+POST   /api/v1/documents:exportVectors   {collection?, limit (1-10000, default 2000)}
+GET    /api/v1/collections               {collections: [info per collection]}
 ```
 
-### Health
+Query request: `query` (1-2000 chars), `collection` (one of `documents`,
+`posts`, `comments`, `webpages`; all when omitted), `top_k` (1-20, default 5),
+`include_sources` (default true). `filter_metadata`, `temperature` and
+`stream` are accepted but not used yet.
+
+Query response: `{answer, sources: [{id, text, score, metadata}], query,
+collection_used, total_chunks_searched, generation_time_ms}`. Source text is
+cut to 500 characters.
+
+The stream sends one `data: <token>` frame per token and ends with
+`data: [DONE]`.
+
+Export response: `{dimension, points: [{id, vector, text, metadata}]}`, text
+cut to 500 characters, `metadata.collection` set, and `dimension` 0 when
+nothing is stored.
+
+### Health and monitoring
 
 ```
-GET    /health                     Health check
-GET    /health/live                Liveness probe
-GET    /health/ready               Readiness probe
+GET    /health                     {status: healthy|degraded, version, timestamp, services: {qdrant, embeddings}}
+GET    /health/live                {status: "alive"}
+GET    /health/ready               {status: "ready"}, or 503 {status: "not ready", reason}
+GET    /metrics                    Prometheus metrics
+GET    /                           Service name, version and links
 ```
 
 ## Usage Examples
 
-### Upload a Document
-
 ```bash
-curl -X POST "http://localhost:8002/api/v1/documents" \
-  -H "Content-Type: multipart/form-data" \
-  -F "file=@document.pdf"
-```
+# Upload
+curl -X POST "http://localhost:8002/api/v1/documents" -F "file=@document.pdf"
 
-### Scrape a Webpage
-
-```bash
+# Scrape
 curl -X POST "http://localhost:8002/api/v1/webpages:scrape" \
   -H "Content-Type: application/json" \
-  -d '{
-    "url": "https://en.wikipedia.org/wiki/Black_Myth_Wukong",
-    "max_depth": 1,
-    "include_subpages": false
-  }'
-```
+  -d '{"url": "https://en.wikipedia.org/wiki/Black_Myth_Wukong"}'
 
-### Query the RAG System
-
-```bash
+# Query one collection
 curl -X POST "http://localhost:8002/api/v1/documents:query" \
   -H "Content-Type: application/json" \
-  -d '{
-    "query": "What is the main topic of the documents?",
-    "collection": "documents",
-    "top_k": 5,
-    "include_sources": true
-  }'
-```
+  -d '{"query": "What did users say about this post?", "collection": "comments", "top_k": 3}'
 
-### Query Specific Collection
-
-Available collections: `documents`, `posts`, `comments`, `webpages`
-
-```bash
-curl -X POST "http://localhost:8002/api/v1/documents:query" \
+# Stream
+curl -N -X POST "http://localhost:8002/api/v1/documents:streamQuery" \
   -H "Content-Type: application/json" \
-  -d '{
-    "query": "What did users say about this post?",
-    "collection": "comments",
-    "top_k": 3,
-    "include_sources": true
-  }'
+  -d '{"query": "Summarize the key points", "collection": "webpages"}'
+
+# Export vectors
+curl -X POST "http://localhost:8002/api/v1/documents:exportVectors" \
+  -H "Content-Type: application/json" -d '{"limit": 500}'
 ```
 
-### Streaming Query
-
-```bash
-curl -X POST "http://localhost:8002/api/v1/documents:streamQuery" \
-  -H "Content-Type: application/json" \
-  -H "Accept: text/event-stream" \
-  -d '{
-    "query": "Summarize the key points",
-    "collection": "webpages",
-    "top_k": 5
-  }'
-```
-
-### List Collections
-
-```bash
-curl -s "http://localhost:8002/api/v1/collections" | python3 -m json.tool
-```
-
-## API Documentation
-
-Once running, visit:
-
-- Swagger UI: http://localhost:8002/docs
-- ReDoc: http://localhost:8002/redoc
+Interactive docs: <http://localhost:8002/docs> (Swagger) and
+<http://localhost:8002/redoc>.
 
 ## Architecture
 
+```mermaid
+flowchart TB
+  subgraph controller [controller]
+    routers["documents / crawler / sync / query / api routers"]
+    errorHandlers["errors.py exception handlers"]
+  end
+  subgraph service [service]
+    documentService[DocumentService]
+    webpageService[WebpageService]
+    syncService[SyncService]
+    queryService[QueryService]
+    healthService[HealthService]
+    chunkIndexer[ChunkIndexer]
+  end
+  subgraph domain [domain]
+    domainTypes["Chunk, TextChunker, SearchHit, Answer, ExportedVectors, SyncResult, errors, system prompt"]
+  end
+  subgraph infra [infra]
+    adapters["QdrantService, EmbeddingService, LlmClient, ContentApiClient, DocumentProcessor, pdf_parser, web_fetcher, reranker"]
+  end
+  routers --> service
+  documentService --> chunkIndexer
+  webpageService --> chunkIndexer
+  syncService --> chunkIndexer
+  service --> domainTypes
+  service --> adapters
+  chunkIndexer --> adapters
+  errorHandlers --> domainTypes
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                         RAG Service                          │
-├─────────────────────────────────────────────────────────────┤
-│  API Layer (FastAPI)                                         │
-│  ├── /documents - Document upload and management            │
-│  ├── /crawler   - Web scraping and crawling                │
-│  ├── /sync      - Database synchronization                 │
-│  └── /query     - RAG query with LLM generation           │
-├─────────────────────────────────────────────────────────────┤
-│  Core Services                                              │
-│  ├── DocumentProcessor (PDF, HTML, DOCX parsing)           │
-│  ├── TextChunker (1500 char limit per chunk)               │
-│  ├── EmbeddingService (Ollama/OpenAI)                      │
-│  └── QdrantService (vector CRUD operations)                │
-├─────────────────────────────────────────────────────────────┤
-│  LLM Integration                                            │
-│  └── generate_answer() with RAG context                   │
-└─────────────────────────────────────────────────────────────┘
-          │                    │                │
-          ▼                    ▼                ▼
-     ┌─────────┐         ┌─────────┐     ┌──────────┐
-     │ Qdrant  │         │ Ollama  │     │ OpenAI   │
-     │(vectors)│         │(local)  │     │ (cloud)  │
-     └─────────┘         └─────────┘     └──────────┘
-```
+
+Each service is a class built by an `@lru_cache` `get_x_service()` function
+and injected into routes with `Annotated[XService, Depends(get_x_service)]`.
+Request and response models live in the controllers; the domain uses plain
+dataclasses.
 
 ## Data Flow
 
-```
-User Input → API → Document Processing → Chunking → Embedding → Qdrant
-                                                              │
-User Query → API → Embed Query → Vector Search ←──────────────┘
-                    │
-                    ▼
-              LLM Generation → Answer + Sources
+```text
+Upload / scrape / sync -> parse -> TextChunker -> ChunkIndexer
+                          (embed in batches of 10) -> Qdrant upsert
+
+Query -> embed question -> search each collection (top_k)
+      -> keep top_k * 3 candidates -> rerank (optional) -> top_k hits
+      -> system prompt with sources -> LLM -> answer + sources
 ```
 
 ## Development
 
-### Run Tests
-
 ```bash
-pytest tests/ -v
-```
-
-### Run with Hot Reload
-
-```bash
+pytest -q                     # 8 test files under tests/
 uvicorn main:app --reload
 ```
 
-### Environment Variables for Development
-
-```bash
-# Required services
-export QDRANT_URL=http://localhost:6333
-export OLLAMA_BASE_URL=http://localhost:11434
-export REDIS_URL=redis://localhost:6379/0
-
-# Optional: Use OpenAI
-export OPENAI_API_KEY=sk-...
-export EMBEDDING_PROVIDER=openai
-export LLM_PROVIDER=openai
-```
+Tests cover the chunker, document parsing, query models, rerank scoring,
+export vectors, route paths, fine-tuning helpers and the services through the
+FastAPI app (`test_services_api.py`, with `app.dependency_overrides`). CI runs
+this suite on every pull request.
 
 ## License
 
