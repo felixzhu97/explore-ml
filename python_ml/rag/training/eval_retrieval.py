@@ -9,7 +9,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 from pathlib import Path
 from typing import Dict, Iterable, List, Optional, Sequence
 
@@ -38,7 +37,7 @@ def score(ranks: List[Optional[int]], k: int) -> Dict[str, float]:
 def main(argv: Optional[Sequence[str]] = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__.splitlines()[0])
     parser.add_argument("--queries", required=True)
-    parser.add_argument("--url", default=os.getenv("EXPLORE_ML_URL", "http://localhost:8000"))
+    parser.add_argument("--url", default="http://localhost:8000")
     parser.add_argument("--collection")
     parser.add_argument("--k", type=int, default=5)
     args = parser.parse_args(argv)

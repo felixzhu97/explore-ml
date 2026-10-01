@@ -7,8 +7,7 @@ import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
-import config
-from server import build_app, create_app, load_modules
+from server import MODULE_NAMES, build_app, create_app, load_modules
 
 
 def fake_module(name: str, *, status: str = "ok", ready: bool = True, events: list | None = None):
@@ -139,7 +138,7 @@ def test_should_mount_only_the_requested_modules():
 
 def test_should_not_register_the_same_operation_in_two_modules():
     try:
-        modules = load_modules(config.MODULE_NAMES)
+        modules = load_modules(MODULE_NAMES)
     except ImportError as error:
         pytest.skip(f"not every module's dependencies are installed: {error}")
     shared = operations(build_app({}))

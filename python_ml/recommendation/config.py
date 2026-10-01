@@ -1,33 +1,22 @@
 import os
-from pathlib import Path
 
-LOCAL_MODELS_ROOT = Path(
-    os.getenv("LOCAL_MODELS_ROOT", str(Path.home() / "Codes" / "models"))
-).expanduser()
-RECOMMENDATION_MODEL_DIR = Path(
-    os.getenv(
-        "RECOMMENDATION_MODEL_DIR",
-        str(LOCAL_MODELS_ROOT / "recommendation" / "models"),
-    )
-).expanduser()
-FEED_RANKER_MODEL = Path(
-    os.getenv("FEED_RANKER_MODEL", str(RECOMMENDATION_MODEL_DIR / "feed_ranker.pt"))
-).expanduser()
+from config import LOCAL_MODELS_ROOT
 
-DATABASE_URL = os.getenv(
-    "DATABASE_URL",
-    "postgresql://chat:chat123@localhost:5433/chat",
-)
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379")
-REDIS_PASSWORD = os.getenv("REDIS_PASSWORD") or None
-CELERY_BROKER_URL = os.getenv("CELERY_BROKER_URL") or os.getenv(
-    "REDIS_URL", "redis://localhost:6379/0"
-)
-CASSANDRA_CONTACT_POINTS = (os.getenv("CASSANDRA_CONTACT_POINTS") or "localhost").split(
-    ","
-)
-CASSANDRA_KEYSPACE = os.getenv("CASSANDRA_KEYSPACE", "chat")
-CASSANDRA_LOCAL_DC = os.getenv("CASSANDRA_LOCAL_DC", "datacenter1")
+RECOMMENDATION_MODEL_DIR = LOCAL_MODELS_ROOT / "recommendation" / "models"
+FEED_RANKER_MODEL = RECOMMENDATION_MODEL_DIR / "feed_ranker.pt"
+
+DATABASE_URL = os.getenv("DATABASE_URL", "postgresql://chat:chat123@localhost:5433/chat")
+REDIS_URL = "redis://localhost:6379"
+REDIS_PASSWORD = os.getenv("REDIS_PASSWORD")
+CELERY_BROKER_URL = "redis://localhost:6379/0"
+CASSANDRA_CONTACT_POINTS = ["localhost"]
+CASSANDRA_KEYSPACE = "chat"
+CASSANDRA_LOCAL_DC = "datacenter1"
+
+VECTOR_BACKEND = "redis"
+FAISS_DIM = 64
+FAISS_INDEX_PATH = None
+FAISS_IDS_PATH = None
 
 SUGGESTION_REDIS_KEY_PREFIX = "recommendation:user:"
 SUGGESTION_TTL_SECONDS = 3600

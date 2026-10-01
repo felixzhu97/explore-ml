@@ -1,22 +1,8 @@
-import os
-
-os.environ.setdefault("OMP_NUM_THREADS", "1")
-try:
-    import numpy  # noqa: F401
-except ImportError:
-    raise SystemExit("numpy is required. Install with: pip install 'numpy>=1.24.0,<3.0.0'")
-os.environ.setdefault("MKL_NUM_THREADS", "1")
-os.environ.setdefault("KMP_DUPLICATE_LIB_OK", "TRUE")
-os.environ.setdefault("PYTORCH_ENABLE_MPS_FALLBACK", "1")
-if "HF_ENDPOINT" not in os.environ:
-    os.environ["HF_ENDPOINT"] = "https://hf-mirror.com"
-
 from pathlib import Path
 
-OUTPUT_BASE = Path(os.environ.get("VIDEO_OUTPUT_DIR") or Path(__file__).parent / "output")
-VIDEO_OUTPUT = OUTPUT_BASE / "video"
+from config import BASE_URL
+
+VIDEO_OUTPUT = Path(__file__).parent / "output" / "video"
 VIDEO_OUTPUT.mkdir(parents=True, exist_ok=True)
 
-BASE_URL = os.environ.get("BASE_URL", f"http://localhost:{os.environ.get('PORT', '8000')}")
-
-COGVIDEOX_MODEL = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")
+COGVIDEOX_MODEL = "THUDM/CogVideoX-2b"

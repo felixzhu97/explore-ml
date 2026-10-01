@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import threading
 
 from speech import config
@@ -13,8 +12,6 @@ model_lock = threading.Lock()
 def _select_device() -> str:
     import torch
 
-    if os.environ.get("SPEECH_DEVICE") == "cpu":
-        return "cpu"
     if torch.cuda.is_available():
         return "cuda"
     mps_backend = getattr(torch.backends, "mps", None)

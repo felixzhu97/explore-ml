@@ -6,7 +6,7 @@ from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.exceptions import UnexpectedResponse
 
-from rag.config import get_settings
+from rag import config
 
 logger = logging.getLogger(__name__)
 
@@ -34,19 +34,12 @@ class QdrantService:
     }
 
     def __init__(self) -> None:
-        settings = get_settings()
-        url = (settings.qdrant_url or "").strip()
-        if url:
-            self._client = QdrantClient(
-                url=url,
-                timeout=settings.qdrant_timeout,
-            )
-            logger.info(f"Qdrant client initialized with URL: {url}")
+        if config.QDRANT_URL:
+            self._client = QdrantClient(url=config.QDRANT_URL, timeout=config.QDRANT_TIMEOUT)
         else:
-            path = settings.qdrant_path
-            self._client = QdrantClient(path=path)
-            logger.info(f"Qdrant client initialized with local path: {path}")
-        self._vector_size = settings.qdrant_vector_size
+            config.QDRANT_PATH.mkdir(parents=True, exist_ok=True)
+            self._client = QdrantClient(path=str(config.QDRANT_PATH))
+        self._vector_size = config.QDRANT_VECTOR_SIZE
 
     @property
     def client(self) -> QdrantClient:
@@ -55,11 +48,11 @@ class QdrantService:
 
     async def initialize_collections(self) -> None:
         """Initialize all required collections if they don't exist."""
-        for collection_name, config in self.COLLECTION_CONFIGS.items():
-            await self._ensure_collection(collection_name, config)
+        for collection_name, collection_config in self.COLLECTION_CONFIGS.items():
+            await self._ensure_collection(collection_name, collection_config)
 
     async def _ensure_collection(
-        self, name: str, config: dict[str, Any]
+        self, name: str, collection_config: dict[str, Any]
     ) -> None:
         """Ensure a collection exists with the given configuration."""
         try:
@@ -70,8 +63,8 @@ class QdrantService:
             self._client.create_collection(
                 collection_name=name,
                 vectors_config=models.VectorParams(
-                    size=config["vector_size"],
-                    distance=config["distance"],
+                    size=collection_config["vector_size"],
+                    distance=collection_config["distance"],
                 ),
                 optimizers_config=models.OptimizersConfigDiff(
                     indexing_threshold=20000,

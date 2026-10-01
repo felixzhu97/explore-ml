@@ -7,10 +7,7 @@ from video import config
 from video.domain.job import Job, JobStore
 from video.infra import pipeline
 
-UNSUPPORTED_PLATFORM = (
-    "Local video generation not supported on this platform. "
-    "Set VIDEO_FORCE_LOCAL=1 to try anyway."
-)
+UNSUPPORTED_PLATFORM = "Local video generation is skipped on macOS without CUDA."
 
 
 class VideoService:
