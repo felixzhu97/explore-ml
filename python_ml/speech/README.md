@@ -28,3 +28,7 @@ uvicorn main:app --host 0.0.0.0 --port 8004
 - **ASR stream**: `WS /ws/v1/audios:transcribe`
 
 Consumers: `SPEECH_API_URL=http://localhost:8004`.
+
+## Fine-tuning
+
+`training/train_asr.py` and `training/train_tts.py` run the upstream Qwen3-ASR and Qwen3-TTS recipes on Hugging Face Jobs and push the final checkpoint. Point `ASR_MODEL`, or `TTS_MODEL` plus `TTS_SPEAKER`, at the downloaded directory. `python -m training.eval_wer` compares the WER (CER for CJK) of the fine-tuned and base ASR checkpoints. See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
