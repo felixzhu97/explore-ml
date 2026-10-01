@@ -103,7 +103,7 @@ GitHub Actions.
 
 ```text
 python_ml/     FastAPI helpers (recommendation / vision / rag / image-playground / speech / video)
-ui/            Model-test UI (Angular, Tailwind, d3)
+ui/            Model-test UI (Angular, NG-ZORRO, Tailwind, d3)
 data/          Test / fixture data
 docs/          Glossary, Guideline, user-guide, C4, product-owner
 ```

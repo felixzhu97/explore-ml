@@ -1,37 +1,36 @@
 import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { synthesize, transcribe } from '../core/api/clients';
 import { LiveAsr, type AsrEvent } from '../core/api/live-asr';
 import { Call } from '../core/call';
 import { Endpoint } from '../ui/endpoint';
+import { FilePick } from '../ui/file-pick';
 import { ModulePage } from '../ui/module-page';
 
 @Component({
   selector: 'app-speech-page',
-  imports: [Endpoint, FormField, ModulePage],
+  imports: [Endpoint, FilePick, FormField, ModulePage, NzButtonModule, NzInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="speech">
       <app-endpoint title="语音合成" path="/api/v1/voices:synthesize" [call]="tts">
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">text</span>
-          <textarea
-            class="min-h-24 rounded-xl border border-hairline px-3.5 py-2.5"
-            [formField]="f.text"
-          ></textarea>
+          <textarea nz-input rows="3" [formField]="f.text"></textarea>
         </label>
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">voice（可选）</span>
-          <input
-            class="h-11 rounded-xl border border-hairline px-3.5"
-            placeholder="zh-CN-XiaoxiaoNeural"
-            [formField]="f.voice"
-          />
+          <input nz-input placeholder="zh-CN-XiaoxiaoNeural" [formField]="f.voice" />
         </label>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="tts.busy() || !m().text.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="tts.busy()"
+            [disabled]="!m().text.trim()"
             (click)="speak()"
           >
             合成
@@ -43,24 +42,18 @@ import { ModulePage } from '../ui/module-page';
       </app-endpoint>
 
       <app-endpoint title="语音识别（文件）" path="/api/v1/audios:transcribe" [call]="asr">
-        <input
-          type="file"
-          accept="audio/*"
-          class="text-sm file:mr-3 file:h-9 file:rounded-full file:border file:border-primary file:bg-white file:px-4 file:text-primary"
-          (change)="pick($event)"
-        />
+        <app-file-pick accept="audio/*" (picked)="file.set($event)" />
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">language（可选）</span>
-          <input
-            class="h-11 rounded-xl border border-hairline px-3.5"
-            placeholder="Chinese"
-            [formField]="f.language"
-          />
+          <input nz-input placeholder="Chinese" [formField]="f.language" />
         </label>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="asr.busy() || !file()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="asr.busy()"
+            [disabled]="!file()"
             (click)="listen()"
           >
             识别
@@ -76,8 +69,9 @@ import { ModulePage } from '../ui/module-page';
       >
         <div>
           <button
-            class="h-11 rounded-full px-5 active:scale-95"
-            [class]="liveOn() ? 'border border-primary text-primary' : 'bg-primary text-white'"
+            nz-button
+            nzShape="round"
+            [nzType]="liveOn() ? 'default' : 'primary'"
             (click)="toggleLive()"
           >
             {{ liveOn() ? '停止' : '开始' }}
@@ -103,10 +97,6 @@ export class SpeechPage {
       this.stopLive();
       this.liveAsr?.stop();
     });
-  }
-
-  protected pick(e: Event): void {
-    this.file.set((e.target as HTMLInputElement).files?.[0] ?? null);
   }
 
   protected speak(): Promise<void> {

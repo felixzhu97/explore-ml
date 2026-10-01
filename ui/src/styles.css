@@ -1,4 +1,8 @@
+/* NG-ZORRO sits above Tailwind's preflight but below its utilities, so inline classes still win. */
+@layer theme, base, antd, antd-theme, components, utilities;
+
 @import 'tailwindcss';
+@import 'ng-zorro-antd/ng-zorro-antd.variable.min.css' layer(antd);
 
 @theme {
   --color-primary: #0066cc;
@@ -14,8 +18,104 @@
   --font-mono: ui-monospace, 'SF Mono', Menlo, monospace;
 }
 
-@layer base {
+/* Apple design tokens mapped onto NG-ZORRO's fixed metrics (radius, heights, type). */
+@layer antd-theme {
   body {
-    @apply bg-white font-sans text-[17px] leading-[1.47] tracking-[-0.374px] text-ink antialiased;
+    font-family: var(--font-sans);
+    font-size: 17px;
+    line-height: 1.47;
+    letter-spacing: -0.374px;
+    color: var(--color-ink);
+    background: #ffffff;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1,
+  h2,
+  h3,
+  p {
+    margin: 0;
+    color: inherit;
+  }
+
+  .ant-btn {
+    height: 44px;
+    padding: 0 22px;
+    font-size: 17px;
+    box-shadow: none;
+    text-shadow: none;
+  }
+
+  .ant-btn-round {
+    border-radius: 9999px;
+  }
+
+  .ant-btn:active {
+    transform: scale(0.95);
+  }
+
+  .ant-input,
+  .ant-input-number,
+  .ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+    border-color: var(--color-hairline);
+    border-radius: 11px;
+    font-size: 17px;
+  }
+
+  .ant-input {
+    padding: 9px 14px;
+  }
+
+  .ant-input-number {
+    width: 100%;
+  }
+
+  .ant-input-number-input {
+    height: 42px;
+    padding: 0 14px;
+  }
+
+  .ant-select-single:not(.ant-select-customize-input) .ant-select-selector {
+    height: 44px;
+    padding: 0 14px;
+  }
+
+  .ant-select-single .ant-select-selector .ant-select-selection-item,
+  .ant-select-single .ant-select-selector .ant-select-selection-search-input {
+    line-height: 42px;
+    height: 42px;
+  }
+
+  .ant-card {
+    border-radius: 18px;
+  }
+
+  .ant-card-bordered {
+    border-color: var(--color-hairline);
+  }
+
+  .ant-card-head {
+    border-bottom-color: var(--color-hairline);
+  }
+
+  .ant-tag {
+    border-radius: 5px;
+  }
+
+  .ant-alert {
+    border-radius: 11px;
+  }
+
+  .ant-alert-error,
+  .ant-tag-error {
+    background: var(--color-parchment);
+    border-color: var(--color-hairline);
+    color: var(--color-ink);
+  }
+
+  .ant-upload.ant-upload-drag {
+    border-radius: 18px;
+    border-color: var(--color-hairline);
+    background: var(--color-parchment);
   }
 }

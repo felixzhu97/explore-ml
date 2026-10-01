@@ -2,8 +2,9 @@
 
 The model test UI is a local Angular app for exercising the helpers under
 `../python_ml/`. Each helper module gets one page, and every endpoint of that
-module can be called from its page. Styles are inline
-[Tailwind CSS](https://tailwindcss.com/) classes; score charts use
+module can be called from its page. Controls come from
+[NG-ZORRO](https://ng.ant.design/), layout uses inline
+[Tailwind CSS](https://tailwindcss.com/) classes, and score charts use
 [d3](https://d3js.org/).
 
 Keep this directory a sibling of `python_ml/`. Do not nest the UI under the
@@ -80,10 +81,20 @@ CI runs both on every pull request.
 src/app/
 ├── core/      helper registry, /svc proxy rules, typed API clients, Call state
 ├── charts/    d3 bar chart
-├── ui/        module page frame and endpoint card
+├── ui/        module page frame, endpoint card, file picker
 └── pages/     home plus one page per module
 ```
 
-Components style themselves with inline Tailwind classes. `src/styles.css` only
-maps the Apple design tokens into the Tailwind theme: one accent colour
-(`#0066cc`), 17px body text, pill buttons, no shadows and no gradients.
+## Theme
+
+The app follows the Apple design tokens: one accent colour (`#0066cc`), 17px
+body text, pill buttons, no shadows and no gradients.
+
+- `provideNzConfig` in `src/app/app.config.ts` sets the NG-ZORRO theme
+  colours. Primary, info and success use `#0066cc`, warning uses `#7a7a7a`,
+  and error uses ink `#1d1d1f`.
+- `src/styles.css` loads the CSS-variable build of NG-ZORRO into its own
+  cascade layer (`antd`). That layer sits above Tailwind's preflight and below
+  its utilities, so inline Tailwind classes still win.
+- The `antd-theme` layer maps the remaining tokens onto NG-ZORRO's fixed
+  metrics: 44px controls, 11px input radius, 18px cards and pill buttons.

@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import { BarChart } from '../charts/bar-chart';
 import { rank, recall, type RankSurface, type RankedItem } from '../core/api/clients';
 import { Call } from '../core/call';
@@ -19,73 +23,67 @@ function toBars(items: RankedItem[] | undefined) {
 
 @Component({
   selector: 'app-rec-page',
-  imports: [BarChart, Endpoint, FormField, ModulePage],
+  imports: [
+    BarChart,
+    Endpoint,
+    FormField,
+    ModulePage,
+    NzButtonModule,
+    NzInputModule,
+    NzInputNumberModule,
+    NzSelectModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="rec">
       <app-endpoint title="排序" [path]="'/api/v1/' + m().surface + ':rank'" [call]="rankCall">
         <div class="grid gap-4 sm:grid-cols-2">
-          <label class="flex flex-col gap-1">
+          <div class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">场景</span>
-            <select class="h-11 rounded-xl border border-hairline px-3.5" [formField]="f.surface">
-              <option value="feeds">feeds</option>
-              <option value="explores">explores</option>
-              <option value="reels">reels</option>
-            </select>
-          </label>
+            <nz-select [formField]="f.surface">
+              <nz-option nzValue="feeds" nzLabel="feeds" />
+              <nz-option nzValue="explores" nzLabel="explores" />
+              <nz-option nzValue="reels" nzLabel="reels" />
+            </nz-select>
+          </div>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">user_id</span>
-            <input class="h-11 rounded-xl border border-hairline px-3.5" [formField]="f.userId" />
+            <input nz-input [formField]="f.userId" />
           </label>
           <label class="flex flex-col gap-1 sm:col-span-2">
             <span class="text-sm font-semibold text-ink-80">candidate_ids（逗号或换行分隔）</span>
-            <textarea
-              class="min-h-24 rounded-xl border border-hairline px-3.5 py-2.5"
-              [formField]="f.candidates"
-            ></textarea>
+            <textarea nz-input rows="3" [formField]="f.candidates"></textarea>
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">limit</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.limit"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.limit" />
           </label>
-          <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">region / language（可选）</span>
-            <div class="flex gap-2">
-              <input
-                class="h-11 min-w-0 flex-1 rounded-xl border border-hairline px-3.5"
-                placeholder="CN"
-                [formField]="f.region"
-              />
-              <input
-                class="h-11 min-w-0 flex-1 rounded-xl border border-hairline px-3.5"
-                placeholder="zh"
-                [formField]="f.language"
-              />
-            </div>
-          </label>
+          <div class="grid grid-cols-2 gap-2">
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-semibold text-ink-80">region（可选）</span>
+              <input nz-input placeholder="CN" [formField]="f.region" />
+            </label>
+            <label class="flex flex-col gap-1">
+              <span class="text-sm font-semibold text-ink-80">language（可选）</span>
+              <input nz-input placeholder="zh" [formField]="f.language" />
+            </label>
+          </div>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">experiment_id（可选）</span>
-            <input
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.experimentId"
-            />
+            <input nz-input [formField]="f.experimentId" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">variant_id（可选）</span>
-            <input
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.variantId"
-            />
+            <input nz-input [formField]="f.variantId" />
           </label>
         </div>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="rankCall.busy() || !candidateIds().length"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="rankCall.busy()"
+            [disabled]="!candidateIds().length"
             (click)="runRank()"
           >
             排序
@@ -100,21 +98,20 @@ function toBars(items: RankedItem[] | undefined) {
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">user_id</span>
-            <input class="h-11 rounded-xl border border-hairline px-3.5" [formField]="f.userId" />
+            <input nz-input [formField]="f.userId" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">limit</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.recallLimit"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.recallLimit" />
           </label>
         </div>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="recallCall.busy() || !m().userId.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="recallCall.busy()"
+            [disabled]="!m().userId.trim()"
             (click)="runRecall()"
           >
             召回

@@ -1,5 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
 import { generateVideo } from '../core/api/clients';
 import { Call } from '../core/call';
 import { Endpoint } from '../ui/endpoint';
@@ -7,7 +9,7 @@ import { ModulePage } from '../ui/module-page';
 
 @Component({
   selector: 'app-video-page',
-  imports: [Endpoint, FormField, ModulePage],
+  imports: [Endpoint, FormField, ModulePage, NzButtonModule, NzInputModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="video">
@@ -18,15 +20,15 @@ import { ModulePage } from '../ui/module-page';
       >
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">prompt</span>
-          <textarea
-            class="min-h-24 rounded-xl border border-hairline px-3.5 py-2.5"
-            [formField]="f.prompt"
-          ></textarea>
+          <textarea nz-input rows="3" [formField]="f.prompt"></textarea>
         </label>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="call.busy() || !m().prompt.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="call.busy()"
+            [disabled]="!m().prompt.trim()"
             (click)="run()"
           >
             生成

@@ -1,12 +1,15 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
 import { RouterLink } from '@angular/router';
+import { NzBadgeModule } from 'ng-zorro-antd/badge';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzCardModule } from 'ng-zorro-antd/card';
 import { BarChart } from '../charts/bar-chart';
 import { checkAll, type HealthResult } from '../core/health';
 import { SERVICES } from '../core/services';
 
 @Component({
   selector: 'app-home',
-  imports: [BarChart, RouterLink],
+  imports: [BarChart, NzBadgeModule, NzButtonModule, NzCardModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <div class="mx-auto flex max-w-[980px] flex-col gap-6 px-6 py-12">
@@ -20,12 +23,8 @@ import { SERVICES } from '../core/services';
             {{ services.length }} 个模块在线。每个模块一个页面，可直接测试全部接口。
           </p>
         </div>
-        <button
-          class="h-11 rounded-full border border-primary px-5 text-primary active:scale-95 disabled:opacity-40"
-          [disabled]="checking()"
-          (click)="refresh()"
-        >
-          {{ checking() ? '检查中…' : '重新检查' }}
+        <button nz-button nzShape="round" [nzLoading]="checking()" (click)="refresh()">
+          重新检查
         </button>
       </header>
 
@@ -33,21 +32,17 @@ import { SERVICES } from '../core/services';
         @for (s of services; track s.id) {
           @let r = result(s.id);
           <li>
-            <a
-              class="flex h-full flex-col gap-1 rounded-2xl border border-hairline p-6 hover:border-primary"
-              [routerLink]="'/' + s.id"
-            >
-              <span class="flex items-center gap-2">
-                <span
-                  class="inline-block size-2 rounded-full"
-                  [class]="r?.ok ? 'bg-primary' : 'bg-muted'"
-                ></span>
-                <span class="font-display text-[21px] font-semibold">{{ s.name }}</span>
-              </span>
-              <span class="text-sm text-muted">python_ml/{{ s.dir }} · {{ s.port }}</span>
-              <span class="text-sm">{{
-                r ? (r.ok ? '在线' : '离线 · ' + r.detail) : '检查中…'
-              }}</span>
+            <a class="block h-full" [routerLink]="'/' + s.id">
+              <nz-card nzHoverable class="h-full">
+                <div class="flex flex-col gap-1">
+                  <span class="font-display text-[21px] font-semibold text-ink">{{ s.name }}</span>
+                  <span class="text-sm text-muted">python_ml/{{ s.dir }} · {{ s.port }}</span>
+                  <nz-badge
+                    [nzStatus]="r ? (r.ok ? 'success' : 'default') : 'processing'"
+                    [nzText]="r ? (r.ok ? '在线' : '离线 · ' + r.detail) : '检查中…'"
+                  />
+                </div>
+              </nz-card>
             </a>
           </li>
         }

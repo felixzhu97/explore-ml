@@ -1,4 +1,7 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzTagModule } from 'ng-zorro-antd/tag';
 import { BarChart } from '../charts/bar-chart';
 import {
   moderateImage,
@@ -9,6 +12,7 @@ import {
 } from '../core/api/clients';
 import { Call } from '../core/call';
 import { Endpoint } from '../ui/endpoint';
+import { FilePick } from '../ui/file-pick';
 import { ModulePage } from '../ui/module-page';
 
 type Target = 'predict' | 'moderateImage' | 'moderateVideo';
@@ -19,26 +23,21 @@ function bars(r: ModerationResult | undefined) {
 
 @Component({
   selector: 'app-vision-page',
-  imports: [BarChart, Endpoint, ModulePage],
+  imports: [BarChart, Endpoint, FilePick, ModulePage, NzButtonModule, NzInputModule, NzTagModule],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="vision">
       @for (e of endpoints; track e.target) {
         <app-endpoint [title]="e.title" [path]="e.path" [call]="calls[e.target]">
           <div class="grid gap-4 sm:grid-cols-2">
-            <label class="flex flex-col gap-1">
+            <div class="flex flex-col gap-1">
               <span class="text-sm font-semibold text-ink-80">上传文件</span>
-              <input
-                type="file"
-                class="text-sm file:mr-3 file:h-9 file:rounded-full file:border file:border-primary file:bg-white file:px-4 file:text-primary"
-                [accept]="e.accept"
-                (change)="pick(e.target, $event)"
-              />
-            </label>
+              <app-file-pick [accept]="e.accept" (picked)="pick(e.target, $event)" />
+            </div>
             <label class="flex flex-col gap-1">
               <span class="text-sm font-semibold text-ink-80">或填写 URL</span>
               <input
-                class="h-11 rounded-xl border border-hairline px-3.5"
+                nz-input
                 [placeholder]="e.placeholder"
                 [value]="urls()[e.target]"
                 (input)="setUrl(e.target, $event)"
@@ -47,8 +46,11 @@ function bars(r: ModerationResult | undefined) {
           </div>
           <div>
             <button
-              class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-              [disabled]="calls[e.target].busy() || !input(e.target)"
+              nz-button
+              nzType="primary"
+              nzShape="round"
+              [nzLoading]="calls[e.target].busy()"
+              [disabled]="!input(e.target)"
               (click)="run(e.target)"
             >
               发送
@@ -56,11 +58,13 @@ function bars(r: ModerationResult | undefined) {
           </div>
           @if (e.target === 'predict') {
             @if (labels().length) {
-              <ol class="list-decimal pl-6">
+              <div class="flex flex-wrap gap-2">
                 @for (l of labels(); track $index) {
-                  <li>{{ l }}</li>
+                  <nz-tag [nzColor]="$first ? 'processing' : 'default'"
+                    >{{ $index + 1 }}. {{ l }}</nz-tag
+                  >
                 }
-              </ol>
+              </div>
             }
           } @else {
             @let b = e.target === 'moderateImage' ? imageBars() : videoBars();
@@ -116,8 +120,7 @@ export class VisionPage {
   protected readonly imageBars = computed(() => bars(this.calls.moderateImage.value()));
   protected readonly videoBars = computed(() => bars(this.calls.moderateVideo.value()));
 
-  protected pick(target: Target, e: Event): void {
-    const file = (e.target as HTMLInputElement).files?.[0] ?? null;
+  protected pick(target: Target, file: File | null): void {
     this.files.update((f) => ({ ...f, [target]: file }));
   }
 
