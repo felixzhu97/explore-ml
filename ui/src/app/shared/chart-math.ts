@@ -93,3 +93,95 @@ export function flaggedPoints(
       .map(([, score]) => ({ x: frame.offset_seconds, y: score })),
   );
 }
+
+export interface Projection {
+  coordinates: [number, number][];
+  /** Share of total variance captured by each of the two components. */
+  explained: [number, number];
+}
+
+const PCA_ITERATIONS = 60;
+
+/** Top-two principal components by power iteration with deflation (deterministic start). */
+export function pca2(vectors: readonly (readonly number[])[]): Projection {
+  const count = vectors.length;
+  const dimension = vectors[0]?.length ?? 0;
+  if (!count || !dimension) return { coordinates: [], explained: [0, 0] };
+  const mean = new Float64Array(dimension);
+  for (const vector of vectors) {
+    for (let index = 0; index < dimension; index++) mean[index] += vector[index] / count;
+  }
+  const centered = vectors.map((vector) =>
+    Float64Array.from(vector, (value, index) => value - mean[index]),
+  );
+  const totalVariance = centered.reduce((total, row) => total + dot(row, row), 0);
+  const components: Float64Array[] = [];
+  const variances: number[] = [];
+  for (let component = 0; component < 2; component++) {
+    let axis = Float64Array.from(
+      { length: dimension },
+      (_, index) => 1 + ((index * 7 + component) % 5),
+    );
+    let variance = 0;
+    for (let iteration = 0; iteration < PCA_ITERATIONS; iteration++) {
+      for (const previous of components) subtractProjection(axis, previous);
+      const norm = Math.sqrt(dot(axis, axis));
+      if (norm === 0) break;
+      axis = axis.map((value) => value / norm);
+      const next = new Float64Array(dimension);
+      variance = 0;
+      for (const row of centered) {
+        const projection = dot(row, axis);
+        variance += projection * projection;
+        for (let index = 0; index < dimension; index++) next[index] += row[index] * projection;
+      }
+      axis = next;
+    }
+    for (const previous of components) subtractProjection(axis, previous);
+    const norm = Math.sqrt(dot(axis, axis));
+    components.push(norm === 0 ? new Float64Array(dimension) : axis.map((value) => value / norm));
+    variances.push(variance);
+  }
+  return {
+    coordinates: centered.map((row) => [dot(row, components[0]), dot(row, components[1])]),
+    explained: totalVariance
+      ? [variances[0] / totalVariance, variances[1] / totalVariance]
+      : [0, 0],
+  };
+}
+
+function dot(left: ArrayLike<number>, right: ArrayLike<number>): number {
+  let total = 0;
+  for (let index = 0; index < left.length; index++) total += left[index] * right[index];
+  return total;
+}
+
+function subtractProjection(axis: Float64Array, unit: Float64Array): void {
+  const projection = dot(axis, unit);
+  for (let index = 0; index < axis.length; index++) axis[index] -= projection * unit[index];
+}
+
+/** Human label for a RAG chunk: title, file name, URL or document id. */
+export function sourceLabel(metadata: Record<string, unknown> | undefined): string {
+  for (const key of ['title', 'filename', 'url', 'doc_id', 'source_type']) {
+    const value = metadata?.[key];
+    if (typeof value === 'string' && value.trim()) return value.trim();
+  }
+  return '未知来源';
+}
+
+export function truncate(text: string, maxLength: number): string {
+  return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
+/** Distinct keys with counts, most frequent first. */
+export function groupCounts(keys: readonly string[]): { key: string; count: number }[] {
+  return d3
+    .rollups(
+      keys,
+      (group) => group.length,
+      (key) => key,
+    )
+    .map(([key, count]) => ({ key, count }))
+    .sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
+}

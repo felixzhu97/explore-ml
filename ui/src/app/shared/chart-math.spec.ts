@@ -1,5 +1,15 @@
 import { describe, expect, it } from 'vitest';
-import { appendSamples, flaggedPoints, frameSeries, rankShifts, scoreBins } from './chart-math';
+import {
+  appendSamples,
+  flaggedPoints,
+  frameSeries,
+  groupCounts,
+  pca2,
+  rankShifts,
+  scoreBins,
+  sourceLabel,
+  truncate,
+} from './chart-math';
 
 describe('scoreBins', () => {
   it('should count every value exactly once', () => {
@@ -92,5 +102,47 @@ describe('frame timeline', () => {
 
   it('should flag frame scores that reach their category threshold', () => {
     expect(flaggedPoints(frames, { nude: 0.8, prohibited: 0.9 })).toEqual([{ x: 1.5, y: 0.8 }]);
+  });
+});
+
+describe('pca2', () => {
+  it('should put the widest spread on the first component', () => {
+    const vectors = [
+      [-2, 0.1, 0],
+      [-1, -0.1, 0],
+      [0, 0, 0],
+      [1, 0.1, 0],
+      [2, -0.1, 0],
+    ];
+    const { coordinates, explained } = pca2(vectors);
+    const first = coordinates.map(([x]) => Math.abs(x));
+    expect(first).toEqual([2, 1, 0, 1, 2].map((value) => expect.closeTo(value, 2)));
+    expect(explained[0]).toBeGreaterThan(0.99);
+    expect(explained[0] + explained[1]).toBeCloseTo(1, 5);
+  });
+
+  it('should return no coordinates for no vectors', () => {
+    expect(pca2([])).toEqual({ coordinates: [], explained: [0, 0] });
+  });
+});
+
+describe('chunk labels', () => {
+  it('should prefer title, then file name, url and document id', () => {
+    expect(sourceLabel({ filename: 'a.pdf', title: ' Guide ' })).toBe('Guide');
+    expect(sourceLabel({ url: 'https://x', doc_id: 'd1' })).toBe('https://x');
+    expect(sourceLabel({})).toBe('未知来源');
+  });
+
+  it('should truncate long labels with an ellipsis', () => {
+    expect(truncate('abcdef', 4)).toBe('abc…');
+    expect(truncate('abc', 4)).toBe('abc');
+  });
+
+  it('should count groups most frequent first', () => {
+    expect(groupCounts(['b', 'a', 'b', 'c', 'a', 'b'])).toEqual([
+      { key: 'b', count: 3 },
+      { key: 'a', count: 2 },
+      { key: 'c', count: 1 },
+    ]);
   });
 });
