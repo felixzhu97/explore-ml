@@ -185,3 +185,79 @@ export function groupCounts(keys: readonly string[]): { key: string; count: numb
     .map(([key, count]) => ({ key, count }))
     .sort((left, right) => right.count - left.count || left.key.localeCompare(right.key));
 }
+
+export interface StatusEvent {
+  at: number;
+  status: string;
+}
+
+export interface StatusSegment {
+  status: string;
+  start: number;
+  end: number;
+}
+
+/** Collapses consecutive identical statuses into spans; the last span runs until `endAt`. */
+export function statusSegments(events: readonly StatusEvent[], endAt: number): StatusSegment[] {
+  const segments: StatusSegment[] = [];
+  for (const event of events) {
+    const last = segments.at(-1);
+    if (last?.status === event.status) continue;
+    if (last) last.end = event.at;
+    segments.push({ status: event.status, start: event.at, end: event.at });
+  }
+  const last = segments.at(-1);
+  if (last) last.end = Math.max(last.start, endAt);
+  return segments;
+}
+
+/** Share of pixels per intensity bin for the R, G and B channels of RGBA pixel data. */
+export function channelHistogram(rgba: ArrayLike<number>, binCount = 32): Series[] {
+  const counts = [0, 1, 2].map(() => new Array<number>(binCount).fill(0));
+  const pixels = Math.floor(rgba.length / 4);
+  for (let offset = 0; offset < pixels * 4; offset += 4) {
+    for (let channel = 0; channel < 3; channel++) {
+      counts[channel][
+        Math.min(binCount - 1, Math.floor((rgba[offset + channel] * binCount) / 256))
+      ]++;
+    }
+  }
+  const binWidth = 256 / binCount;
+  return ['R', 'G', 'B'].map((label, channel) => ({
+    label,
+    points: counts[channel].map((count, bin) => ({
+      x: bin * binWidth + binWidth / 2,
+      y: pixels ? count / pixels : 0,
+    })),
+  }));
+}
+
+export interface EnvelopeBucket {
+  min: number;
+  max: number;
+}
+
+/** Min and max sample per bucket, for drawing a waveform at a fixed width. */
+export function audioEnvelope(samples: ArrayLike<number>, bucketCount: number): EnvelopeBucket[] {
+  if (!samples.length || bucketCount <= 0) return [];
+  const size = samples.length / bucketCount;
+  return Array.from({ length: Math.min(bucketCount, samples.length) }, (_, bucket) => {
+    const start = Math.floor(bucket * size);
+    const end = Math.max(start + 1, Math.floor((bucket + 1) * size));
+    let min = Infinity;
+    let max = -Infinity;
+    for (let index = start; index < end && index < samples.length; index++) {
+      min = Math.min(min, samples[index]);
+      max = Math.max(max, samples[index]);
+    }
+    return { min, max };
+  });
+}
+
+/** Root mean square of the samples (0 for silence, 1 for a full-scale square wave). */
+export function rms(samples: ArrayLike<number>): number {
+  if (!samples.length) return 0;
+  let total = 0;
+  for (let index = 0; index < samples.length; index++) total += samples[index] * samples[index];
+  return Math.sqrt(total / samples.length);
+}
