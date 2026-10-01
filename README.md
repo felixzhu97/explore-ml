@@ -7,17 +7,18 @@ and media generation — including speech transcription — on loopback.
 Product clients never call these helpers directly. A Spring (or other) API
 proxies over localhost. Four services live under `python_ml/` today on
 contiguous ports `8000`–`8005`. A future cut may fold them behind one port
-without moving the folder boundary. `ui/` is reserved for a model-test front
-end; `data/` holds small fixtures.
+without moving the folder boundary. `ui/` is an Angular model-test front end
+for those helpers; `data/` holds small fixtures.
 
 ## Get started
 
 ### Requirements
 
-You need Python 3.11+ and Git. Redis is optional for recommendation Celery
-workers. Some helpers also expect Ollama, a GPU stack, or local model weights —
-see each service README and the
-[Model download](docs/user-guide/model-download.md) guide.
+You need Python 3.11+ and Git. The optional model-test UI needs Node.js
+22.22+ or 24.15+. Redis is optional for recommendation Celery workers. Some
+helpers also expect Ollama, a GPU stack, or local model weights — see each
+service README and the [Model download](docs/user-guide/model-download.md)
+guide.
 
 ### Initial setup
 
@@ -53,6 +54,19 @@ for the other helpers:
 Wire your product’s upstream or env config to these loopback URLs. For a fuller
 walkthrough, see the [User Guide](docs/user-guide/README.md).
 
+### Start the model test UI (optional)
+
+```bash
+cd ui
+npm ci
+npm start
+```
+
+This serves the UI at <http://localhost:4200>. It proxies `/svc/<name>` to the
+helpers above, so you get health checks, playgrounds, a RAG embedding atlas,
+and a fine-tuning eval dashboard without configuring CORS. See
+[ui/README.md](ui/README.md).
+
 ### Configuration
 
 Each service ships `.env.example`. Do not commit real secrets. Large model
@@ -67,7 +81,10 @@ fixtures under `data/`.
 cd python_ml/<name> && pytest
 ```
 
-Pull requests run `pytest` for the RAG helper on GitHub Actions.
+For the UI, run `npm test` and `npm run build` in `ui/`.
+
+Pull requests run `pytest` for the RAG helper and the UI tests and build on
+GitHub Actions.
 
 ## Next steps
 
@@ -86,7 +103,7 @@ Pull requests run `pytest` for the RAG helper on GitHub Actions.
 
 ```text
 python_ml/     FastAPI helpers (recommendation / vision / rag / image-playground / speech / video)
-ui/            Model-test UI (placeholder)
+ui/            Model-test UI (Angular, d3, embedding-atlas)
 data/          Test / fixture data
 docs/          Glossary, Guideline, user-guide, C4, product-owner
 ```
