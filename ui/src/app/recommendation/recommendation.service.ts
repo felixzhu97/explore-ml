@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { helperUrl } from '../shared/helpers';
+import { mlUrl } from '../shared/helpers';
 
 export type RankSurface = 'feeds' | 'explores' | 'reels';
 
@@ -30,16 +30,13 @@ export class RecommendationService {
 
   rank(surface: RankSurface, request: RankRequest): Promise<RankedItemsResponse> {
     return firstValueFrom(
-      this.http.post<RankedItemsResponse>(
-        helperUrl('recommendation', `/api/v1/${surface}:rank`),
-        request,
-      ),
+      this.http.post<RankedItemsResponse>(mlUrl(`/api/v1/${surface}:rank`), request),
     );
   }
 
   recall(userId: string, limit = 20): Promise<RankedItemsResponse> {
     return firstValueFrom(
-      this.http.post<RankedItemsResponse>(helperUrl('recommendation', '/api/v1/feeds:recall'), {
+      this.http.post<RankedItemsResponse>(mlUrl('/api/v1/feeds:recall'), {
         user_id: userId,
         limit,
       }),

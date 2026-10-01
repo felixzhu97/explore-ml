@@ -2,10 +2,17 @@ import { Component, computed, inject, input, type OnInit } from '@angular/core';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { Call } from './call';
-import { HealthService, type HealthResult } from './health';
-import { findHelper, helperUrl, type HelperId } from './helpers';
+import {
+  HEALTH_PATH,
+  HealthService,
+  STATUS_LABELS,
+  badgeStatus,
+  type HealthReport,
+} from './health';
+import { findHelper, mlUrl, type HelperId } from './helpers';
+import { ML_BASE_PATH, ML_PORT } from './proxy';
 
-/** Page frame for one helper module: name, port, health check and the endpoint list. */
+/** Page frame for one module: name, package, health check and the endpoint list. */
 @Component({
   selector: 'app-module-page',
   imports: [NzBadgeModule, NzButtonModule],
@@ -17,25 +24,23 @@ import { findHelper, helperUrl, type HelperId } from './helpers';
           {{ currentHelper.name }}
         </h1>
         <p class="m-0 text-caption text-muted">
-          python_ml/{{ currentHelper.directory }} · 端口 {{ currentHelper.port }} · 代理 /svc/{{
-            currentHelper.id
-          }}
-          ·
-          <a [href]="docsUrl()" target="_blank">OpenAPI</a>
+          python_ml/{{ currentHelper.module }} · 端口 {{ port }} · 代理 {{ basePath }} ·
+          <a [href]="docsUrl" target="_blank">OpenAPI</a>
         </p>
         <div class="flex items-center gap-4">
           <button nz-button nzShape="round" [nzLoading]="healthCall.busy()" (click)="check()">
             健康检查
           </button>
-          @let health = healthCall.value();
+          @let health = moduleHealth();
           @if (health) {
             <nz-badge
-              [nzStatus]="health.ok ? 'success' : 'default'"
+              [nzStatus]="badgeStatus(health.status)"
               [nzText]="
-                (health.ok ? '在线' : '离线') +
+                statusLabels[health.status] +
                 ' · GET ' +
-                currentHelper.healthPath +
-                (health.latencyMs !== null ? ' · ' + health.latencyMs + ' ms' : '')
+                healthPath +
+                (health.latencyMs !== null ? ' · ' + health.latencyMs + ' ms' : '') +
+                (health.detail ? ' · ' + health.detail : '')
               "
             />
           }
@@ -49,14 +54,22 @@ export class ModulePage implements OnInit {
   readonly module = input.required<HelperId>();
   private readonly healthService = inject(HealthService);
   protected readonly helper = computed(() => findHelper(this.module())!);
-  protected readonly docsUrl = computed(() => helperUrl(this.module(), '/docs'));
-  protected readonly healthCall = new Call<HealthResult>();
+  protected readonly healthCall = new Call<HealthReport>();
+  protected readonly moduleHealth = computed(() =>
+    this.healthCall.value()?.modules.find((health) => health.helper.id === this.module()),
+  );
+  protected readonly docsUrl = mlUrl('/docs');
+  protected readonly healthPath = HEALTH_PATH;
+  protected readonly basePath = ML_BASE_PATH;
+  protected readonly port = ML_PORT;
+  protected readonly statusLabels = STATUS_LABELS;
+  protected readonly badgeStatus = badgeStatus;
 
   ngOnInit(): void {
     void this.check();
   }
 
   protected check(): Promise<void> {
-    return this.healthCall.run(() => this.healthService.check(this.helper()));
+    return this.healthCall.run(() => this.healthService.check());
   }
 }

@@ -1,7 +1,7 @@
 import { HttpClient, HttpParams } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { firstValueFrom, map } from 'rxjs';
-import { helperUrl } from '../shared/helpers';
+import { mlUrl } from '../shared/helpers';
 import { readSse } from '../shared/sse';
 
 export interface QueryRequest {
@@ -65,7 +65,7 @@ export class RagService {
 
   query(request: QueryRequest): Promise<QueryResponse> {
     return firstValueFrom(
-      this.http.post<QueryResponse>(helperUrl('rag', '/api/v1/documents:query'), {
+      this.http.post<QueryResponse>(mlUrl('/api/v1/documents:query'), {
         include_sources: true,
         ...request,
       }),
@@ -78,7 +78,7 @@ export class RagService {
     onToken: (token: string) => void,
     signal?: AbortSignal,
   ): Promise<void> {
-    const response = await fetch(helperUrl('rag', '/api/v1/documents:streamQuery'), {
+    const response = await fetch(mlUrl('/api/v1/documents:streamQuery'), {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ ...request, stream: true }),
@@ -93,7 +93,7 @@ export class RagService {
   listCollections(): Promise<CollectionInfo[]> {
     return firstValueFrom(
       this.http
-        .get<{ collections?: CollectionInfo[] }>(helperUrl('rag', '/api/v1/collections'))
+        .get<{ collections?: CollectionInfo[] }>(mlUrl('/api/v1/collections'))
         .pipe(map((response) => response.collections ?? [])),
     );
   }
@@ -101,17 +101,13 @@ export class RagService {
   uploadDocument(file: File): Promise<UploadedDocument> {
     const formData = new FormData();
     formData.append('file', file);
-    return firstValueFrom(
-      this.http.post<UploadedDocument>(helperUrl('rag', '/api/v1/documents'), formData),
-    );
+    return firstValueFrom(this.http.post<UploadedDocument>(mlUrl('/api/v1/documents'), formData));
   }
 
   listDocuments(pageSize = 20, pageToken = ''): Promise<DocumentPage> {
     let params = new HttpParams().set('page_size', pageSize);
     if (pageToken) params = params.set('page_token', pageToken);
-    return firstValueFrom(
-      this.http.get<DocumentPage>(helperUrl('rag', '/api/v1/documents'), { params }),
-    );
+    return firstValueFrom(this.http.get<DocumentPage>(mlUrl('/api/v1/documents'), { params }));
   }
 
   getDocument(documentId: string): Promise<unknown> {
@@ -128,14 +124,12 @@ export class RagService {
   }
 
   scrapeWebpage(url: string): Promise<unknown> {
-    return firstValueFrom(
-      this.http.post<unknown>(helperUrl('rag', '/api/v1/webpages:scrape'), { url }),
-    );
+    return firstValueFrom(this.http.post<unknown>(mlUrl('/api/v1/webpages:scrape'), { url }));
   }
 
   crawlWebpages(urls: string[], maxDepth = 1): Promise<unknown> {
     return firstValueFrom(
-      this.http.post<unknown>(helperUrl('rag', '/api/v1/webpages:crawl'), {
+      this.http.post<unknown>(mlUrl('/api/v1/webpages:crawl'), {
         urls,
         max_depth: maxDepth,
       }),
@@ -145,7 +139,7 @@ export class RagService {
   sync(target: SyncTarget, limit = 1000): Promise<unknown> {
     return firstValueFrom(
       this.http.post<unknown>(
-        helperUrl('rag', `/api/v1/${target}:sync`),
+        mlUrl(`/api/v1/${target}:sync`),
         target === 'resources' ? {} : { limit },
       ),
     );
@@ -153,7 +147,7 @@ export class RagService {
 
   exportVectors(collection: string, limit: number): Promise<ExportedVectors> {
     return firstValueFrom(
-      this.http.post<ExportedVectors>(helperUrl('rag', '/api/v1/documents:exportVectors'), {
+      this.http.post<ExportedVectors>(mlUrl('/api/v1/documents:exportVectors'), {
         collection: collection || undefined,
         limit,
       }),
@@ -161,6 +155,6 @@ export class RagService {
   }
 
   private documentUrl(documentId: string): string {
-    return helperUrl('rag', `/api/v1/documents/${encodeURIComponent(documentId)}`);
+    return mlUrl(`/api/v1/documents/${encodeURIComponent(documentId)}`);
   }
 }

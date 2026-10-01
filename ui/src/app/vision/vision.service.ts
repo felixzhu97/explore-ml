@@ -1,7 +1,7 @@
 import { HttpClient } from '@angular/common/http';
 import { Service, inject } from '@angular/core';
 import { firstValueFrom } from 'rxjs';
-import { helperUrl } from '../shared/helpers';
+import { mlUrl } from '../shared/helpers';
 
 export type VisionInput = { file: File } | { url: string };
 
@@ -32,7 +32,7 @@ export class VisionService {
 
   /** Uploads the file as multipart form data, or sends the URL under `urlField` as JSON. */
   private post<T>(path: string, input: VisionInput, urlField: string): Promise<T> {
-    const url = helperUrl('vision', path);
+    const url = mlUrl(path);
     if ('file' in input) {
       const formData = new FormData();
       formData.append('file', input.file);
