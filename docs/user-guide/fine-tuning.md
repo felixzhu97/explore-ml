@@ -53,7 +53,7 @@ flowchart TB
 1. Install the Hub client and sign in once:
 
 ```bash
-pip install -U "huggingface_hub[cli]"
+pip install -U huggingface_hub
 hf auth login
 ```
 
@@ -103,7 +103,8 @@ Promote with `FEED_RANKER_MODEL=<path>`.
 ## Vision
 
 Replace the ResNet50 head with your labels. Arrange images as one folder per
-label under `train/` and `eval/`.
+label under `train/` and `eval/`. Git tracks only `.jsonl` files under
+`data/finetune/`, so the vision image folders stay local.
 
 ```bash
 cd python_ml/vision
@@ -118,6 +119,10 @@ python -m training.eval_head \
 Promote with `VISION_MODEL_PATH=<dir>/model.pt` and
 `VISION_LABELS_PATH=<dir>/labels.json`. Keep NudeNet as is; tune
 `VISION_NSFW_THRESHOLD` instead of retraining it.
+
+With a custom head loaded, `images:moderate` skips the ImageNet "prohibited"
+class check, because those class ids no longer match your labels. Only the
+NudeNet check runs until you add your own moderation rule.
 
 ## RAG retrieval
 
@@ -139,7 +144,10 @@ from different models never mix.
 
 ### Reranker
 
-Train a LoRA reranker on one GPU and pull the merged result:
+Train a LoRA reranker on one GPU and pull the merged result. The script
+starts from `Qwen/Qwen3-Reranker-0.6B` (`--base-model`), while the sidecar
+serves `Qwen3-Reranker-8B` by default. Compare the tuned 0.6B model with the
+8B default, not only with the 0.6B base:
 
 ```bash
 hf jobs uv run --flavor l40sx1 --secrets HF_TOKEN \
@@ -160,7 +168,9 @@ python -m training.eval_retrieval --queries ../../data/finetune/rag/eval.jsonl
 ## RAG LLM
 
 Train a QLoRA adapter on chat-format examples, merge it, and serve it through
-Ollama.
+Ollama. The script tunes `Qwen/Qwen3-8B` (`--base-model`), so `qwen3:8b` is
+the fair baseline. RAG serves `qwen3-coder:30b` by default (`LLM_MODEL`);
+run a second comparison against it before you switch.
 
 ```bash
 cd python_ml/rag
@@ -192,8 +202,16 @@ hf download <you>/qwen-image-my-style \
   --local-dir "$LOCAL_MODELS_ROOT/image/loras/my-style"
 ```
 
+Compare with fixed prompts and seeds before you keep it. The script writes
+base and LoRA images side by side:
+
+```bash
+python -m training.compare_prompts \
+  --lora "$LOCAL_MODELS_ROOT/image/loras/my-style" \
+  --prompts prompts.txt --out compare --seed 0 --steps 20
+```
+
 Promote with `IMAGE_LORA_PATH=<dir>` and optional `IMAGE_LORA_SCALE=0.8`.
-Compare with fixed prompts and seeds before you keep it.
 
 ## Speech
 

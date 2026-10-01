@@ -3,12 +3,12 @@
 ← [User guide home](README.md)
 
 Fetch local checkpoints only when you chose a local generative or rerank
-backend. Point helpers at one root (`LOCAL_MODELS_ROOT`). Keep large weights out
-of git.
+backend. Point helpers at one root (`LOCAL_MODELS_ROOT`, default
+`~/Codes/models`). Keep large weights out of git.
 
-This layout is a **target convention** for the easiest offline setup. Align
-loaders to it over time. Prefer a Hub id or lightweight backend when you want
-zero local disk.
+Speech, Image Playground, RAG rerank and recommendation read paths under this
+root. Video loads `COGVIDEOX_MODEL` as a Hugging Face id and ignores the root.
+Prefer a Hub id or lightweight backend when you want zero local disk.
 
 For model choice see the [Guideline](../Guideline.md).
 
@@ -28,19 +28,30 @@ flowchart TB
 Skip this guide when Vision / Recommendation online paths do not need those
 weights, or when `IMAGE_BACKEND` / `VOICE_BACKEND` already avoid local Qwen.
 
-## Target layout
+## Layout
 
-One root. One folder per modality:
+One root. One folder per area, shared with the
+[Fine-tuning](fine-tuning.md) guide:
 
 ```text
 $LOCAL_MODELS_ROOT/
 ├── asr/models/<asr-model>/
 ├── tts/models/<tts-model>/
 ├── image/models/<image-model>/
-└── rerank/models/<rerank-model>/
+├── image/loras/<lora>/              # IMAGE_LORA_PATH
+├── rerank/models/<rerank-model>/
+├── embed/models/<embed-ft>/         # fine-tuned, then imported to Ollama
+├── llm/models/<llm-ft>/             # fine-tuned, then imported to Ollama
+├── vision/models/<resnet50-ft>/
+└── recommendation/models/           # RECOMMENDATION_MODEL_DIR, feed_ranker.pt
 ```
 
-Example ids that fit the target tree:
+Recommendation reads `RECOMMENDATION_MODEL_DIR` (default
+`$LOCAL_MODELS_ROOT/recommendation/models`) and `FEED_RANKER_MODEL` (default
+`feed_ranker.pt` in that folder). Those files come from its own training
+jobs, not from a Hub download.
+
+Default ids the helpers expect:
 
 - ASR — `Qwen/Qwen3-ASR-1.7B`
 - TTS — `Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice`
@@ -67,12 +78,14 @@ flowchart LR
 Install one Hub client:
 
 ```bash
-pip install -U "huggingface_hub[cli]"
+pip install -U huggingface_hub   # provides the `hf` CLI
 # or
 pip install -U modelscope
 ```
 
-Optional mirror:
+Image Playground, Speech and Video set `HF_ENDPOINT=https://hf-mirror.com`
+when it is unset. Set the same mirror in your shell before `hf download`, or
+set `HF_ENDPOINT=https://huggingface.co` to use the main Hub:
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
@@ -92,14 +105,14 @@ Download only the modalities you will run locally.
 ### ASR
 
 ```bash
-huggingface-cli download Qwen/Qwen3-ASR-1.7B \
+hf download Qwen/Qwen3-ASR-1.7B \
   --local-dir "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
 ```
 
 ### TTS
 
 ```bash
-huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
+hf download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
   --local-dir "$LOCAL_MODELS_ROOT/tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice"
 ```
 
@@ -108,14 +121,14 @@ huggingface-cli download Qwen/Qwen3-TTS-12Hz-1.7B-CustomVoice \
 Expect a large first download.
 
 ```bash
-huggingface-cli download Qwen/Qwen-Image \
+hf download Qwen/Qwen-Image \
   --local-dir "$LOCAL_MODELS_ROOT/image/models/Qwen-Image"
 ```
 
 ### Rerank
 
 ```bash
-huggingface-cli download Qwen/Qwen3-Reranker-8B \
+hf download Qwen/Qwen3-Reranker-8B \
   --local-dir "$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B"
 ```
 
@@ -134,8 +147,20 @@ Prefer defaults that resolve under that root. Override with a path or Hub id
 when needed. Swap away from local weights with backend flags—keep `/api/v1`
 routes unchanged.
 
-For optional rerank, set one sidecar URL and one model path; if the sidecar is
-down, keep vector order (see [Guideline](../Guideline.md)).
+Per-helper overrides: `ASR_MODEL` and `TTS_MODEL` (Speech), `IMAGE_MODEL`
+and `IMAGE_LORA_PATH` (Image Playground), `COGVIDEOX_MODEL` (Video, Hub id).
+
+RAG rerank is on by default. It calls a sidecar that serves the reranker:
+
+| Variable | Default |
+| --- | --- |
+| `RERANK_ENABLED` | `true` (`false` skips rerank) |
+| `RERANK_URL` | `http://127.0.0.1:8091` |
+| `RERANK_MODEL` | `$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B` |
+| `RERANK_TIMEOUT` | `30` seconds |
+
+If the sidecar is down, RAG keeps vector order (see
+[Guideline](../Guideline.md)).
 
 ```mermaid
 flowchart TB
@@ -155,7 +180,7 @@ ollama pull qwen3-coder:30b
 
 ```bash
 ls "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
-curl -s "$HELPER/health"
+curl -s "$HELPER/openapi.json"   # Speech has no /health route
 ```
 
 Fail clearly when a required path is empty—do not hang on an unexpected Hub

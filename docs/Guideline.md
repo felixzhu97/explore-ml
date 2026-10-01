@@ -30,7 +30,7 @@ flowchart LR
     Rec[Recommendation]
     Vis[Vision]
     Rag[RAG]
-    Media[Media_Gen]
+    Media["Media_Gen: Image_Playground, Speech, Video"]
   end
   Env --> Rec
   Env --> Vis
@@ -42,6 +42,9 @@ flowchart LR
   Contract --> Rag
   Contract --> Media
 ```
+
+Media Gen is not one process: it is three helpers (Image Playground, Speech
+and Video), each with its own port and base URL.
 
 Prefer one base URL per helper, one `.env` / YAML block on the product API, and
 stable `/api/v1` custom methods. Call helpers only over loopback from the
@@ -102,8 +105,9 @@ sidecar never blocks the whole answer path.
 
 ### Local checkpoints
 
-**Default to local checkpoints; keep backends swappable.** Image Playground / Speech / Video and RAG
-prefer downloaded weights under `LOCAL_MODELS_ROOT` (see the
+**Default to local checkpoints; keep backends swappable.** Image Playground,
+Speech, RAG rerank and recommendation prefer weights under
+`LOCAL_MODELS_ROOT`; Video uses a Hugging Face id (see the
 [download guide](user-guide/model-download.md)). Operators may switch to HF ids,
 Stable Diffusion, edge-tts, or cloud embeddings without changing each API’s ML
 contract.
@@ -232,17 +236,18 @@ instead of hard-coding ad-hoc clients.
 
 ### Easiest product wiring
 
-**Prefer four env vars and timeouts—nothing else for first connect.**
+**Prefer six env vars and timeouts—nothing else for first connect.** The
+names match the `ui/` proxy; set only the ones your product uses.
 
 ```mermaid
 flowchart TB
   subgraph config [Product config]
-    R[RECOMMENDATION_API_URL]
-    V[VISION_SERVICE_URL]
-    G[RAG_SERVICE_URL]
-    I[IMAGE_PLAYGROUND_API_URL]
-    S[SPEECH_API_URL]
-    V[VIDEO_API_URL]
+    R[RECOMMENDATION_URL]
+    V[VISION_URL]
+    G[RAG_URL]
+    I[IMAGE_URL]
+    S[SPEECH_URL]
+    D[VIDEO_URL]
   end
   subgraph ports [Local defaults]
     P0[localhost:8000]
@@ -256,8 +261,8 @@ flowchart TB
   V --> P1
   G --> P2
   I --> P3
-    S --> P4
-    V --> P5
+  S --> P4
+  D --> P5
 ```
 
 Own connect timeouts and fallbacks in the product API. Degrade the feature when
@@ -266,7 +271,8 @@ a helper is down; do not hang the main request forever.
 ### Server-Sent Events
 
 **Stream long RAG answers when progress matters.** Keep SSE event shapes
-stable. See
+stable: each chunk is a `data: ...` frame, and the stream ends with
+`data: [DONE]`. See
 [WHATWG Server-Sent Events](https://html.spec.whatwg.org/multipage/server-sent-events.html).
 
 ```mermaid
@@ -275,9 +281,9 @@ sequenceDiagram
   participant RAG as RAG_helper
   API->>RAG: documents:streamQuery
   loop tokens
-    RAG-->>API: SSE event
+    RAG-->>API: data: chunk
   end
-  RAG-->>API: done
+  RAG-->>API: data: [DONE]
 ```
 
 ### Model libraries
@@ -457,21 +463,26 @@ model’s practical context.
 **Align image and video synthesis with diffusion methods.** Lineage:
 [Latent Diffusion Models](https://arxiv.org/abs/2112.10752),
 [DDPM](https://arxiv.org/abs/2006.11239). Treat heavy jobs as asynchronous:
-return a job id and poll. Prefer downloaded local weights (for example
-Qwen-Image via Diffusers); allow Hugging Face ids via configuration.
+return a job id and poll `GET /api/v1/imageJobs/{id}` or
+`GET /api/v1/videoJobs/{id}`. Job `status` is `pending`, `succeeded` or
+`failed`. Image prefers downloaded local weights (Qwen-Image via Diffusers);
+video loads CogVideoX by Hugging Face id (`COGVIDEOX_MODEL`).
 
 ```mermaid
 sequenceDiagram
   participant API as Product_API
-  participant MG as Media_Gen
+  participant MG as Image_Playground
   API->>MG: images:generate
   MG-->>API: job_id
-  loop until done
-    API->>MG: GET imageJobs
+  loop until succeeded or failed
+    API->>MG: GET imageJobs/{id}
     MG-->>API: status
   end
   MG-->>API: image_url
 ```
+
+Speech is synchronous: `voices:synthesize` returns `audio_url` and
+`audios:transcribe` returns `text` in the same response.
 
 ### Text-to-speech
 
@@ -484,8 +495,8 @@ formats aligned (`.wav` vs `.mp3`).
 **Keep ASR on an explicit transcribe route.** Lineage:
 [Whisper](https://arxiv.org/abs/2212.04356). Default to local Qwen3-ASR
 (`POST /api/v1/audios:transcribe`). For live conversation, expose streaming
-on `WS /ws/v1/audios:transcribe` with the same Qwen3 weights; use a rolling
-buffer on MPS/CPU and vLLM streaming on CUDA when configured
+on `WS /ws/v1/audios:transcribe` with the same Qwen3 weights. The stream
+re-transcribes a rolling PCM buffer and sends `partial` and `final` events
 ([Qwen3-ASR-1.7B](https://huggingface.co/Qwen/Qwen3-ASR-1.7B)). Do not mix
 incompatible contracts across TTS, ASR, diffusion image, and video.
 
