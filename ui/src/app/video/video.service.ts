@@ -27,6 +27,6 @@ export class VideoService {
       () => firstValueFrom(this.http.get<VideoJob>(mlUrl(`/api/v1/videoJobs/${jobId}`))),
       pollOptions,
     );
-    return { jobId, url: toProxyUrl(job.video_url ?? `/output/video/${jobId}.mp4`) };
+    return { jobId, url: toProxyUrl(job.video_url!) };
   }
 }
