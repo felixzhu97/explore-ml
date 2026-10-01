@@ -1,0 +1,29 @@
+.lead {
+  font-family: var(--font-display);
+  font-size: 21px;
+  line-height: 1.38;
+  color: var(--color-ink-muted-80);
+  max-width: 720px;
+}
+
+.head {
+  justify-content: space-between;
+}
+
+.status {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--color-ink-muted-48);
+}
+
+.dot.up {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+}
