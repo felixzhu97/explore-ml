@@ -2,12 +2,12 @@ import { ChangeDetectionStrategy, Component, DestroyRef, inject, signal } from '
 import { FormField, form } from '@angular/forms/signals';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { synthesize, transcribe } from '../core/api/clients';
-import { LiveAsr, type AsrEvent } from '../core/api/live-asr';
-import { Call } from '../core/call';
-import { Endpoint } from '../ui/endpoint';
-import { FilePick } from '../ui/file-pick';
-import { ModulePage } from '../ui/module-page';
+import { synthesize, transcribe } from './speech.api';
+import { LiveAsr, type AsrEvent } from './live-asr';
+import { Call } from '../shared/call';
+import { Endpoint } from '../shared/endpoint';
+import { FilePick } from '../shared/file-pick';
+import { ModulePage } from '../shared/module-page';
 
 @Component({
   selector: 'app-speech-page',

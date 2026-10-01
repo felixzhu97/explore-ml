@@ -2,10 +2,10 @@ import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/c
 import { FormField, form } from '@angular/forms/signals';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { generateImage } from '../core/api/clients';
-import { Call } from '../core/call';
-import { Endpoint } from '../ui/endpoint';
-import { ModulePage } from '../ui/module-page';
+import { generateImage } from './image.api';
+import { Call } from '../shared/call';
+import { Endpoint } from '../shared/endpoint';
+import { ModulePage } from '../shared/module-page';
 
 @Component({
   selector: 'app-image-page',

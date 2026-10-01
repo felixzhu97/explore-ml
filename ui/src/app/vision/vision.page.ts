@@ -2,18 +2,17 @@ import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/c
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import { BarChart } from '../charts/bar-chart';
+import { BarChart } from '../shared/bar-chart';
 import {
   moderateImage,
   moderateVideo,
   predictImage,
-  type ModerationResult,
-  type VisionInput,
-} from '../core/api/clients';
-import { Call } from '../core/call';
-import { Endpoint } from '../ui/endpoint';
-import { FilePick } from '../ui/file-pick';
-import { ModulePage } from '../ui/module-page';
+} from './vision.api';
+import type { ModerationResult, VisionInput } from './vision.model';
+import { Call } from '../shared/call';
+import { Endpoint } from '../shared/endpoint';
+import { FilePick } from '../shared/file-pick';
+import { ModulePage } from '../shared/module-page';
 
 type Target = 'predict' | 'moderateImage' | 'moderateVideo';
 

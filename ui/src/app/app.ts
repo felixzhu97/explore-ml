@@ -1,6 +1,6 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-import { SERVICES } from './core/services';
+import { SERVICES } from './shared/services';
 
 @Component({
   selector: 'app-root',

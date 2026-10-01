@@ -3,7 +3,7 @@ import { ChangeDetectionStrategy, Component, input } from '@angular/core';
 import { NzAlertModule } from 'ng-zorro-antd/alert';
 import { NzCardModule } from 'ng-zorro-antd/card';
 import { NzTagModule } from 'ng-zorro-antd/tag';
-import type { Call } from '../core/call';
+import type { Call } from '../shared/call';
 
 type CallState = Pick<Call<unknown>, 'busy' | 'value' | 'error' | 'ms'>;
 

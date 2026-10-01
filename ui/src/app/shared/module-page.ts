@@ -1,9 +1,9 @@
 import { ChangeDetectionStrategy, Component, computed, input, type OnInit } from '@angular/core';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
-import { Call } from '../core/call';
-import { checkHealth } from '../core/health';
-import { getService, svcUrl, type ServiceId } from '../core/services';
+import { Call } from '../shared/call';
+import { checkHealth } from '../shared/health';
+import { getService, svcUrl, type ServiceId } from '../shared/services';
 
 /** Page frame for one helper module: name, port, health check and the endpoint list. */
 @Component({
