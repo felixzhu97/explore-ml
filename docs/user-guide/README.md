@@ -12,7 +12,7 @@ For design rules see the [Guideline](../Guideline.md). For terms see the
 
 ## Goal
 
-Four optional helpers. One base URL each. Loopback only from your product API.
+Six optional helpers. One base URL each. Loopback only from your product API.
 Product clients never dial the helpers.
 
 ```mermaid
@@ -31,8 +31,14 @@ flowchart LR
 2. Confirm health on that base URL:
 
 ```bash
-curl -s "$HELPER/health"
+curl -s "$HELPER/health"         # recommendation, vision, RAG
+curl -s "$HELPER/openapi.json"   # image playground, speech, video
 ```
+
+   Recommendation and vision serve `/health`. RAG serves `/health`,
+   `/health/live` and `/health/ready`. Image Playground, Speech and Video
+   have no health route yet; a 200 from `/openapi.json` means the process is
+   up.
 
 3. Open `$HELPER/docs` and copy one request from OpenAPI.
 4. Set one env var on the product API to `$HELPER` (see
@@ -52,6 +58,10 @@ Use `$HELPER` as a placeholder. Local defaults are often:
 - Speech — `http://localhost:8004`
 - Video — `http://localhost:8005`
 
+The Angular operator console in `ui/` runs on `http://localhost:4200` and
+proxies `/svc/<id>` to these helpers. Use it to try each helper by hand
+before you wire your own API.
+
 ```mermaid
 flowchart TB
   Start[Start_one_helper]
@@ -64,16 +74,26 @@ flowchart TB
 
 ## Useful endpoints
 
-Relative to each helper base URL (target contract):
+Relative to each helper base URL:
 
-- Health — `GET /health`
-- Contract — `GET /docs`
+- Health — `GET /health` (recommendation, vision, RAG); RAG also has
+  `/health/live` and `/health/ready`
+- Contract — `GET /docs` and `GET /openapi.json` (every helper)
 - Recommendation — `POST /api/v1/feeds:rank`, `explores:rank`, `reels:rank`,
   `feeds:recall`
 - Vision — `POST /api/v1/images:predict`, `images:moderate`, `videos:moderate`
-- RAG — `POST /api/v1/documents`, `documents:query`, `documents:streamQuery`
-- Speech / Image Playground / Video — `POST /api/v1/images:generate`, `voices:synthesize`,
-  `audios:transcribe`, `videos:generate`
+- RAG documents — `POST /api/v1/documents`, `GET /api/v1/documents`,
+  `GET /api/v1/documents/{id}`, `DELETE /api/v1/documents/{id}`
+- RAG query — `POST /api/v1/documents:query`, `documents:streamQuery`,
+  `documents:exportVectors`; `GET /api/v1/collections`
+- RAG ingest — `POST /api/v1/posts:sync`, `comments:sync`, `resources:sync`,
+  `webpages:scrape`, `webpages:crawl`
+- Image Playground — `POST /api/v1/images:generate`, then poll
+  `GET /api/v1/imageJobs/{id}`
+- Speech — `POST /api/v1/voices:synthesize`, `audios:transcribe`; WebSocket
+  `/ws/v1/audios:transcribe` for streaming ASR
+- Video — `POST /api/v1/videos:generate`, then poll
+  `GET /api/v1/videoJobs/{id}`
 
 Prefer `/docs` over memorizing bodies. Keep custom-method names stable when
 code moves.
@@ -83,12 +103,12 @@ code moves.
 ### Run helpers
 
 **Follow [Operator setup](operator-setup.md).** One process, one port, one
-health check.
+liveness check.
 
 ### Connect your API
 
-**Follow [Loopback integration](loopback-integration.md).** Four env vars at
-most for a full stack; one var for a single feature.
+**Follow [Loopback integration](loopback-integration.md).** Six env vars for
+a full stack; one var for a single feature.
 
 ### Fetch checkpoints
 
