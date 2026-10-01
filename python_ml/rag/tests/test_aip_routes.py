@@ -20,6 +20,7 @@ def test_should_wire_aip_document_and_custom_method_paths():
     query = _read("api_query.py")
     assert '/documents:query"' in query
     assert '/documents:streamQuery"' in query
+    assert '/documents:exportVectors"' in query
     assert '/collections"' in query
 
     crawler = _read("api_crawler.py")

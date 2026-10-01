@@ -52,6 +52,32 @@ class QueryResponse(BaseModel):
     generation_time_ms: int = 0
 
 
+class ExportVectorsRequest(BaseModel):
+    """Request to export stored vectors for client-side visualization."""
+
+    collection: Optional[str] = Field(
+        default=None,
+        description="Collection to export. If None, exports from all collections.",
+    )
+    limit: int = Field(default=2000, ge=1, le=10000)
+
+
+class ExportedPoint(BaseModel):
+    """One stored chunk with its embedding."""
+
+    id: str
+    vector: list[float]
+    text: str
+    metadata: dict
+
+
+class ExportVectorsResponse(BaseModel):
+    """Exported vectors; `dimension` is 0 when nothing is stored."""
+
+    dimension: int
+    points: list[ExportedPoint]
+
+
 class StreamingQueryResponse(BaseModel):
     """Streaming RAG query response chunk."""
 
