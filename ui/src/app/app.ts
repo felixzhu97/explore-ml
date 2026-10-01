@@ -1,42 +1,29 @@
 import { ChangeDetectionStrategy, Component } from '@angular/core';
 import { RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
-
-interface NavItem {
-  path: string;
-  label: string;
-  exact: boolean;
-}
+import { SERVICES } from './core/services';
 
 @Component({
   selector: 'app-root',
   imports: [RouterOutlet, RouterLink, RouterLinkActive],
   changeDetection: ChangeDetectionStrategy.OnPush,
-  styleUrl: './app.css',
   template: `
-    <nav class="global-nav" aria-label="主导航">
-      <a class="brand" routerLink="/">Explore ML</a>
-      <ul>
-        @for (item of nav; track item.path) {
-          <li>
-            <a
-              [routerLink]="item.path"
-              routerLinkActive="active"
-              ariaCurrentWhenActive="page"
-              [routerLinkActiveOptions]="{ exact: item.exact }"
-              >{{ item.label }}</a
-            >
-          </li>
+    <nav class="sticky top-0 z-10 bg-black text-xs text-white/80" aria-label="主导航">
+      <div class="mx-auto flex h-11 max-w-[980px] items-center gap-6 overflow-x-auto px-6">
+        <a class="font-semibold text-white" routerLink="/">Explore ML</a>
+        @for (s of services; track s.id) {
+          <a
+            class="whitespace-nowrap hover:text-white"
+            [routerLink]="'/' + s.id"
+            routerLinkActive="text-white"
+            ariaCurrentWhenActive="page"
+            >{{ s.name }}</a
+          >
         }
-      </ul>
+      </div>
     </nav>
     <main><router-outlet /></main>
   `,
 })
 export class App {
-  protected readonly nav: NavItem[] = [
-    { path: '/', label: '总览', exact: true },
-    { path: '/playground', label: '调试台', exact: false },
-    { path: '/atlas', label: '向量地图', exact: false },
-    { path: '/evaluation', label: '评估看板', exact: false },
-  ];
+  protected readonly services = SERVICES;
 }

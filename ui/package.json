@@ -17,9 +17,11 @@
     "@angular/forms": "^22.2.0",
     "@angular/platform-browser": "^22.2.0",
     "@angular/router": "^22.2.0",
+    "@tailwindcss/postcss": "^4.3.3",
     "d3": "^7.9.0",
-    "embedding-atlas": "^0.24.0",
+    "postcss": "^8.5.28",
     "rxjs": "~7.8.0",
+    "tailwindcss": "^4.3.3",
     "tslib": "^2.3.0"
   },
   "devDependencies": {

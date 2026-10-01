@@ -19,7 +19,8 @@ export async function checkHealth(
     });
     const latencyMs = Math.round(now() - start);
     const text = await res.text();
-    return { service, ok: res.ok, latencyMs, detail: res.ok ? text : `${res.status}` };
+    const detail = res.ok ? text.slice(0, 160) : `${res.status}`;
+    return { service, ok: res.ok, latencyMs, detail };
   } catch (e) {
     return { service, ok: false, latencyMs: null, detail: e instanceof Error ? e.name : 'error' };
   }

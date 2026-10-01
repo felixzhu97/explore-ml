@@ -1,4 +1,0 @@
-{
-  "model": { "recall@10": 0.412, "ndcg@10": 0.287 },
-  "baseline": { "recall@10": 0.355, "ndcg@10": 0.241 }
-}

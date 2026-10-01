@@ -25,11 +25,11 @@ System_Boundary(ml, "Explore ML") {
   Container(ip, "Image Playground", "FastAPI", "python_ml/image-playground :8003")
   Container(sp, "Speech", "FastAPI", "python_ml/speech :8004")
   Container(vd, "Video", "FastAPI", "python_ml/video :8005")
-  Container(ui, "Model Test UI", "Angular, d3, embedding-atlas", "ui/ :4200 (ng serve)")
+  Container(ui, "Model Test UI", "Angular, Tailwind, d3", "ui/ :4200 (ng serve)")
   ContainerDb(fixtures, "Fixture data", "Files", "data/")
 }
 
-Rel(engineer, ui, "Playgrounds, atlas, eval", "Browser")
+Rel(engineer, ui, "Module pages", "Browser")
 Rel(engineer, rec, "uvicorn / pytest")
 Rel(sibling_api, rec, "HTTP", "optional")
 Rel(sibling_api, vision, "HTTP", "optional")
