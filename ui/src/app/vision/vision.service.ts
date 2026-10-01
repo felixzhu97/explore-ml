@@ -7,11 +7,21 @@ export type VisionInput = { file: File } | { url: string };
 
 export interface PredictionResult {
   labels: string[];
+  predictions?: { label: string; score: number }[];
+}
+
+export interface ModerationFrame {
+  offset_seconds: number;
+  scores: Record<string, number>;
+  safe: boolean;
 }
 
 export interface ModerationResult {
   safe: boolean;
   categories: { label: string; score: number }[];
+  scores?: Record<string, number>;
+  thresholds?: Record<string, number>;
+  frames?: ModerationFrame[];
 }
 
 @Service()

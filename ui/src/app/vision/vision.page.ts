@@ -2,11 +2,15 @@ import { Component, computed, inject, signal } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzTagModule } from 'ng-zorro-antd/tag';
+import * as d3 from 'd3';
 import { BarChart } from '../shared/bar-chart';
 import { Call } from '../shared/call';
+import { flaggedPoints, frameSeries } from '../shared/chart-math';
+import { LineChart, type Rule } from '../shared/line-chart';
 import { Endpoint } from '../shared/endpoint';
 import { FilePick } from '../shared/file-pick';
 import { ModulePage } from '../shared/module-page';
+import type { BarDatum } from '../shared/scales';
 import {
   VisionService,
   type ModerationResult,
@@ -16,16 +20,42 @@ import {
 
 type Target = 'predict' | 'moderateImage' | 'moderateVideo';
 
-function categoryBars(result: ModerationResult | undefined) {
-  return (result?.categories ?? []).map((category) => ({
-    label: category.label,
-    value: category.score,
+const formatPercent = d3.format('.1%');
+
+/** Every scored or thresholded category; older responses only carry flagged categories. */
+function categoryBars(result: ModerationResult | undefined): BarDatum[] {
+  if (!result) return [];
+  const thresholds = result.thresholds ?? {};
+  const scores =
+    result.scores ??
+    Object.fromEntries(result.categories.map((category) => [category.label, category.score]));
+  const labels = [...new Set([...Object.keys(thresholds), ...Object.keys(scores)])];
+  return labels.map((label) => ({
+    label,
+    value: scores[label] ?? 0,
+    threshold: thresholds[label],
+  }));
+}
+
+function thresholdRules(result: ModerationResult | undefined): Rule[] {
+  return Object.entries(result?.thresholds ?? {}).map(([label, value]) => ({
+    value,
+    label: `${label} ≥ ${value}`,
   }));
 }
 
 @Component({
   selector: 'app-vision-page',
-  imports: [BarChart, Endpoint, FilePick, ModulePage, NzButtonModule, NzInputModule, NzTagModule],
+  imports: [
+    BarChart,
+    Endpoint,
+    FilePick,
+    LineChart,
+    ModulePage,
+    NzButtonModule,
+    NzInputModule,
+    NzTagModule,
+  ],
   template: `
     <app-module-page module="vision">
       @for (endpoint of endpoints; track endpoint.target) {
@@ -62,7 +92,13 @@ function categoryBars(result: ModerationResult | undefined) {
             </button>
           </div>
           @if (endpoint.target === 'predict') {
-            @if (labels().length) {
+            @if (predictionBars().length) {
+              <app-bar-chart
+                [data]="predictionBars()"
+                [format]="formatPercent"
+                ariaLabel="分类概率"
+              />
+            } @else if (labels().length) {
               <div class="flex flex-wrap gap-2">
                 @for (label of labels(); track $index) {
                   <nz-tag [nzColor]="$first ? 'processing' : 'default'"
@@ -72,9 +108,39 @@ function categoryBars(result: ModerationResult | undefined) {
               </div>
             }
           } @else {
+            @let result = calls[endpoint.target].value();
             @let moderationBars = endpoint.target === 'moderateImage' ? imageBars() : videoBars();
+            @if (result) {
+              <span>
+                <nz-tag [nzColor]="result.safe ? 'success' : 'error'">{{
+                  result.safe ? '通过' : '拒绝'
+                }}</nz-tag>
+              </span>
+            }
             @if (moderationBars.length) {
-              <app-bar-chart [data]="moderationBars" [max]="1" ariaLabel="审核类别分数" />
+              <section class="flex flex-col gap-2">
+                <h3 class="m-0 text-caption font-semibold text-ink-80">
+                  {{ endpoint.target === 'moderateVideo' ? '各类别峰值分数' : '各类别分数' }}
+                  · 竖线为阈值
+                </h3>
+                <app-bar-chart [data]="moderationBars" [max]="1" ariaLabel="审核类别分数与阈值" />
+              </section>
+            }
+            @if (endpoint.target === 'moderateVideo' && frames().length) {
+              <section class="flex flex-col gap-2">
+                <h3 class="m-0 text-caption font-semibold text-ink-80">
+                  逐帧时间线 · {{ frames().length }} 帧，{{ unsafeFrames() }} 帧超阈值
+                </h3>
+                <app-line-chart
+                  [series]="frameScores()"
+                  [thresholds]="videoRules()"
+                  [highlights]="flagged()"
+                  [yMax]="1"
+                  [xFormat]="formatSeconds"
+                  [yFormat]="formatScore"
+                  ariaLabel="视频逐帧审核分数"
+                />
+              </section>
             }
           }
         </app-endpoint>
@@ -125,6 +191,24 @@ export class VisionPage {
   protected readonly labels = computed(() => this.calls.predict.value()?.labels ?? []);
   protected readonly imageBars = computed(() => categoryBars(this.calls.moderateImage.value()));
   protected readonly videoBars = computed(() => categoryBars(this.calls.moderateVideo.value()));
+  protected readonly predictionBars = computed(() =>
+    (this.calls.predict.value()?.predictions ?? []).map((prediction) => ({
+      label: prediction.label,
+      value: prediction.score,
+    })),
+  );
+  protected readonly frames = computed(() => this.calls.moderateVideo.value()?.frames ?? []);
+  protected readonly frameScores = computed(() => frameSeries(this.frames()));
+  protected readonly videoRules = computed(() => thresholdRules(this.calls.moderateVideo.value()));
+  protected readonly flagged = computed(() =>
+    flaggedPoints(this.frames(), this.calls.moderateVideo.value()?.thresholds ?? {}),
+  );
+  protected readonly unsafeFrames = computed(
+    () => this.frames().filter((frame) => !frame.safe).length,
+  );
+  protected readonly formatPercent = formatPercent;
+  protected readonly formatScore = d3.format('.1f');
+  protected readonly formatSeconds = (seconds: number) => `${d3.format('.1~f')(seconds)}s`;
 
   protected pick(target: Target, file: File | null): void {
     this.files.update((files) => ({ ...files, [target]: file }));

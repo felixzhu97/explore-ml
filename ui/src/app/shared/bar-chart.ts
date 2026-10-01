@@ -56,6 +56,7 @@ export class BarChart {
         row.append('text').attr('class', 'label').attr('dominant-baseline', 'middle');
         row.append('rect').attr('class', 'track').attr('rx', 4);
         row.append('rect').attr('class', 'bar').attr('rx', 4);
+        row.append('line').attr('class', 'row-threshold').attr('stroke-width', 2);
         row.append('text').attr('class', 'value').attr('dominant-baseline', 'middle');
         return row;
       });
@@ -76,10 +77,22 @@ export class BarChart {
       .select<SVGRectElement>('rect.bar')
       .attr('x', LABEL_WIDTH)
       .attr('height', yScale.bandwidth())
-      .style('fill', CHART_COLORS.primary)
+      .style('fill', (datum) =>
+        datum.threshold != null && (datum.value ?? 0) < datum.threshold
+          ? CHART_COLORS.secondary
+          : CHART_COLORS.primary,
+      )
       .transition()
       .duration(300)
       .attr('width', (datum) => (datum.value == null ? 0 : Math.max(0, xScale(datum.value))));
+    rows
+      .select('line.row-threshold')
+      .attr('display', (datum) => (datum.threshold == null ? 'none' : null))
+      .attr('x1', (datum) => LABEL_WIDTH + xScale(datum.threshold ?? 0))
+      .attr('x2', (datum) => LABEL_WIDTH + xScale(datum.threshold ?? 0))
+      .attr('y1', -2)
+      .attr('y2', yScale.bandwidth() + 2)
+      .style('stroke', CHART_COLORS.ink);
     rows
       .select('text.value')
       .attr('x', LABEL_WIDTH + innerWidth + 8)
