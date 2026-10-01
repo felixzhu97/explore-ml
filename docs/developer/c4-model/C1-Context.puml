@@ -15,7 +15,7 @@ title [C4 Level 1] Explore ML - System Context
 
 Person(engineer, "Platform engineer", "Local boot, model test, fine-tuning")
 System(explore_ml, "Explore ML", "One Python FastAPI loopback app on :8000 with six modules (recommendation, vision, RAG, image_playground, speech, video) plus the Angular Model Test UI with D3 charts")
-System_Ext(sibling_api, "Sibling Explore API", "Spring (or other); calls EXPLORE_ML_URL over loopback")
+System_Ext(sibling_api, "Sibling Explore API", "Spring (or other); calls http://localhost:8000 over loopback")
 System_Ext(vector_db, "Qdrant", "RAG vectors; embedded on disk unless QDRANT_URL is set")
 System_Ext(llm, "Ollama / OpenAI", "RAG embeddings and answers")
 System_Ext(reranker, "Rerank sidecar", "Optional HTTP reranker (RERANK_URL)")

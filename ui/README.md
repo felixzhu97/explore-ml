@@ -13,8 +13,6 @@ API tree.
 ## Get started
 
 You need Node.js 22.22+ or 24.15+, the versions Angular 22 supports.
-`ng serve` loads `proxy.conf.mjs`, which imports TypeScript directly; those
-Node versions strip the types natively.
 
 ```bash
 cd ui
@@ -32,15 +30,12 @@ The browser only talks to the UI origin. The dev server proxies `/ml/*` to
 the Python app with the prefix stripped, WebSockets included, so the app needs
 no CORS setup.
 
-| Proxy path | Default target          | Override env     |
-| ---------- | ----------------------- | ---------------- |
-| `/ml`      | `http://127.0.0.1:8000` | `EXPLORE_ML_URL` |
+| Proxy path | Target                  |
+| ---------- | ----------------------- |
+| `/ml`      | `http://127.0.0.1:8000` |
 
-For example, to point the UI at a GPU box:
-
-```bash
-EXPLORE_ML_URL=http://gpu-box:8000 npm start
-```
+The rule lives in [`proxy.conf.json`](proxy.conf.json); edit `target` to
+point the UI at another host, such as a GPU box.
 
 The proxy only runs under `ng serve`. If you host the `npm run build` output
 elsewhere, put the same `/ml` rewrite in front of it.
@@ -60,7 +55,7 @@ elsewhere, put the same `/ml` rewrite in front of it.
 Every module page starts with a health check and lists one card per endpoint:
 the form, the elapsed time, any error, the charts and the raw JSON response.
 The health check reads the module's entry from the app's aggregated
-`GET /health`; a module the app was started without shows as disabled.
+`GET /health`; every module shows offline when the app is unreachable.
 
 ## Checks
 
@@ -76,8 +71,8 @@ CI runs both on every pull request and every push to `main` (Node 22).
 ```text
 src/app/
 ├── shared/    helpers.ts (HELPERS registry, mlUrl, toProxyUrl),
-│              proxy.ts (used by proxy.conf.mjs), health.ts
-│              (HealthService, parseHealthReport), call.ts (Call state),
+│              health.ts (HealthService, parseHealthReport),
+│              call.ts (Call state),
 │              sse.ts, poll.ts, job-trace.ts, audio.ts, error-message.ts,
 │              observe-width.ts, module-page.ts, endpoint.ts, file-pick.ts
 │              chart-math.ts   pure chart helpers (bins, rank shifts, PCA,

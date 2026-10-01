@@ -3,8 +3,8 @@
 ← [User guide home](README.md)
 
 Fetch local checkpoints only when you chose a local generative or rerank
-backend. Point the app at one root (`LOCAL_MODELS_ROOT`, default
-`~/Codes/models`). Keep large weights out of git.
+backend. The app reads one root, `~/Codes/models` (`LOCAL_MODELS_ROOT`
+in `python_ml/config.py`). Keep large weights out of git.
 
 Speech, Image Playground, RAG rerank and recommendation read paths under this
 root. Video loads `COGVIDEOX_MODEL` as a Hugging Face id and ignores the root.
@@ -46,9 +46,8 @@ $LOCAL_MODELS_ROOT/
 └── recommendation/models/           # RECOMMENDATION_MODEL_DIR, feed_ranker.pt
 ```
 
-Recommendation reads `RECOMMENDATION_MODEL_DIR` (default
-`$LOCAL_MODELS_ROOT/recommendation/models`) and `FEED_RANKER_MODEL` (default
-`feed_ranker.pt` in that folder). Those files come from its own training
+Recommendation reads `FEED_RANKER_MODEL`, `feed_ranker.pt` under
+`RECOMMENDATION_MODEL_DIR` (`$LOCAL_MODELS_ROOT/recommendation/models`). Those files come from its own training
 jobs, not from a Hub download.
 
 Default ids the modules expect:
@@ -83,18 +82,17 @@ pip install -U huggingface_hub   # provides the `hf` CLI
 pip install -U modelscope
 ```
 
-Image Playground, Speech and Video set `HF_ENDPOINT=https://hf-mirror.com`
-when it is unset. Set the same mirror in your shell before `hf download`, or
+The app sets `HF_ENDPOINT=https://hf-mirror.com` when it is unset. Set the same mirror in your shell before `hf download`, or
 set `HF_ENDPOINT=https://huggingface.co` to use the main Hub:
 
 ```bash
 export HF_ENDPOINT=https://hf-mirror.com
 ```
 
-Set the root once:
+Use the same root in your shell:
 
 ```bash
-export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
+export LOCAL_MODELS_ROOT="$HOME/Codes/models"
 mkdir -p "$LOCAL_MODELS_ROOT"/{asr,tts,image,rerank}/models
 ```
 
@@ -137,34 +135,30 @@ when Hugging Face is unreachable.
 
 ## Wire modules (easiest config)
 
-Export the same root the modules read:
+The defaults resolve under the root, so downloaded weights need no change.
+To use another path or Hub id, or a backend without local weights, edit
+the constant in the module's `config.py`—`/api/v1` routes stay unchanged:
+`ASR_MODEL` and `TTS_MODEL` (`speech/config.py`), `IMAGE_MODEL` and
+`IMAGE_LORA_PATH` (`image_playground/config.py`), `COGVIDEOX_MODEL`
+(`video/config.py`, Hub id). To move the root itself, change
+`LOCAL_MODELS_ROOT` in `python_ml/config.py`.
 
-```bash
-export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
-```
+RAG rerank is on. It calls a sidecar that serves
+`$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B`; `rag/config.py`
+holds:
 
-Prefer defaults that resolve under that root. Override with a path or Hub id
-when needed. Swap away from local weights with backend flags—keep `/api/v1`
-routes unchanged.
-
-Per-module overrides: `ASR_MODEL` and `TTS_MODEL` (Speech), `IMAGE_MODEL`
-and `IMAGE_LORA_PATH` (Image Playground), `COGVIDEOX_MODEL` (Video, Hub id).
-
-RAG rerank is on by default. It calls a sidecar that serves the reranker:
-
-| Variable | Default |
+| Constant | Value |
 | --- | --- |
-| `RERANK_ENABLED` | `true` (`false` skips rerank) |
+| `RERANK_ENABLED` | `True` (`False` skips rerank) |
 | `RERANK_URL` | `http://127.0.0.1:8091` |
-| `RERANK_MODEL` | `$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B` |
-| `RERANK_TIMEOUT` | `30` seconds |
+| `RERANK_TIMEOUT` | `30.0` seconds |
 
 If the sidecar is down, RAG keeps vector order (see
 [Guideline](../Guideline.md)).
 
 ```mermaid
 flowchart TB
-  Env[LOCAL_MODELS_ROOT_and_backends]
+  Env[LOCAL_MODELS_ROOT_and_config_constants]
   Routes[Stable_/api/v1_routes]
   Env --> Routes
 ```
@@ -180,7 +174,7 @@ ollama pull qwen3-coder:30b
 
 ```bash
 ls "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
-curl -s "$EXPLORE_ML_URL/health"   # speech lists its voice and asr backends
+curl -s http://localhost:8000/health   # speech lists its voice and asr backends
 ```
 
 Fail clearly when a required path is empty—do not hang on an unexpected Hub

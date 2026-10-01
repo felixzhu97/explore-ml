@@ -12,21 +12,15 @@ channel. Never expose its port to browsers or mobile clients.
 2. The module reports `ok` (or `degraded` with a known reason):
 
 ```bash
-curl -s "$EXPLORE_ML_URL/health"
+curl -s "http://localhost:8000/health"
 ```
 
-3. You opened `$EXPLORE_ML_URL/docs` and know which `/api/v1` method you need.
+3. You opened `http://localhost:8000/docs` and know which `/api/v1` method you need.
 
 ## Wire the base URL
 
-Set one upstream string. `EXPLORE_ML_URL` is the name the `ui/` proxy reads;
-reuse it in your product API:
-
-```bash
-export EXPLORE_ML_URL=http://localhost:8000
-```
-
-Every module answers under that URL, so a new feature needs no new upstream.
+Point your product API's upstream at one URL, `http://localhost:8000`.
+Every module answers under it, so a new feature needs no new upstream.
 Keep model roots and secrets on the app side—never in the client bundle.
 
 ```mermaid
@@ -57,13 +51,13 @@ sequenceDiagram
 
 ## Prove one route (easiest path)
 
-Copy a request from `$EXPLORE_ML_URL/docs`. Smoke it with curl against the
+Copy a request from `http://localhost:8000/docs`. Smoke it with curl against the
 app, then call the same path from your API client.
 
 ### Recommendation — rank a short list
 
 ```bash
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/feeds:rank" \
+curl -s -X POST "http://localhost:8000/api/v1/feeds:rank" \
   -H 'Content-Type: application/json' \
   -d '{"user_id":"demo","candidate_ids":["1","2","3"]}'
 # {"items":[{"id":"2","score":0.91}, ...]}
@@ -78,7 +72,7 @@ Prefer separate recall and rank when you own candidate generation (see
 ### Vision — moderate a file
 
 ```bash
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/images:moderate" \
+curl -s -X POST "http://localhost:8000/api/v1/images:moderate" \
   -F "file=@sample.jpg"
 ```
 
@@ -90,10 +84,10 @@ category's `scores` and the `thresholds` used; `videos:moderate` adds one
 ### RAG — ingest then ask
 
 ```bash
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/documents" \
+curl -s -X POST "http://localhost:8000/api/v1/documents" \
   -F "file=@./notes.md"
 
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/documents:query" \
+curl -s -X POST "http://localhost:8000/api/v1/documents:query" \
   -H 'Content-Type: application/json' \
   -d '{"query":"What should I do first?","top_k":5}'
 ```
@@ -116,13 +110,13 @@ Speech does not use jobs. Synthesis returns the audio URL and transcription
 returns the text in the same response.
 
 ```bash
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/voices:synthesize" \
+curl -s -X POST "http://localhost:8000/api/v1/voices:synthesize" \
   -H 'Content-Type: application/json' \
   -d '{"text":"Hello from Explore ML"}'
 # {"audio_url":"http://localhost:8000/output/voice/<id>.wav"}
-# (.mp3 when VOICE_BACKEND=edge)
+# (.mp3 when VOICE_BACKEND is "edge")
 
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/audios:transcribe" \
+curl -s -X POST "http://localhost:8000/api/v1/audios:transcribe" \
   -F "file=@sample.wav"
 # {"text":"...","language":"en"}
 ```
@@ -133,20 +127,20 @@ PCM audio; it sends `partial` and `final` events.
 ### Image Playground / Video — generate then poll
 
 ```bash
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/images:generate" \
+curl -s -X POST "http://localhost:8000/api/v1/images:generate" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"a quiet desk lamp"}'
 # {"job_id":"<id>"}
 
-curl -s "$EXPLORE_ML_URL/api/v1/imageJobs/<id>"
+curl -s "http://localhost:8000/api/v1/imageJobs/<id>"
 # {"name":"imageJobs/<id>","status":"succeeded",
 #  "image_url":"http://localhost:8000/output/image/<id>.png"}
 
-curl -s -X POST "$EXPLORE_ML_URL/api/v1/videos:generate" \
+curl -s -X POST "http://localhost:8000/api/v1/videos:generate" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"a calm pan across a desk"}'
 
-curl -s "$EXPLORE_ML_URL/api/v1/videoJobs/<id>"
+curl -s "http://localhost:8000/api/v1/videoJobs/<id>"
 ```
 
 Treat heavy work as a job: store the `job_id`, poll
@@ -154,8 +148,8 @@ Treat heavy work as a job: store the `job_id`, poll
 return `image_url` or `video_url` to the client. `status` is `pending`,
 `succeeded` or `failed`; a failed job carries `error`. Unknown ids return 404.
 
-Swap backends with env (`IMAGE_BACKEND`, `VOICE_BACKEND`, model ids)—keep the
-same routes.
+Swap backends in the module's `config.py` (`IMAGE_BACKEND`, `VOICE_BACKEND`,
+model ids)—keep the same routes.
 
 ```mermaid
 sequenceDiagram
@@ -174,15 +168,15 @@ sequenceDiagram
 
 1. Call the app only from the product API (or another trusted server).
 2. Own timeouts and fallbacks in the API. Degrade a feature when its module
-   reports `degraded` or `error`, or the app is down.
+   reports `degraded`, or the app is down.
 3. Treat `/docs` + `/api/v1/...` as the contract.
-4. Change the port only together with `EXPLORE_ML_URL` (and `BASE_URL` when
-   set).
+4. Change the port only together with your upstream URL and `BASE_URL`
+   in `python_ml/config.py`.
 5. Prefer loopback or private network URLs—not public ingress.
 
 ## Checklist
 
-1. Set `EXPLORE_ML_URL`.
+1. Point the upstream at `http://localhost:8000`.
 2. Confirm the module in `GET /health`.
 3. Smoke one `/api/v1` route with curl.
 4. Call the same route from the product API.
@@ -191,9 +185,9 @@ sequenceDiagram
 ## Smoke test
 
 1. Start the app ([Operator setup](operator-setup.md)).
-2. `curl "$EXPLORE_ML_URL/health"`.
+2. `curl http://localhost:8000/health`.
 3. Run one curl example above.
-4. Point the product env at `$EXPLORE_ML_URL`.
+4. Point the product upstream at `http://localhost:8000`.
 5. Repeat the action once through the product.
 
 ## Related

@@ -3,8 +3,8 @@
 ← [User guide home](README.md)
 
 Adapt a module's model to your own data. Train once, write the result under
-`LOCAL_MODELS_ROOT`, point one env var at it, and keep `/api/v1` routes
-unchanged.
+`LOCAL_MODELS_ROOT`, point one config constant at it, and keep `/api/v1`
+routes unchanged.
 
 Fine-tune only after the base model works end to end. Most quality problems
 are fixed faster with better data, thresholds, or prompts.
@@ -12,17 +12,18 @@ are fixed faster with better data, thresholds, or prompts.
 ## Goal
 
 One loop for every module. Train, evaluate against the base model, then
-promote or roll back by changing a single env var.
+promote or roll back by changing a single constant in the module's
+`config.py`.
 
 ```mermaid
 flowchart LR
   Data[data/finetune/area]
   Train[Train]
   Out[LOCAL_MODELS_ROOT/area/models/name-ft]
-  Env[Point_env_var_at_ft_dir]
+  Env[Point_constant_at_ft_dir]
   Eval[Eval_vs_base_on_held_out_split]
-  Keep[Keep_env_var]
-  Revert[Revert_env_var]
+  Keep[Keep_constant]
+  Revert[Revert_constant]
   Data --> Train --> Out --> Env --> Eval
   Eval -->|better| Keep
   Eval -->|worse| Revert
@@ -57,10 +58,10 @@ pip install -U huggingface_hub
 hf auth login
 ```
 
-2. Set the models root:
+2. Use the app's models root in your shell:
 
 ```bash
-export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
+export LOCAL_MODELS_ROOT="$HOME/Codes/models"
 ```
 
 3. Put a small train and eval split under `data/finetune/<area>/`. Commit only
@@ -73,7 +74,7 @@ cd python_ml
 pip install -r <module>/requirements-train.txt
 ```
 
-5. Train, evaluate, and set the env var shown in the section for your module.
+5. Train, evaluate, and set the constant shown in the section for your module.
 
 Name every output `<base>-ft-<yyyymmdd>`. Never overwrite a base model.
 
@@ -84,22 +85,23 @@ engagement.
 
 ```bash
 cd python_ml
-export RECOMMENDATION_MODEL_DIR="$LOCAL_MODELS_ROOT/recommendation/models"
+MODEL_DIR="$LOCAL_MODELS_ROOT/recommendation/models"
 python -m recommendation.run_jobs --job feed_rank \
-  --init-from "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
-  --output "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-$(date +%Y%m%d).pt"
+  --init-from "$MODEL_DIR/feed_ranker.pt" \
+  --output "$MODEL_DIR/feed_ranker-ft-$(date +%Y%m%d).pt"
 ```
 
 Compare against the current model on a held-out file:
 
 ```bash
 python -m recommendation.training.eval_feed_ranker \
-  --model "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-<yyyymmdd>.pt" \
-  --baseline "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
+  --model "$MODEL_DIR/feed_ranker-ft-<yyyymmdd>.pt" \
+  --baseline "$MODEL_DIR/feed_ranker.pt" \
   --holdout ../data/finetune/recommendation/eval.jsonl
 ```
 
-Promote with `FEED_RANKER_MODEL=<path>`.
+Promote by pointing `FEED_RANKER_MODEL` in `recommendation/config.py` at
+the new file.
 
 ## Vision
 
@@ -117,9 +119,9 @@ python -m vision.training.eval_head \
   --model "$LOCAL_MODELS_ROOT/vision/models/resnet50-ft-<yyyymmdd>"
 ```
 
-Promote with `VISION_MODEL_PATH=<dir>/model.pt` and
-`VISION_LABELS_PATH=<dir>/labels.json`. Keep NudeNet as is; tune
-`VISION_NSFW_THRESHOLD` instead of retraining it.
+Promote by setting `MODEL_PATH` to `<dir>/model.pt` and `LABELS_PATH` to
+`<dir>/labels.json` in `vision/config.py`. Keep NudeNet as is; tune
+`NSFW_THRESHOLD` instead of retraining it.
 
 With a custom head loaded, `images:moderate` skips the ImageNet "prohibited"
 class check, because those class ids no longer match your labels. Only the
@@ -140,7 +142,7 @@ python -m rag.training.train_embedding \
 rag/training/to_ollama.sh "$LOCAL_MODELS_ROOT/embed/models/nomic-embed-ft-<yyyymmdd>" nomic-embed-ft
 ```
 
-Set `EMBEDDING_MODEL=nomic-embed-ft`, then re-index every document. Vectors
+Set `EMBEDDING_MODEL = "nomic-embed-ft"` in `rag/config.py`, then re-index every document. Vectors
 from different models never mix.
 
 ### Reranker
@@ -158,7 +160,7 @@ hf download <you>/qwen3-reranker-ft \
   --local-dir "$LOCAL_MODELS_ROOT/rerank/models/qwen3-reranker-ft"
 ```
 
-Point the rerank sidecar at that directory with `RERANK_MODEL`.
+Point the rerank sidecar at that directory.
 
 Measure both changes with the same query set:
 
@@ -170,7 +172,7 @@ python -m rag.training.eval_retrieval --queries ../data/finetune/rag/eval.jsonl
 
 Train a QLoRA adapter on chat-format examples, merge it, and serve it through
 Ollama. The script tunes `Qwen/Qwen3-8B` (`--base-model`), so `qwen3:8b` is
-the fair baseline. RAG serves `qwen3-coder:30b` by default (`LLM_MODEL`);
+the fair baseline. RAG serves `qwen3-coder:30b` (`LLM_MODEL` in `rag/config.py`);
 run a second comparison against it before you switch.
 
 ```bash
@@ -186,7 +188,7 @@ python -m rag.training.eval_answers \
   --model rag-llm-ft --baseline qwen3:8b
 ```
 
-Promote with `LLM_MODEL=rag-llm-ft`.
+Promote with `LLM_MODEL = "rag-llm-ft"`.
 
 ## Image Playground
 
@@ -212,7 +214,8 @@ python -m image_playground.training.compare_prompts \
   --prompts prompts.txt --out compare --seed 0 --steps 20
 ```
 
-Promote with `IMAGE_LORA_PATH=<dir>` and optional `IMAGE_LORA_SCALE=0.8`.
+Promote by setting `IMAGE_LORA_PATH` to the directory (and optionally
+`IMAGE_LORA_SCALE = 0.8`) in `image_playground/config.py`.
 
 ## Speech
 
@@ -233,7 +236,7 @@ python -m speech.training.eval_wer \
   --baseline "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
 ```
 
-Promote with `ASR_MODEL=<dir>`.
+Promote by setting `ASR_MODEL` to the directory in `speech/config.py`.
 
 ### TTS
 
@@ -248,7 +251,8 @@ hf download <you>/qwen3-tts-ft \
   --local-dir "$LOCAL_MODELS_ROOT/tts/models/qwen3-tts-ft"
 ```
 
-Promote with `TTS_MODEL=<dir>` and `TTS_SPEAKER=my_voice`. Listen to a fixed
+Promote by setting `TTS_MODEL` to the directory and `TTS_SPEAKER` to
+`"my_voice"` in `speech/config.py`. Listen to a fixed
 script, and transcribe it with ASR to catch regressions.
 
 ## Related

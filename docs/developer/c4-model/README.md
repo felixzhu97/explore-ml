@@ -22,7 +22,7 @@ cd docs/developer/c4-model && docker run --rm -v "$PWD":/data plantuml/plantuml 
 | Model Test UI (`ng serve`) | `:4200` |
 
 The UI reaches the app through the dev-server proxy at `/ml` (prefix
-stripped, WebSocket on). Override the target with `EXPLORE_ML_URL`. Sibling
+stripped, WebSocket on). The target lives in `ui/proxy.conf.json`. Sibling
 product APIs point their one loopback upstream at the same port.
 
 ## What each diagram shows

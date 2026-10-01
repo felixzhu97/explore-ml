@@ -37,9 +37,8 @@ uvicorn main:app --port 8000
 ```
 
 This creates a virtualenv, installs every module's dependencies, copies the
-example env file (loaded automatically) and starts all six modules on port
-`8000`. `GET /health` reports each module's status; set `EXPLORE_MODULES` to
-load only some of them. Details:
+secrets file (loaded automatically) and starts all six modules on port
+`8000`. `GET /health` reports each module's status. Details:
 [`python_ml/README.md`](python_ml/README.md).
 
 | Module           | Package            | Operations under `/api/v1`                      |
@@ -69,13 +68,15 @@ all of its endpoints and see the results charted with D3. See
 
 ### Configuration
 
-`python_ml/.env.example` lists every module's variables. Do not commit real
-secrets. Large model
-weights stay out of git under `LOCAL_MODELS_ROOT`; download them with the
-[Model download](docs/user-guide/model-download.md) guide. Image Playground,
-Speech, RAG rerank and the recommendation feed ranker read those paths; Video
-loads a Hugging Face id (`COGVIDEOX_MODEL`). Every path can be overridden via
-env. Put small fixtures under `data/`.
+Settings are constants in `python_ml/config.py` and each
+`<module>/config.py`; edit them in place. `python_ml/.env` holds only
+secrets (`DATABASE_URL`, `REDIS_PASSWORD`, `OPENAI_API_KEY`); never commit
+it. Large model weights stay out of git under `~/Codes/models`
+(`LOCAL_MODELS_ROOT`); download them with the
+[Model download](docs/user-guide/model-download.md) guide. Image
+Playground, Speech, RAG rerank and the recommendation feed ranker read
+those paths; Video loads a Hugging Face id (`COGVIDEOX_MODEL`). Put small
+fixtures under `data/`.
 
 ### Checks
 

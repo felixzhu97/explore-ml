@@ -13,15 +13,15 @@ one folder of flat files (no sub-folders inside a layer).
 ```
 python_ml/
 ├── README.md
-├── .env.example          # every module's variables, one file
+├── .env.example          # secrets only (DATABASE_URL, REDIS_PASSWORD, OPENAI_API_KEY)
 ├── requirements.txt      # -r each module's requirements.txt
 ├── overrides.txt         # uv override: transformers==4.57.6
 ├── Dockerfile            # one image, port 8000
 ├── pytest.ini            # pythonpath = ., testpaths = tests
-├── config.py             # loads .env; HOST, PORT, EXPLORE_MODULES
-├── server.py             # load_modules, aggregated health, build_app
-├── main.py               # app = create_app(); uvicorn on HOST:PORT
-├── tests/                # app tests (server, config)
+├── config.py             # loads .env; HOST, PORT, BASE_URL, LOCAL_MODELS_ROOT
+├── server.py             # build_app: routers, lifespans, GET /health
+├── main.py               # imports the six modules, app = build_app({...})
+├── tests/                # app tests (server)
 └── <module>/             # recommendation, vision, rag, image_playground,
                           # speech, video
 ```
@@ -35,7 +35,7 @@ python_ml/<module>/
 ├── module.py             # the contract the app loads (below)
 ├── requirements.txt      # serving dependencies
 ├── requirements-train.txt # training extras (all but video)
-├── config.py             # os.getenv; .env is already loaded by the app
+├── config.py             # constants; os.getenv only for secrets
 ├── controller/           # FastAPI routers + inline Pydantic DTOs
 ├── service/              # XService classes, orchestration only
 ├── domain/               # dataclasses, enums, errors, pure rules
@@ -55,39 +55,32 @@ example `python -m recommendation.run_jobs --job explore`.
 
 ## Module contract
 
-`server.py` imports `<module>.module` for each name in `EXPLORE_MODULES`
-(default: all six, in a fixed order) and reads:
+`main.py` imports `<module>.module` for all six modules and passes them to
+`server.build_app()`, which reads:
 
 | Attribute | Required | Purpose |
 | --------- | -------- | ------- |
 | `router` | yes | `APIRouter` with the module's `/api/v1/...` routes |
-| `lifespan()` | no | Async context manager for startup and shutdown work, e.g. `get_video_service().startup()` |
-| `async health() -> dict` | no | Entry under `modules.<name>` in `GET /health`; must include `status` (`ok`, `degraded` or `error`) |
-| `async readiness() -> (bool, reason)` | no | Feeds `GET /health/ready` |
-| `register_exception_handlers(app)` | no | Domain error mapping (RAG) |
+| `async health() -> dict` | yes | Entry under `modules.<name>` in `GET /health`; must include `status` (`ok` or `degraded`) |
+| `lifespan()` | no | Async context manager for startup work, e.g. `get_video_service().startup()` |
 
 Lifespans enter in module order and exit in reverse. The app measures each
-`health()` call and adds `latency_ms`; an exception becomes
-`{status: "error", detail}`.
+`health()` call and adds `latency_ms`. `main.py` also registers RAG's
+domain error handlers (`rag.module.register_exception_handlers`).
 
 ## Start
 
 ```bash
 cd python_ml
 uvicorn main:app --port 8000      # or: python main.py (HOST / PORT)
-EXPLORE_MODULES=rag,vision uvicorn main:app --port 8000
 ```
 
 | Path | Response |
 | ---- | -------- |
 | `GET /health` | `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}` |
-| `GET /health/live` | `{status: "alive"}` |
-| `GET /health/ready` | `{status: "ready"}`, or 503 `{status: "not ready", modules: {name: reason}}` |
-| `GET /metrics` | Prometheus metrics |
-| `GET /` | App name, modules and links |
+| `GET /docs` | OpenAPI UI for every module |
 
-The UI dev server proxies `/ml/*` to this app (`EXPLORE_ML_URL` overrides the
-target).
+The UI dev server proxies `/ml/*` to this app (`ui/proxy.conf.json`).
 
 ## Routes
 
@@ -111,7 +104,7 @@ use distinct roots: `/output/image/`, `/output/voice/`, `/output/video/`.
   RAG's `get_qdrant_service()`, `get_llm_client()`). Heavy libraries (torch,
   diffusers, qwen) import lazily, so every module loads without weights.
 
-Tests build the app with `create_app(["<module>"])` and swap a service
+Tests build the app with `build_app({"<module>": <module>.module})` and swap a service
 through `app.dependency_overrides[get_x_service]`.
 
 Errors keep FastAPI's `{"detail": ...}` body. RAG raises domain errors
@@ -120,7 +113,7 @@ Errors keep FastAPI's `{"detail": ...}` body. RAG raises domain errors
 `controller/errors.py`. The other modules raise `HTTPException` from their
 controllers.
 
-Known gaps: `rag/domain/chunker.py` still reads `config` for chunk sizes, and
+Known gaps: `rag/domain/chunker.py` reads `rag.config` for chunk sizes, and
 recommendation's domain holds an abstract `VectorStore` plus a
 `FeatureRegistry` rather than dataclasses only.
 
@@ -144,7 +137,8 @@ Dependabot ignores the versions that would break this set.
 
 **Forbidden:** `routes/`, nested `src/` / `app/` inside a module, sub-folders
 inside a layer (e.g. `domain/core/`), per-module `main.py`, ports or
-`.env` files, dual `pyproject.toml` + `requirements.txt`.
+`.env` files, environment variables for non-secret settings, dual
+`pyproject.toml` + `requirements.txt`.
 
 ## References
 

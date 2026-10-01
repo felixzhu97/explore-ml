@@ -2,7 +2,7 @@
 
 Package `rag` in the single Explore ML app (port 8000): `module.py` /
 `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/` /
-`training/`. Setup, `.env` and run commands:
+`training/`. Setup and run commands:
 [`python_ml/README.md`](../README.md).
 
 Retrieval Augmented Generation (RAG) helper: index documents, webpages, posts
@@ -34,67 +34,62 @@ and comments into Qdrant, then answer questions from the retrieved chunks.
 ```bash
 brew install ollama
 ollama pull nomic-embed-text
-ollama pull qwen3-coder:30b   # or set LLM_MODEL to a smaller model
+ollama pull qwen3-coder:30b   # or point LLM_MODEL at a smaller model
 ollama serve
 ```
 
-2. Install and run the app from `python_ml/` (RAG alone needs only
+2. Install and run the app from `python_ml/` (the RAG tests need only
    `rag/requirements.txt`):
 
 ```bash
 cd python_ml
-pip install -r rag/requirements.txt
-cp .env.example .env          # loaded automatically
-EXPLORE_MODULES=rag uvicorn main:app --port 8000
+uv pip install -r requirements.txt --override overrides.txt
+uvicorn main:app --port 8000
 ```
 
 Qdrant needs no separate process: with `QDRANT_URL` empty the module stores
 vectors under `QDRANT_PATH` (`python_ml/rag/data/qdrant`). To use a server
-instead:
+instead, start one and set `QDRANT_URL = "http://localhost:6333"` in
+`config.py`:
 
 ```bash
 docker run -d -p 6333:6333 qdrant/qdrant
-export QDRANT_URL=http://localhost:6333
 ```
 
 ## Configuration
 
-Read from the environment or `python_ml/.env`:
+Constants in [`config.py`](config.py); only `OPENAI_API_KEY` comes from
+`python_ml/.env`.
 
-| Variable                 | Description                                   | Default |
-| ------------------------ | --------------------------------------------- | ------- |
+| Constant                 | Description                                   | Value |
+| ------------------------ | --------------------------------------------- | ----- |
 | `UPLOADS_DIR`            | Saved uploads                                 | `python_ml/rag/uploads` |
-| `QDRANT_URL`             | Qdrant server; empty means embedded           | (empty) |
+| `QDRANT_URL`             | Qdrant server; empty means embedded           | `""` |
 | `QDRANT_PATH`            | Embedded Qdrant directory                     | `python_ml/rag/data/qdrant` |
 | `QDRANT_TIMEOUT`         | Qdrant client timeout (seconds)               | `30` |
-| `QDRANT_VECTOR_SIZE`     | Read but unused; collections are created with 768 dimensions | `768` |
-| `EMBEDDING_PROVIDER`     | `ollama` or `openai`                          | `ollama` |
-| `EMBEDDING_MODEL`        | Ollama embedding model                        | `nomic-embed-text` |
-| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model                        | `text-embedding-3-small` |
-| `OLLAMA_BASE_URL`        | Ollama server                                 | `http://localhost:11434` |
-| `OPENAI_API_KEY`         | OpenAI key                                    | (empty) |
-| `LLM_PROVIDER`           | `ollama` or `openai`                          | `ollama` |
-| `LLM_MODEL`              | Ollama chat model                             | `qwen3-coder:30b` |
-| `OPENAI_LLM_MODEL`       | OpenAI chat model                             | `gpt-4-turbo-preview` |
+| `QDRANT_VECTOR_SIZE`     | Unused by collections, which are created with 768 dimensions | `768` |
+| `EMBEDDING_PROVIDER`     | `"ollama"` or `"openai"`                      | `"ollama"` |
+| `EMBEDDING_MODEL`        | Ollama embedding model                        | `"nomic-embed-text"` |
+| `OPENAI_EMBEDDING_MODEL` | OpenAI embedding model                        | `"text-embedding-3-small"` |
+| `OLLAMA_BASE_URL`        | Ollama server                                 | `"http://localhost:11434"` |
+| `LLM_PROVIDER`           | `"ollama"` or `"openai"`                      | `"ollama"` |
+| `LLM_MODEL`              | Ollama chat model                             | `"qwen3-coder:30b"` |
+| `OPENAI_LLM_MODEL`       | OpenAI chat model                             | `"gpt-4-turbo-preview"` |
 | `LLM_TIMEOUT`            | Ollama request timeout (seconds)              | `120` |
 | `CHUNK_SIZE` / `CHUNK_OVERLAP` | Chunk size and overlap (tokens)         | `256` / `50` |
 | `CRAWLER_TIMEOUT`        | Webpage fetch timeout (seconds)               | `30` |
-| `CONTENT_API_URL`        | Content API base URL for sync                 | (empty) |
-| `LOCAL_MODELS_ROOT`      | Local weights root                            | `~/Codes/models` (see [download guide](../../docs/user-guide/model-download.md)) |
-| `RERANK_ENABLED`         | Call the rerank sidecar; skipped if it is down | `true` |
-| `RERANK_URL`             | Rerank sidecar base URL                       | `http://127.0.0.1:8091` |
-| `RERANK_MODEL`           | Weight path the sidecar should load           | `…/rerank/models/Qwen3-Reranker-8B` |
-| `RERANK_TIMEOUT`         | Rerank request timeout (seconds)              | `30` |
-
-`config.py` also defines `DEFAULT_TOP_K`, `RAG_TIMEOUT`, `CACHE_TTL`, `RATE_LIMIT_*` and `CRAWLER_MAX_DEPTH`, but no code reads them
-yet.
+| `CONTENT_API_URL`        | Content API base URL for sync                 | `"http://localhost:3000"` |
+| `RERANK_ENABLED`         | Call the rerank sidecar; skipped if it is down | `True` |
+| `RERANK_URL`             | Rerank sidecar base URL                       | `"http://127.0.0.1:8091"` |
+| `RERANK_TIMEOUT`         | Rerank request timeout (seconds)              | `30.0` |
 
 ### Rerank sidecar
 
 The reranker is a separate HTTP server, not part of this repo. It must answer
-`POST {RERANK_URL}/rerank`. Download the weights with the
-[model download guide](../../docs/user-guide/model-download.md) and start your
-sidecar on port 8091, or set `RERANK_ENABLED=false`.
+`POST {RERANK_URL}/rerank` with `{scores}`, and loads
+`$LOCAL_MODELS_ROOT/rerank/models/Qwen3-Reranker-8B`. Download the weights
+with the [model download guide](../../docs/user-guide/model-download.md) and
+start your sidecar on port 8091, or set `RERANK_ENABLED = False`.
 
 ### Fine-tuning
 
@@ -185,10 +180,8 @@ nothing is stored.
 
 ### Health
 
-The app serves `/health`, `/health/live`, `/health/ready` and `/metrics` for
-all modules (see [`python_ml/README.md`](../README.md)). RAG reports
-`{status: ok | degraded, qdrant, embeddings}` in `/health` and holds
-`/health/ready` at 503 until Qdrant answers.
+RAG reports `{status: ok | degraded, qdrant, embeddings}` in the app's
+`GET /health` (see [`python_ml/README.md`](../README.md)).
 
 ## Usage Examples
 
@@ -272,7 +265,7 @@ Query -> embed question -> search each collection (top_k)
 ```bash
 cd python_ml
 pytest -q rag/tests           # 8 test files
-EXPLORE_MODULES=rag uvicorn main:app --reload
+uvicorn main:app --reload
 ```
 
 Tests cover the chunker, document parsing, query models, rerank scoring,

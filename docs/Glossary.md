@@ -22,7 +22,8 @@ architecture naming. Chinese labels are for localization only.
 ## 2. Business Domains | 业务域总览
 
 Every module is a package in one FastAPI app (`python_ml/main.py`, port
-`8000`). `EXPLORE_MODULES` selects which ones load.
+`8000`). Settings are constants in `config.py` files; only secrets come
+from `python_ml/.env`.
 
 | Preferred Term   | 中文       | Code / Path                  | Notes                               |
 | ---------------- | ---------- | ---------------------------- | ----------------------------------- |
@@ -54,18 +55,19 @@ flowchart LR
 | Preferred Term    | 中文       | Definition                                                              |
 | ----------------- | ---------- | ----------------------------------------------------------------------- |
 | Explore ML        | Explore ML | Sibling repo of one optional Python FastAPI app (six modules) for Explore products |
-| ML App            | ML 应用    | `python_ml/main.py` → `server.create_app`; mounts every module's routers on one port (`PORT`, default `8000`) |
-| Module            | 模块       | Package under `python_ml/` exposing `module.py` (`routers`, optional `lifespan`, `health`, `readiness`, `register_exception_handlers`) |
+| ML App            | ML 应用    | `python_ml/main.py` → `server.build_app`; mounts every module's router on one port (`PORT = 8000` in `config.py`) |
+| Module            | 模块       | Package under `python_ml/` exposing `module.py` (`router`, `health`, optional `lifespan`); `main.py` imports all six |
+| Setting           | 设置       | Constant in `python_ml/config.py` or `<module>/config.py`; only secrets (`DATABASE_URL`, `REDIS_PASSWORD`, `OPENAI_API_KEY`) come from `python_ml/.env` |
 | Loopback Upstream | 旁路上游   | Called only by a sibling API over localhost; never from product clients |
 | Fixture Data      | 测试数据   | Committed small files under `data/`; large weights stay gitignored      |
-| Local Models Root | 本地模型根 | Weight root via `LOCAL_MODELS_ROOT` (default `~/Codes/models`); obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground, Speech, RAG rerank and the Recommendation feed ranker read it. Video loads the Hugging Face id in `COGVIDEOX_MODEL` instead |
+| Local Models Root | 本地模型根 | Weight root `LOCAL_MODELS_ROOT` in `python_ml/config.py` (`~/Codes/models`); obtain checkpoints with the [Model Download Guide](user-guide/model-download.md); Image Playground, Speech, RAG rerank and the Recommendation feed ranker read it. Video loads the Hugging Face id `COGVIDEOX_MODEL` instead |
 | ASR               | 语音识别   | Speech-to-text on Speech (`POST /api/v1/audios:transcribe`); default local Qwen3-ASR after download |
 | Streaming ASR     | 流式识别   | `WS /ws/v1/audios:transcribe`; client sends `audio` / `commit` / `stop`, server answers `partial` / `final` / `error`; buffered by `StreamingTranscriptionSession` |
 | TTS               | 语音合成   | Text-to-speech on Speech (`POST /api/v1/voices:synthesize`); returns `audio_url` directly (`.wav` with Qwen, `.mp3` with Edge) |
-| ML Proxy          | ML 代理    | `ng serve` route `/ml` → the ML app on loopback (prefix stripped, WebSocket on); target overridable via `EXPLORE_ML_URL` |
+| ML Proxy          | ML 代理    | `ng serve` route `/ml` → the ML app on loopback (prefix stripped, WebSocket on); target set in `ui/proxy.conf.json` |
 | Module Page       | 模块页     | One UI page per module (`#/<id>`) with a card for every endpoint and D3 charts of its results |
 | Chart             | 图表       | D3 component in `ui/src/app/shared/` (bar, line, slope, histogram, scatter, job timeline, waveform); math lives in `chart-math.ts` |
-| Health Report     | 健康报告   | `GET /health` → `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}`; `/health/live` and `/health/ready` (503 lists not-ready modules) |
+| Health Report     | 健康报告   | `GET /health` → `{status: ok \| degraded, modules: {name: {status, latency_ms, …}}}` |
 
 ---
 

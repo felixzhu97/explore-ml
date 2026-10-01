@@ -9,12 +9,13 @@ Package `speech` in the single Explore ML app (port 8000): `module.py` /
 
 | Capability | Default backend | Local path (under `LOCAL_MODELS_ROOT`)        | Other                   |
 | ---------- | --------------- | --------------------------------------------- | ----------------------- |
-| Voice/TTS  | `qwen`          | `tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice`  | `VOICE_BACKEND=edge`    |
+| Voice/TTS  | `qwen`          | `tts/models/Qwen3-TTS-12Hz-1.7B-CustomVoice`  | `VOICE_BACKEND = "edge"` |
 | ASR        | `qwen`          | `asr/models/Qwen3-ASR-1.7B`                   | streaming over WebSocket |
 
 ## Setup
 
-Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). Models load lazily on the first request.
+Setup and run commands: [`python_ml/README.md`](../README.md). Models load
+lazily on the first request.
 
 ## API
 
@@ -43,27 +44,29 @@ In the app's `GET /health` the module reports
 
 ## Configuration
 
-| Variable | Default |
-| -------- | ------- |
-| `BASE_URL` (shared) | `http://localhost:$PORT` |
-| `SPEECH_OUTPUT_DIR` | `speech/output` |
-| `SPEECH_DEVICE=cpu` | force CPU |
-| `VOICE_BACKEND` | `qwen` (or `edge`) |
-| `TTS_MODEL` / `TTS_LANGUAGE` / `TTS_SPEAKER` | local Qwen3-TTS / `Chinese` / (empty) |
-| `EDGE_TTS_VOICE` | `zh-CN-XiaoxiaoNeural` |
-| `ASR_BACKEND` | `qwen` (the only working backend) |
-| `ASR_MODEL` / `ASR_LANGUAGE` | local Qwen3-ASR / auto |
-| `ASR_STREAM_PARTIAL_INTERVAL_SEC` / `ASR_STREAM_MIN_PARTIAL_BYTES` | `1.0` / `32000` |
-| `LOCAL_MODELS_ROOT` | `~/Codes/models` |
-| `HF_ENDPOINT` | `https://hf-mirror.com` when unset |
+Constants in [`config.py`](config.py); the device is CUDA, then MPS, then
+CPU.
 
-`ASR_STREAM_BACKEND` is defined but not read yet.
+| Constant | Value |
+| -------- | ----- |
+| `BASE_URL` (shared, `python_ml/config.py`) | `http://localhost:8000` |
+| `VOICE_OUTPUT` / `ASR_UPLOADS` | `speech/output/voice` / `speech/output/asr` |
+| `VOICE_BACKEND` | `"qwen"` (or `"edge"`) |
+| `TTS_MODEL` / `TTS_LANGUAGE` / `TTS_SPEAKER` | local Qwen3-TTS / `"Chinese"` / `""` |
+| `DEFAULT_VOICE` (Edge) | `"zh-CN-XiaoxiaoNeural"` |
+| `ASR_BACKEND` | `"qwen"` (the only working backend) |
+| `ASR_MODEL` / `ASR_LANGUAGE` | local Qwen3-ASR / `""` (auto) |
+| `ASR_STREAM_PARTIAL_INTERVAL_SEC` / `ASR_STREAM_MIN_PARTIAL_BYTES` | `1.0` / `32000` |
+| `LOCAL_MODELS_ROOT` (shared) | `~/Codes/models` |
+
+The app sets `HF_ENDPOINT=https://hf-mirror.com` when it is unset.
 
 ## Fine-tuning
 
 `training/train_asr.py` and `training/train_tts.py` run the upstream Qwen3-ASR
 and Qwen3-TTS recipes on Hugging Face Jobs and push the final checkpoint. Point
-`ASR_MODEL`, or `TTS_MODEL` plus `TTS_SPEAKER`, at the downloaded directory.
+`ASR_MODEL`, or `TTS_MODEL` plus `TTS_SPEAKER`, in `config.py` at the
+downloaded directory.
 `python -m speech.training.eval_wer` compares the WER (CER for CJK) of the fine-tuned
 and base ASR checkpoints. See the
 [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
