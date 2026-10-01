@@ -3,7 +3,7 @@
 Local loopback image generation (Apple [Image Playground](https://developer.apple.com/documentation/imageplayground)–aligned name).
 Port: **8003**.
 
-Layout: `main.py` / `config.py` / `api.py` / `service.py` / `tests/`.
+Layout: `main.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
 
 | Capability | Default backend | Local path (under `LOCAL_MODELS_ROOT`) | Other |
 | ---------- | --------------- | ---------------------------------------- | ----- |

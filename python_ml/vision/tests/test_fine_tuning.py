@@ -3,7 +3,8 @@ from pathlib import Path
 from PIL import Image
 
 import config
-import service
+from infra import models
+from service import vision as service
 from training.eval_head import evaluate
 from training.train_head import train
 
@@ -28,8 +29,8 @@ def test_should_train_head_and_serve_it_when_model_path_is_set(tmp_path, monkeyp
 
     monkeypatch.setattr(config, "MODEL_PATH", str(out / "model.pt"))
     monkeypatch.setattr(config, "LABELS_PATH", out / "labels.json")
-    service.load_labels()
-    service.load_model()
+    models.load_labels()
+    models.load_model()
 
-    assert service.MODEL.fc.out_features == 2
+    assert models.MODEL.fc.out_features == 2
     assert service.predict_image(Image.new("RGB", (64, 64))) in (["cat", "dog"], ["dog", "cat"])

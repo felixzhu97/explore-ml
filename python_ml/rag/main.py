@@ -9,10 +9,9 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 
-from aip import register_aip_exception_handlers
-from api import router
+from controller.api import router
 from config import get_settings
-import service as rag_service
+from service import rag as rag_service
 
 logging.basicConfig(
     level=logging.INFO,
@@ -61,7 +60,6 @@ async def log_requests(request: Request, call_next):
     return response
 
 
-register_aip_exception_handlers(app)
 app.include_router(router)
 
 

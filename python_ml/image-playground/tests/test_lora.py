@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import config
-import service
+from infra import pipeline
 from training.train_lora import build_command, parse_args
 
 
@@ -20,7 +20,7 @@ def test_should_skip_lora_when_path_is_unset(monkeypatch):
     monkeypatch.setattr(config, "IMAGE_LORA_PATH", None)
     pipe = FakePipe()
 
-    service.apply_lora(pipe)
+    pipeline.apply_lora(pipe)
 
     assert pipe.calls == []
 
@@ -30,7 +30,7 @@ def test_should_load_lora_with_scale_when_path_is_set(monkeypatch):
     monkeypatch.setattr(config, "IMAGE_LORA_SCALE", 0.8)
     pipe = FakePipe()
 
-    service.apply_lora(pipe)
+    pipeline.apply_lora(pipe)
 
     assert pipe.calls == [
         ("load", "/loras/my-style", "ft"),

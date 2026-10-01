@@ -1,4 +1,4 @@
-from domain.core.rerank import apply_rerank_scores
+from domain.rerank import apply_rerank_scores
 
 
 def test_should_sort_by_rerank_score_descending():

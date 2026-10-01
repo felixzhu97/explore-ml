@@ -1,6 +1,6 @@
 # RAG Service
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `api.py` / `service.py` / `domain/` / `tests/`.
+Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
 Start: `uvicorn main:app --host 0.0.0.0 --port 8002`.
 
 Retrieval Augmented Generation (RAG) service for Chat, providing semantic search and AI-powered question answering capabilities.

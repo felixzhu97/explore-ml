@@ -14,14 +14,17 @@ LAYOUT_WITH_LEGEND()
 title [C4 Level 3] Explore ML - Component Diagram (single-service template)
 
 Container_Boundary(svc, "python_ml/<name>") {
-  Component(api, "api.py", "FastAPI routes", "HTTP")
-  Component(service, "service.py", "orchestration", "No piled-up business rules")
-  Component(domain, "domain/", "models / ETL", "ML core")
+  Component(api, "controller/", "FastAPI routers", "HTTP + DTOs")
+  Component(service, "service/", "orchestration", "No piled-up business rules")
+  Component(domain, "domain/", "models / rules", "No external libraries")
+  Component(infra, "infra/", "models / stores / ETL", "torch, redis, qdrant, httpx")
   Component(config, "config.py", "env", "ports / paths")
 }
 
 Rel(api, service, "calls")
 Rel(service, domain, "calls")
+Rel(service, infra, "calls")
+Rel(infra, domain, "implements")
 Rel(api, config, "reads")
 Rel(service, config, "reads")
 

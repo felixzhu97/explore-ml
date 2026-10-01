@@ -11,4 +11,4 @@ Optional Python FastAPI services used by sibling Explore APIs over loopback:
 | `speech` | 8004 | ASR + TTS (Speech) |
 | `video` | 8005 | Video generation |
 
-Layout: [`docs/developer/python-services.md`](../../docs/developer/python-services.md).
+Layout: [`docs/developer/python-services.md`](../docs/developer/python-services.md).

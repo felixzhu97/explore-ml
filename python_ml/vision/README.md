@@ -1,6 +1,6 @@
 # Vision service — image labeling and content moderation (ResNet50 + NudeNet)
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `api.py` / `service.py` / `domain/` / `tests/`.
+Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
 
 Port **8001**. Endpoints: `/health`, `POST /api/v1/images:predict`, `POST /api/v1/images:moderate`, `POST /api/v1/videos:moderate`.
 

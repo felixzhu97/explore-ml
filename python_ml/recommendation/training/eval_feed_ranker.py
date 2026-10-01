@@ -15,7 +15,7 @@ from typing import Dict, Iterable, List, Optional, Sequence
 
 import torch
 
-from domain.feed_ranker import FeedRanker
+from infra.feed_ranker import FeedRanker
 
 
 def recall_at_k(ranked: Sequence[str], positives: Iterable[str], k: int) -> float:
