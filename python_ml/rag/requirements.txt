@@ -33,4 +33,3 @@ pytest-cov>=7.1.0
 
 # Logging and monitoring
 structlog>=26.1.0
-prometheus-client>=0.26.0

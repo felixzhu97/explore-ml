@@ -5,9 +5,10 @@ from fastapi.testclient import TestClient
 
 from speech.controller.api import router
 from speech.infra.streaming_transcription import StreamingTranscriptionSession, pcm16_le_to_wav_bytes
-from server import create_app
+import speech.module
+from server import build_app
 
-app = create_app(["speech"])
+app = build_app({"speech": speech.module})
 
 
 def test_should_register_streaming_transcription_websocket_route():

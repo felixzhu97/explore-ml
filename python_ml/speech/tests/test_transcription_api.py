@@ -1,8 +1,9 @@
 from fastapi.testclient import TestClient
 
-from server import create_app
+import speech.module
+from server import build_app
 
-app = create_app(["speech"])
+app = build_app({"speech": speech.module})
 
 client = TestClient(app)
 

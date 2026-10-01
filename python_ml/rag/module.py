@@ -1,30 +1,24 @@
 """RAG module entry: routes, lifespan, health and error mapping for the Explore ML app."""
 
-import logging
 from contextlib import asynccontextmanager
 
 from rag.controller.api import router
 from rag.controller.errors import register_exception_handlers
-from rag.service.health import get_health_service
+from rag.infra.embedding import get_embedding_service
+from rag.infra.qdrant_client import get_qdrant_service
 
-__all__ = ["health", "lifespan", "readiness", "register_exception_handlers", "router"]
-
-logger = logging.getLogger(__name__)
+__all__ = ["health", "lifespan", "register_exception_handlers", "router"]
 
 
 @asynccontextmanager
 async def lifespan():
-    logger.info("Starting RAG module...")
-    await get_health_service().startup()
+    await get_qdrant_service().initialize_collections()
     yield
-    logger.info("Shutting down RAG module...")
 
 
 async def health() -> dict:
-    report = await get_health_service().health()
-    return {"status": "ok" if report.status == "healthy" else "degraded", **report.services}
-
-
-async def readiness() -> tuple[bool, str | None]:
-    result = await get_health_service().readiness()
-    return result.ready, result.reason
+    services = {
+        "qdrant": await get_qdrant_service().health_check(),
+        "embeddings": await get_embedding_service().health_check(),
+    }
+    return {"status": "ok" if all(services.values()) else "degraded", **services}

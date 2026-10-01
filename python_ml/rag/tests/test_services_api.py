@@ -10,9 +10,11 @@ from rag.domain.errors import ServiceUnavailableError, UpstreamError
 from rag.service.documents import DocumentService, get_document_service
 from rag.service.query import QueryService, get_query_service
 from rag.service.sync import SyncService, get_sync_service
-from server import create_app
+import rag.module
+from server import build_app
 
-app = create_app(["rag"])
+app = build_app({"rag": rag.module})
+rag.module.register_exception_handlers(app)
 
 
 @pytest.fixture

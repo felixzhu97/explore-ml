@@ -6,9 +6,10 @@ from PIL import Image
 from vision.domain.moderation import FrameVerdict, ModerationCategory, verdict
 from vision.domain.prediction import Prediction
 from vision.service.vision import get_vision_service
-from server import create_app
+import vision.module
+from server import build_app
 
-app = create_app(["vision"])
+app = build_app({"vision": vision.module})
 
 
 class FakeVisionService:
