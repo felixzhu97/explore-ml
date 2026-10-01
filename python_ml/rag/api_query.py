@@ -13,7 +13,14 @@ from config import get_settings
 from domain.core.embedding import EmbeddingService
 from domain.core.qdrant_client import QdrantService
 from domain.core.rerank import apply_rerank_scores, rerank_documents
-from domain.schemas.query import QueryRequest, QueryResponse, SourceDocument
+from domain.schemas.query import (
+    ExportedPoint,
+    ExportVectorsRequest,
+    ExportVectorsResponse,
+    QueryRequest,
+    QueryResponse,
+    SourceDocument,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -311,6 +318,36 @@ async def query_stream(
 
     except Exception as e:
         logger.error("Streaming query failed: %s", e)
+        raise HTTPException(status_code=500, detail=str(e))
+
+
+@router.post("/documents:exportVectors", response_model=ExportVectorsResponse)
+async def export_vectors(
+    request: ExportVectorsRequest,
+    qdrant: QdrantService = Depends(rag_service.get_qdrant),
+):
+    """Export stored chunk vectors (text truncated to 500 chars) for the UI atlas."""
+    try:
+        names = [request.collection] if request.collection else await qdrant.get_collections()
+        points: list[ExportedPoint] = []
+        for name in names:
+            remaining = request.limit - len(points)
+            if remaining <= 0:
+                break
+            for record in await qdrant.scroll_vectors(name, remaining):
+                metadata = dict(record["payload"])
+                text = str(metadata.pop("text", ""))[:500]
+                metadata.setdefault("collection", name)
+                points.append(ExportedPoint(
+                    id=record["id"],
+                    vector=record["vector"],
+                    text=text,
+                    metadata=metadata,
+                ))
+        dimension = len(points[0].vector) if points else 0
+        return ExportVectorsResponse(dimension=dimension, points=points)
+    except Exception as e:
+        logger.error("Export vectors failed: %s", e)
         raise HTTPException(status_code=500, detail=str(e))
 
 

@@ -266,6 +266,32 @@ class QdrantService:
         )
         return result.count
 
+    async def scroll_vectors(self, collection: str, limit: int) -> list[dict[str, Any]]:
+        """Read up to `limit` points with payloads and vectors."""
+        points: list[dict[str, Any]] = []
+        offset = None
+        while len(points) < limit:
+            batch, offset = self._client.scroll(
+                collection_name=collection,
+                limit=min(256, limit - len(points)),
+                offset=offset,
+                with_payload=True,
+                with_vectors=True,
+            )
+            for record in batch:
+                vector = record.vector
+                if isinstance(vector, dict):
+                    vector = next(iter(vector.values()), None)
+                if vector:
+                    points.append({
+                        "id": str(record.id),
+                        "vector": list(vector),
+                        "payload": record.payload or {},
+                    })
+            if offset is None or not batch:
+                break
+        return points[:limit]
+
     async def get_collections(self) -> list[str]:
         """Get list of all collection names."""
         collections = self._client.get_collections()
