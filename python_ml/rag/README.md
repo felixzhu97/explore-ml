@@ -114,7 +114,9 @@ Set `RERANK_ENABLED=false` to disable.
 
 ### Fine-tuning retrieval
 
-`training/` holds a local embedding fine-tune (`train_embedding.py`), a GGUF-to-Ollama import (`to_ollama.sh`), a LoRA reranker job for Hugging Face Jobs (`train_reranker.py`), and a recall@k / MRR check against a running helper (`eval_retrieval.py`). After switching `EMBEDDING_MODEL`, re-index every document. See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
+`training/` holds a local embedding fine-tune (`train_embedding.py`), a GGUF-to-Ollama import (`to_ollama.sh`), a LoRA reranker job for Hugging Face Jobs (`train_reranker.py`), and a recall@k / MRR check against a running helper (`eval_retrieval.py`). After switching `EMBEDDING_MODEL`, re-index every document.
+
+For the chat model, `train_sft.py` runs QLoRA SFT on Qwen3-8B on Hugging Face Jobs and merges the adapter. Then `to_ollama.sh <dir> rag-llm-ft Q4_K_M` registers it and `LLM_MODEL=rag-llm-ft` selects it. `eval_answers.py` compares it with the base model using an LLM judge. See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
 
 ### Recommended Ollama Models
 

@@ -1,0 +1,2 @@
+{"question": "What happens when the rerank sidecar is down?", "context": "If the rerank sidecar is unreachable, the RAG helper logs a warning and keeps vector order.", "reference": "Retrieval continues and results keep their vector order."}
+{"question": "Which env var selects the chat model?", "context": "LLM_MODEL selects the Ollama chat model; LLM_PROVIDER selects ollama or openai.", "reference": "LLM_MODEL."}
