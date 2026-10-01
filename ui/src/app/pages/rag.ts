@@ -1,5 +1,9 @@
 import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
+import { NzButtonModule } from 'ng-zorro-antd/button';
+import { NzInputModule } from 'ng-zorro-antd/input';
+import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
+import { NzSelectModule } from 'ng-zorro-antd/select';
 import {
   ragCollections,
   ragCrawl,
@@ -16,6 +20,7 @@ import {
 } from '../core/api/clients';
 import { Call } from '../core/call';
 import { Endpoint } from '../ui/endpoint';
+import { FilePick } from '../ui/file-pick';
 import { ModulePage } from '../ui/module-page';
 
 const PREVIEW_POINTS = 20;
@@ -23,7 +28,16 @@ const PREVIEW_DIMS = 8;
 
 @Component({
   selector: 'app-rag-page',
-  imports: [Endpoint, FormField, ModulePage],
+  imports: [
+    Endpoint,
+    FilePick,
+    FormField,
+    ModulePage,
+    NzButtonModule,
+    NzInputModule,
+    NzInputNumberModule,
+    NzSelectModule,
+  ],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="rag">
@@ -35,8 +49,10 @@ const PREVIEW_DIMS = 8;
       >
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.collections.busy()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.collections.busy()"
             (click)="calls.collections.run(listCollections)"
           >
             查询
@@ -48,31 +64,24 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1 sm:col-span-2">
             <span class="text-sm font-semibold text-ink-80">问题</span>
-            <textarea
-              class="min-h-24 rounded-xl border border-hairline px-3.5 py-2.5"
-              [formField]="f.query"
-            ></textarea>
+            <textarea nz-input rows="3" [formField]="f.query"></textarea>
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">collection（可选）</span>
-            <input
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.collection"
-            />
+            <input nz-input [formField]="f.collection" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">top_k（1–20）</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.topK"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.topK" />
           </label>
         </div>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.query.busy() || !m().query.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.query.busy()"
+            [disabled]="!m().query.trim()"
             (click)="runQuery()"
           >
             提问
@@ -84,8 +93,11 @@ const PREVIEW_DIMS = 8;
         <p class="text-sm text-muted">使用上方「问答」的问题、集合与 top_k。</p>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.stream.busy() || !m().query.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.stream.busy()"
+            [disabled]="!m().query.trim()"
             (click)="runStream()"
           >
             流式提问
@@ -94,16 +106,14 @@ const PREVIEW_DIMS = 8;
       </app-endpoint>
 
       <app-endpoint title="上传文档" path="/api/v1/documents" [call]="calls.upload">
-        <input
-          type="file"
-          accept=".pdf,.html,.htm,.md,.txt,.docx,.doc"
-          class="text-sm file:mr-3 file:h-9 file:rounded-full file:border file:border-primary file:bg-white file:px-4 file:text-primary"
-          (change)="pick($event)"
-        />
+        <app-file-pick accept=".pdf,.html,.htm,.md,.txt,.docx,.doc" (picked)="file.set($event)" />
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.upload.busy() || !file()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.upload.busy()"
+            [disabled]="!file()"
             (click)="runUpload()"
           >
             上传并索引
@@ -115,24 +125,19 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">page_size</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.pageSize"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.pageSize" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">page_token（可选）</span>
-            <input
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.pageToken"
-            />
+            <input nz-input [formField]="f.pageToken" />
           </label>
         </div>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.list.busy()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.list.busy()"
             (click)="runList()"
           >
             查询
@@ -148,18 +153,22 @@ const PREVIEW_DIMS = 8;
       >
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">文档 id</span>
-          <input class="h-11 rounded-xl border border-hairline px-3.5" [formField]="f.docId" />
+          <input nz-input [formField]="f.docId" />
         </label>
         <div class="flex gap-3">
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.doc.busy() || !m().docId.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.doc.busy()"
+            [disabled]="!m().docId.trim()"
             (click)="calls.doc.run(getDoc)"
           >
             查询
           </button>
           <button
-            class="h-11 rounded-full border border-primary px-5 text-primary active:scale-95 disabled:opacity-40"
+            nz-button
+            nzShape="round"
             [disabled]="calls.doc.busy() || !m().docId.trim()"
             (click)="calls.doc.run(deleteDoc)"
           >
@@ -172,18 +181,11 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">collection（可选）</span>
-            <input
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.collection"
-            />
+            <input nz-input [formField]="f.collection" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">limit</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.exportLimit"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.exportLimit" />
           </label>
         </div>
         <p class="text-sm text-muted">
@@ -191,8 +193,10 @@ const PREVIEW_DIMS = 8;
         </p>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.export.busy()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.export.busy()"
             (click)="runExport()"
           >
             导出
@@ -203,12 +207,15 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="抓取网页" path="/api/v1/webpages:scrape" [call]="calls.scrape">
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">url</span>
-          <input class="h-11 rounded-xl border border-hairline px-3.5" [formField]="f.url" />
+          <input nz-input [formField]="f.url" />
         </label>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.scrape.busy() || !m().url.trim()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.scrape.busy()"
+            [disabled]="!m().url.trim()"
             (click)="calls.scrape.run(scrape)"
           >
             抓取
@@ -219,23 +226,19 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="批量抓取" path="/api/v1/webpages:crawl" [call]="calls.crawl">
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">urls（每行一个，最多 50 个）</span>
-          <textarea
-            class="min-h-24 rounded-xl border border-hairline px-3.5 py-2.5"
-            [formField]="f.urls"
-          ></textarea>
+          <textarea nz-input rows="3" [formField]="f.urls"></textarea>
         </label>
         <label class="flex flex-col gap-1">
           <span class="text-sm font-semibold text-ink-80">max_depth（1–3）</span>
-          <input
-            type="number"
-            class="h-11 rounded-xl border border-hairline px-3.5"
-            [formField]="f.maxDepth"
-          />
+          <nz-input-number [nzMin]="1" [formField]="f.maxDepth" />
         </label>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.crawl.busy() || !crawlUrls().length"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.crawl.busy()"
+            [disabled]="!crawlUrls().length"
             (click)="calls.crawl.run(crawl)"
           >
             批量抓取
@@ -249,30 +252,25 @@ const PREVIEW_DIMS = 8;
         [call]="calls.sync"
       >
         <div class="grid gap-4 sm:grid-cols-2">
-          <label class="flex flex-col gap-1">
+          <div class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">资源</span>
-            <select
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.syncTarget"
-            >
-              <option value="posts">posts</option>
-              <option value="comments">comments</option>
-              <option value="resources">resources（全部）</option>
-            </select>
-          </label>
+            <nz-select [formField]="f.syncTarget">
+              <nz-option nzValue="posts" nzLabel="posts" />
+              <nz-option nzValue="comments" nzLabel="comments" />
+              <nz-option nzValue="resources" nzLabel="resources（全部）" />
+            </nz-select>
+          </div>
           <label class="flex flex-col gap-1">
             <span class="text-sm font-semibold text-ink-80">limit</span>
-            <input
-              type="number"
-              class="h-11 rounded-xl border border-hairline px-3.5"
-              [formField]="f.syncLimit"
-            />
+            <nz-input-number [nzMin]="1" [formField]="f.syncLimit" />
           </label>
         </div>
         <div>
           <button
-            class="h-11 rounded-full bg-primary px-5 text-white active:scale-95 disabled:opacity-40"
-            [disabled]="calls.sync.busy()"
+            nz-button
+            nzType="primary"
+            nzShape="round"
+            [nzLoading]="calls.sync.busy()"
             (click)="calls.sync.run(sync)"
           >
             同步
@@ -331,10 +329,6 @@ export class RagPage {
   private queryBody() {
     const m = this.m();
     return { query: m.query.trim(), collection: m.collection.trim() || undefined, top_k: m.topK };
-  }
-
-  protected pick(e: Event): void {
-    this.file.set((e.target as HTMLInputElement).files?.[0] ?? null);
   }
 
   protected runQuery(): Promise<void> {
