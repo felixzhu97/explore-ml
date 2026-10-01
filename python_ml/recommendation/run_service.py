@@ -1,10 +1,10 @@
 import uvicorn
 
-import config as cfg
+import config
 
 
 def main() -> int:
-    uvicorn.run("main:app", host=cfg.HOST, port=cfg.PORT, reload=False)
+    uvicorn.run("main:app", host=config.HOST, port=config.PORT, reload=False)
     return 0
 
 

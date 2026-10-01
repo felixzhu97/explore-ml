@@ -1,374 +1,140 @@
 """RAG query API routes."""
-import logging
-import time
-from typing import AsyncGenerator, Optional
 
-import ollama
-from fastapi import APIRouter, Depends, HTTPException
+from collections.abc import AsyncIterator
+from typing import Annotated, Any
+
+from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
-from openai import AsyncOpenAI
+from pydantic import BaseModel, Field
 
-from service import rag as rag_service
-from config import get_settings
-from infra.embedding import EmbeddingService
-from infra.qdrant_client import QdrantService
-from domain.rerank import apply_rerank_scores
-from infra.reranker import rerank_documents
-from domain.query import (
-    ExportedPoint,
-    ExportVectorsRequest,
-    ExportVectorsResponse,
-    QueryRequest,
-    QueryResponse,
-    SourceDocument,
-)
-
-logger = logging.getLogger(__name__)
+from domain.query import SOURCE_TEXT_LIMIT, SearchHit
+from service.query import QueryService, get_query_service
 
 router = APIRouter(tags=["Query"])
 
-
-def build_context_and_prompt(
-    query: str,
-    context_texts: list[str],
-) -> tuple[str, str]:
-    """Build context string and system prompt from retrieved documents."""
-    context = "\n\n".join([
-        f"[Source {i+1}]: {text[:500]}..." if len(text) > 500 else f"[Source {i+1}]: {text}"
-        for i, text in enumerate(context_texts)
-    ])
-
-    system_prompt = f"""You are a helpful assistant that answers questions based on the provided context.
-    
-Context:
-{context}
-
-Instructions:
-1. Answer the question based ONLY on the provided context.
-2. If the context doesn't contain enough information to answer the question, say so.
-3. Cite your sources using [Source N] notation when referencing specific information.
-4. Be concise but thorough.
-5. If you're uncertain, acknowledge the uncertainty.
-"""
-    return context, system_prompt
+QueryServiceDependency = Annotated[QueryService, Depends(get_query_service)]
 
 
-async def generate_answer(
-    query: str,
-    context_texts: list[str],
-    provider: str,
-    model: str,
-    openai_client: Optional[AsyncOpenAI] = None,
-) -> str:
-    """Generate an answer using the LLM with retrieved context."""
-    settings = get_settings()
-    _, system_prompt = build_context_and_prompt(query, context_texts)
-
-    if provider == "ollama":
-        client = ollama.AsyncClient(host=settings.ollama_base_url)
-        try:
-            response = await client.chat(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query},
-                ],
-                options={"timeout": settings.llm_timeout} if settings.llm_timeout else None,
-            )
-            return response["message"]["content"]
-        except Exception as e:
-            logger.error("Ollama chat failed: %s", e)
-            raise HTTPException(status_code=503, detail="LLM service unavailable")
-    else:
-        try:
-            response = await openai_client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query},
-                ],
-                temperature=0.7,
-            )
-            return response.choices[0].message.content
-        except Exception as e:
-            logger.error("OpenAI chat failed: %s", e)
-            raise HTTPException(status_code=503, detail="LLM service unavailable")
-
-
-async def generate_answer_stream(
-    query: str,
-    context_texts: list[str],
-    provider: str,
-    model: str,
-    openai_client: Optional[AsyncOpenAI] = None,
-) -> AsyncGenerator[str, None]:
-    """Generate an answer using the LLM with retrieved context (streaming)."""
-    settings = get_settings()
-    _, system_prompt = build_context_and_prompt(query, context_texts)
-
-    if provider == "ollama":
-        client = ollama.AsyncClient(host=settings.ollama_base_url)
-        try:
-            stream = await client.chat(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query},
-                ],
-                stream=True,
-                options={"timeout": settings.llm_timeout} if settings.llm_timeout else None,
-            )
-            async for chunk in stream:
-                if chunk.get("message") and chunk["message"].get("content"):
-                    yield f"data: {chunk['message']['content']}\n\n"
-        except Exception as e:
-            logger.error("Ollama streaming failed: %s", e)
-            yield "data: Error: LLM service unavailable\n\n"
-
-    else:
-        try:
-            stream = await openai_client.chat.completions.create(
-                model=model,
-                messages=[
-                    {"role": "system", "content": system_prompt},
-                    {"role": "user", "content": query},
-                ],
-                temperature=0.7,
-                stream=True,
-            )
-            async for chunk in stream:
-                if chunk.choices and chunk.choices[0].delta.content:
-                    yield f"data: {chunk.choices[0].delta.content}\n\n"
-        except Exception as e:
-            logger.error("OpenAI streaming failed: %s", e)
-            yield "data: Error: LLM service unavailable\n\n"
-
-
-async def search_collections(
-    embeddings: EmbeddingService,
-    qdrant: QdrantService,
-    query_vector: list[float],
-    collection: Optional[str],
-    top_k: int,
-) -> list[dict]:
-    """Search across specified collections and return combined results."""
-    collections_to_search = [collection] if collection else ["documents", "posts", "comments", "webpages"]
-    all_results = []
-
-    for coll in collections_to_search:
-        try:
-            results = await qdrant.search(
-                collection=coll,
-                query_vector=query_vector,
-                top_k=top_k,
-            )
-            all_results.extend(results)
-        except Exception as e:
-            logger.warning("Failed to search collection %s: %s", coll, e)
-
-    all_results.sort(key=lambda x: x["score"], reverse=True)
-    return all_results
-
-
-async def retrieve_and_rerank(
-    query: str,
-    embeddings: EmbeddingService,
-    qdrant: QdrantService,
-    collection: Optional[str],
-    top_k: int,
-) -> tuple[list[dict], list[dict]]:
-    """Vector search then optional local rerank. Returns (top_k, all_hits)."""
-    query_vector = await embeddings.embed_single(query)
-    all_results = await search_collections(
-        embeddings, qdrant, query_vector, collection, top_k
+class QueryRequest(BaseModel):
+    query: str = Field(min_length=1, max_length=2000)
+    collection: str | None = Field(
+        default=None,
+        description="Collection to search in. If None, searches all collections.",
     )
-    candidates = all_results[: max(top_k * 3, top_k)]
-    texts = [r["payload"].get("text", "") for r in candidates]
-    rerank_scores = await rerank_documents(query, texts)
-    if rerank_scores is not None:
-        candidates = apply_rerank_scores(candidates, rerank_scores)
-    return candidates[:top_k], all_results
+    top_k: int = Field(default=5, ge=1, le=20)
+    include_sources: bool = Field(
+        default=True, description="Whether to include source documents in the response."
+    )
+    filter_metadata: dict | None = Field(
+        default=None, description="Metadata filters for the query."
+    )
+    temperature: float = Field(
+        default=0.7, ge=0.0, le=2.0, description="Temperature for LLM response generation."
+    )
+    stream: bool = Field(default=False, description="Whether to stream the response.")
+
+
+class SourceDocument(BaseModel):
+    id: str
+    text: str
+    score: float
+    metadata: dict
+
+    @classmethod
+    def from_hit(cls, hit: SearchHit) -> "SourceDocument":
+        return cls(
+            id=hit.id, text=hit.text[:SOURCE_TEXT_LIMIT], score=hit.score, metadata=hit.payload
+        )
+
+
+class QueryResponse(BaseModel):
+    answer: str
+    sources: list[SourceDocument]
+    query: str
+    collection_used: str | None = None
+    total_chunks_searched: int = 0
+    generation_time_ms: int = 0
+
+
+class ExportVectorsRequest(BaseModel):
+    collection: str | None = Field(
+        default=None,
+        description="Collection to export. If None, exports from all collections.",
+    )
+    limit: int = Field(default=2000, ge=1, le=10000)
+
+
+class ExportedPointResponse(BaseModel):
+    id: str
+    vector: list[float]
+    text: str
+    metadata: dict
+
+
+class ExportVectorsResponse(BaseModel):
+    """Exported vectors; `dimension` is 0 when nothing is stored."""
+
+    dimension: int
+    points: list[ExportedPointResponse]
 
 
 @router.post("/documents:query", response_model=QueryResponse)
-async def query(
-    request: QueryRequest,
-    embeddings: EmbeddingService = Depends(rag_service.get_embeddings),
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+async def query_documents(
+    request: QueryRequest, query_service: QueryServiceDependency
+) -> QueryResponse:
     """Query the RAG system with a question."""
-    start_time = time.time()
-    settings = get_settings()
-
-    try:
-        top_results, all_results = await retrieve_and_rerank(
-            request.query,
-            embeddings,
-            qdrant,
-            request.collection,
-            request.top_k,
-        )
-
-        if not top_results:
-            return QueryResponse(
-                answer="No relevant documents found for your query.",
-                sources=[],
-                query=request.query,
-                collection_used=request.collection,
-                total_chunks_searched=0,
-                generation_time_ms=int((time.time() - start_time) * 1000),
-            )
-
-        context_texts = [r["payload"]["text"] for r in top_results]
-        answer = await generate_answer(
-            query=request.query,
-            context_texts=context_texts,
-            provider=settings.llm_provider,
-            model=settings.llm_model if settings.llm_provider == "ollama" else settings.openai_llm_model,
-        )
-
-        sources = []
-        if request.include_sources:
-            for result in top_results:
-                sources.append(SourceDocument(
-                    id=result["id"],
-                    text=result["payload"].get("text", "")[:500],
-                    score=result["score"],
-                    metadata=result["payload"],
-                ))
-
-        generation_time = int((time.time() - start_time) * 1000)
-
-        logger.info(
-            "Query processed in %sms: %s sources retrieved",
-            generation_time,
-            len(top_results),
-        )
-
-        return QueryResponse(
-            answer=answer,
-            sources=sources,
-            query=request.query,
-            collection_used=request.collection,
-            total_chunks_searched=len(all_results),
-            generation_time_ms=generation_time,
-        )
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error("Query failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    answer = await query_service.answer(
+        request.query, request.collection, request.top_k, request.include_sources
+    )
+    return QueryResponse(
+        answer=answer.text,
+        sources=[SourceDocument.from_hit(hit) for hit in answer.sources],
+        query=request.query,
+        collection_used=request.collection,
+        total_chunks_searched=answer.total_chunks_searched,
+        generation_time_ms=answer.generation_time_ms,
+    )
 
 
 @router.post("/documents:streamQuery")
-async def query_stream(
-    request: QueryRequest,
-    embeddings: EmbeddingService = Depends(rag_service.get_embeddings),
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
-    """Query the RAG system with streaming response."""
-    start_time = time.time()
-    settings = get_settings()
+async def stream_query_documents(
+    request: QueryRequest, query_service: QueryServiceDependency
+) -> StreamingResponse:
+    """Query the RAG system with a server-sent events response."""
+    tokens = await query_service.stream_answer(
+        request.query, request.collection, request.top_k
+    )
 
-    try:
-        top_results, _all_results = await retrieve_and_rerank(
-            request.query,
-            embeddings,
-            qdrant,
-            request.collection,
-            request.top_k,
-        )
+    async def server_sent_events() -> AsyncIterator[str]:
+        async for token in tokens:
+            yield f"data: {token}\n\n"
+        yield "data: [DONE]\n\n"
 
-        if not top_results:
-            async def no_results_stream():
-                yield "data: No relevant documents found for your query.\n\n"
-                yield "data: [DONE]\n\n"
-
-            return StreamingResponse(
-                no_results_stream(),
-                media_type="text/event-stream",
-            )
-
-        context_texts = [r["payload"]["text"] for r in top_results]
-        openai_client = None
-        if settings.llm_provider == "openai":
-            openai_client = AsyncOpenAI(api_key=settings.openai_api_key)
-
-        model = settings.llm_model if settings.llm_provider == "ollama" else settings.openai_llm_model
-
-        async def generate():
-            async for chunk in generate_answer_stream(
-                query=request.query,
-                context_texts=context_texts,
-                provider=settings.llm_provider,
-                model=model,
-                openai_client=openai_client,
-            ):
-                yield chunk
-            yield "data: [DONE]\n\n"
-
-        return StreamingResponse(
-            generate(),
-            media_type="text/event-stream",
-            headers={
-                "Cache-Control": "no-cache",
-                "Connection": "keep-alive",
-            },
-        )
-
-    except Exception as e:
-        logger.error("Streaming query failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    return StreamingResponse(
+        server_sent_events(),
+        media_type="text/event-stream",
+        headers={"Cache-Control": "no-cache", "Connection": "keep-alive"},
+    )
 
 
 @router.post("/documents:exportVectors", response_model=ExportVectorsResponse)
 async def export_vectors(
-    request: ExportVectorsRequest,
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+    request: ExportVectorsRequest, query_service: QueryServiceDependency
+) -> ExportVectorsResponse:
     """Export stored chunk vectors (text truncated to 500 chars) for the UI atlas."""
-    try:
-        names = [request.collection] if request.collection else await qdrant.get_collections()
-        points: list[ExportedPoint] = []
-        for name in names:
-            remaining = request.limit - len(points)
-            if remaining <= 0:
-                break
-            for record in await qdrant.scroll_vectors(name, remaining):
-                metadata = dict(record["payload"])
-                text = str(metadata.pop("text", ""))[:500]
-                metadata.setdefault("collection", name)
-                points.append(ExportedPoint(
-                    id=record["id"],
-                    vector=record["vector"],
-                    text=text,
-                    metadata=metadata,
-                ))
-        dimension = len(points[0].vector) if points else 0
-        return ExportVectorsResponse(dimension=dimension, points=points)
-    except Exception as e:
-        logger.error("Export vectors failed: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    exported = await query_service.export_vectors(request.collection, request.limit)
+    return ExportVectorsResponse(
+        dimension=exported.dimension,
+        points=[
+            ExportedPointResponse(
+                id=point.id, vector=point.vector, text=point.text, metadata=point.metadata
+            )
+            for point in exported.points
+        ],
+    )
 
 
 @router.get("/collections")
-async def list_collections(
-    qdrant: QdrantService = Depends(rag_service.get_qdrant),
-):
+async def list_collections(query_service: QueryServiceDependency) -> dict[str, Any]:
     """List all available collections."""
-    try:
-        collections = await qdrant.get_collections()
-        collection_info = []
-
-        for name in collections:
-            info = await qdrant.get_collection_info(name)
-            collection_info.append(info)
-
-        return {
-            "collections": collection_info,
-        }
-
-    except Exception as e:
-        logger.error("Failed to list collections: %s", e)
-        raise HTTPException(status_code=500, detail=str(e))
+    return {"collections": await query_service.list_collections()}

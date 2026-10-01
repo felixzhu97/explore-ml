@@ -3,11 +3,10 @@
 from __future__ import annotations
 
 import os
-from typing import Optional
 
 import redis
 
-import config as cfg
+import config
 from infra.feed_ranker import FeedRankingService
 from infra.vector_store import FaissVectorStore, RedisVectorStore
 
@@ -16,7 +15,7 @@ class VectorStoreFactory:
     @staticmethod
     def create_redis_store() -> RedisVectorStore:
         client = redis.from_url(
-            cfg.REDIS_URL, password=cfg.REDIS_PASSWORD, decode_responses=True
+            config.REDIS_URL, password=config.REDIS_PASSWORD, decode_responses=True
         )
         return RedisVectorStore(
             client,
@@ -26,9 +25,9 @@ class VectorStoreFactory:
 
     @staticmethod
     def create_faiss_store() -> FaissVectorStore:
-        dim = int(os.getenv("FAISS_DIM", "64"))
+        dimension = int(os.getenv("FAISS_DIM", "64"))
         return FaissVectorStore(
-            dim=dim,
+            dimension=dimension,
             index_path=os.getenv("FAISS_INDEX_PATH"),
             ids_path=os.getenv("FAISS_IDS_PATH"),
         )
@@ -43,8 +42,8 @@ class VectorStoreFactory:
 
 class RankerFactory:
     @staticmethod
-    def create_ranker() -> Optional[FeedRankingService]:
-        model_path = cfg.FEED_RANKER_MODEL
+    def create_ranker() -> FeedRankingService | None:
+        model_path = config.FEED_RANKER_MODEL
         if not model_path.is_file():
             return None
         return FeedRankingService(model_path=str(model_path))

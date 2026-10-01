@@ -16,8 +16,8 @@ from pathlib import Path
 OUTPUT_BASE = Path(os.environ.get("SPEECH_OUTPUT_DIR", "output"))
 VOICE_OUTPUT = OUTPUT_BASE / "voice"
 ASR_UPLOADS = OUTPUT_BASE / "asr"
-for d in (VOICE_OUTPUT, ASR_UPLOADS):
-    d.mkdir(parents=True, exist_ok=True)
+for directory in (VOICE_OUTPUT, ASR_UPLOADS):
+    directory.mkdir(parents=True, exist_ok=True)
 
 HOST = os.environ.get("SPEECH_HOST", "0.0.0.0")
 PORT = int(os.environ.get("SPEECH_PORT", os.environ.get("PORT", "8004")))
@@ -35,7 +35,7 @@ TTS_MODEL = os.environ.get(
 TTS_LANGUAGE = os.environ.get("TTS_LANGUAGE", "Chinese")
 TTS_SPEAKER = os.environ.get("TTS_SPEAKER", "")
 DEFAULT_VOICE = os.environ.get("EDGE_TTS_VOICE", "zh-CN-XiaoxiaoNeural")
-VOICE_EXT = "wav" if VOICE_BACKEND == "qwen" else "mp3"
+VOICE_EXTENSION = "wav" if VOICE_BACKEND == "qwen" else "mp3"
 VOICE_MEDIA_TYPE = "audio/wav" if VOICE_BACKEND == "qwen" else "audio/mpeg"
 
 ASR_BACKEND = os.environ.get("ASR_BACKEND", "qwen").strip().lower()

@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import logging
-from typing import Optional
 
 import httpx
 
@@ -14,7 +13,7 @@ logger = logging.getLogger(__name__)
 async def rerank_documents(
     query: str,
     documents: list[str],
-) -> Optional[list[float]]:
+) -> list[float] | None:
     """Return yes-probs aligned with documents, or None if disabled / unavailable."""
     settings = get_settings()
     if not settings.rerank_enabled or not documents:
@@ -32,7 +31,7 @@ async def rerank_documents(
             if not isinstance(scores, list) or len(scores) != len(documents):
                 logger.warning("Rerank response shape mismatch; skipping")
                 return None
-            return [float(s) for s in scores]
-    except Exception as e:
-        logger.warning("Rerank unavailable (%s); continuing without rerank", e)
+            return [float(score) for score in scores]
+    except Exception as error:
+        logger.warning("Rerank unavailable (%s); continuing without rerank", error)
         return None

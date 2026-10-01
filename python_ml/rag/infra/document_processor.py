@@ -1,9 +1,7 @@
 """Document processor service."""
 import logging
 import hashlib
-import json
-from datetime import datetime
-from typing import Optional
+from datetime import UTC, datetime
 from pathlib import Path
 
 import aiofiles
@@ -42,7 +40,7 @@ class DocumentProcessor:
         Returns:
             Processing result with chunks
         """
-        doc_id = self._generate_doc_id(filename, file_content)
+        document_id = self._generate_document_id(filename, file_content)
 
         # Parse the document
         parsed = parse_file(file_content, filename)
@@ -50,7 +48,7 @@ class DocumentProcessor:
         # Extract text based on document type
         if parsed["type"] == "pdf":
             pages = parsed.get("pages", [])
-            text_parts = [{"text": p["text"], "page_number": p["page_number"]} for p in pages]
+            text_parts = [{"text": page["text"], "page_number": page["page_number"]} for page in pages]
         else:
             text_parts = [{"text": parsed.get("text", ""), "page_number": None}]
 
@@ -59,14 +57,14 @@ class DocumentProcessor:
             "filename": filename,
             "content_type": content_type,
             "source_type": "document",
-            "doc_id": doc_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "doc_id": document_id,
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         chunks = self._chunker.chunk_documents(
             text_parts,
             metadata,
-            doc_id,
+            document_id,
         )
 
         logger.info(
@@ -74,11 +72,11 @@ class DocumentProcessor:
         )
 
         return {
-            "id": doc_id,
+            "id": document_id,
             "filename": filename,
             "content_type": content_type,
             "type": parsed["type"],
-            "total_text_length": sum(len(p["text"]) for p in text_parts),
+            "total_text_length": sum(len(part["text"]) for part in text_parts),
             "chunks_count": len(chunks),
             "metadata": parsed.get("metadata", {}),
         }
@@ -87,7 +85,7 @@ class DocumentProcessor:
         self,
         url: str,
         content: str,
-        title: Optional[str] = None,
+        title: str | None = None,
     ) -> dict:
         """
         Process a webpage.
@@ -100,7 +98,7 @@ class DocumentProcessor:
         Returns:
             Processing result with chunks
         """
-        doc_id = self._generate_doc_id(url, content.encode())
+        document_id = self._generate_document_id(url, content.encode())
 
         # Parse HTML
         from infra.pdf_parser import HTMLParser
@@ -111,14 +109,14 @@ class DocumentProcessor:
             "source_url": url,
             "title": title or parsed.get("title", ""),
             "source_type": "webpage",
-            "doc_id": doc_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "doc_id": document_id,
+            "created_at": datetime.now(UTC).isoformat(),
         }
 
         chunks = self._chunker.chunk_text(
             parsed.get("text", ""),
             metadata,
-            doc_id,
+            document_id,
         )
 
         logger.info(
@@ -126,7 +124,7 @@ class DocumentProcessor:
         )
 
         return {
-            "id": doc_id,
+            "id": document_id,
             "url": url,
             "title": title or parsed.get("title", ""),
             "total_text_length": len(parsed.get("text", "")),
@@ -139,7 +137,7 @@ class DocumentProcessor:
         content: str,
         content_type: str,
         source_id: str,
-        metadata: Optional[dict] = None,
+        metadata: dict | None = None,
     ) -> dict:
         """
         Process content from the database.
@@ -153,20 +151,20 @@ class DocumentProcessor:
         Returns:
             Processing result with chunks
         """
-        doc_id = f"{content_type}_{source_id}"
+        document_id = f"{content_type}_{source_id}"
 
         chunk_metadata = {
             "source_type": content_type,
             "source_id": source_id,
-            "doc_id": doc_id,
-            "created_at": datetime.utcnow().isoformat(),
+            "doc_id": document_id,
+            "created_at": datetime.now(UTC).isoformat(),
             **(metadata or {}),
         }
 
         chunks = self._chunker.chunk_text(
             content,
             chunk_metadata,
-            doc_id,
+            document_id,
         )
 
         logger.info(
@@ -174,7 +172,7 @@ class DocumentProcessor:
         )
 
         return {
-            "id": doc_id,
+            "id": document_id,
             "source_type": content_type,
             "source_id": source_id,
             "content_length": len(content),
@@ -220,27 +218,27 @@ class DocumentProcessor:
         settings.ensure_directories()
 
         # Generate unique filename
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S")
-        doc_id = self._generate_doc_id(filename, file_content)[:8]
-        safe_filename = f"{timestamp}_{doc_id}_{filename}"
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
+        document_id = self._generate_document_id(filename, file_content)[:8]
+        safe_filename = f"{timestamp}_{document_id}_{filename}"
 
         file_path = settings.uploads_dir / safe_filename
 
-        async with aiofiles.open(file_path, "wb") as f:
-            await f.write(file_content)
+        async with aiofiles.open(file_path, "wb") as output_file:
+            await output_file.write(file_content)
 
         logger.info(f"Saved file to {file_path}")
 
         return file_path
 
-    def _generate_doc_id(self, identifier: str, content: bytes) -> str:
+    def _generate_document_id(self, identifier: str, content: bytes) -> str:
         """Generate a unique document ID."""
         combined = f"{identifier}_{content[:1024]}"
         return hashlib.sha256(combined.encode()).hexdigest()[:16]
 
 
 # Singleton instance
-_processor: Optional[DocumentProcessor] = None
+_processor: DocumentProcessor | None = None
 
 
 def get_document_processor() -> DocumentProcessor:

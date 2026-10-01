@@ -1,11 +1,7 @@
 """Test configuration and fixtures."""
 import pytest
-import pytest_asyncio
 from unittest.mock import AsyncMock, MagicMock, patch
-from typing import Generator, AsyncGenerator
 
-from fastapi.testclient import TestClient
-from httpx import AsyncClient, ASGITransport
 
 
 @pytest.fixture

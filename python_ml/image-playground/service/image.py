@@ -1,28 +1,34 @@
+"""Image generation jobs: create, run in the background, look up, locate output."""
+
+from functools import lru_cache
 from pathlib import Path
-from typing import Optional
 
 import config
-from domain.job import JobStore
+from domain.job import Job, JobStore
 from infra import pipeline
 
-jobs = JobStore()
+
+class ImageService:
+    def __init__(self, job_store: JobStore) -> None:
+        self._job_store = job_store
+
+    def output_path(self, job_id: str) -> Path:
+        return config.IMAGE_OUTPUT / f"{job_id}.png"
+
+    def create_job(self) -> Job:
+        return self._job_store.create()
+
+    def get_job(self, job_id: str) -> Job | None:
+        return self._job_store.get(job_id)
+
+    def run_job(self, job_id: str, prompt: str, negative_prompt: str) -> None:
+        try:
+            pipeline.generate(prompt, negative_prompt, self.output_path(job_id))
+            self._job_store.succeed(job_id, f"{config.BASE_URL}/output/image/{job_id}.png")
+        except Exception as error:
+            self._job_store.fail(job_id, str(error))
 
 
-def output_path(job_id: str) -> Path:
-    return config.IMAGE_OUTPUT / f"{job_id}.png"
-
-
-def create_job() -> str:
-    return jobs.create()
-
-
-def get_job(job_id: str) -> Optional[dict]:
-    return jobs.get(job_id)
-
-
-def run_image_job(job_id: str, prompt: str, negative_prompt: str) -> None:
-    try:
-        pipeline.generate(prompt, negative_prompt, output_path(job_id))
-        jobs.succeed(job_id, f"{config.BASE_URL}/output/image/{job_id}.png")
-    except Exception as e:
-        jobs.fail(job_id, str(e))
+@lru_cache
+def get_image_service() -> ImageService:
+    return ImageService(JobStore())

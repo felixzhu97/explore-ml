@@ -3,36 +3,35 @@ import json
 import logging
 import os
 import tempfile
-from typing import Optional
 
 import config
 import torch
-import torchvision.transforms as T
+from torchvision import transforms
 from PIL import Image, UnidentifiedImageError
 from torchvision.models import ResNet50_Weights, resnet50
 
-log = logging.getLogger("vision")
+logger = logging.getLogger("vision")
 
 DEVICE = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 MODEL = None
 LABELS: list[str] = []
 NSFW_DETECTOR = None
 
-transform = T.Compose([
-    T.Resize((256, 256)),
-    T.CenterCrop(224),
-    T.ToTensor(),
-    T.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+preprocess = transforms.Compose([
+    transforms.Resize((256, 256)),
+    transforms.CenterCrop(224),
+    transforms.ToTensor(),
+    transforms.Normalize(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
 ])
 
 
 def load_labels():
     global LABELS
     if config.LABELS_PATH.exists():
-        with open(config.LABELS_PATH, "r", encoding="utf-8") as f:
+        with open(config.LABELS_PATH, encoding="utf-8") as f:
             LABELS = json.load(f)
     else:
-        LABELS = [f"class_{i}" for i in range(1000)]
+        LABELS = [f"class_{index}" for index in range(1000)]
 
 
 def load_model():
@@ -42,7 +41,7 @@ def load_model():
         MODEL = resnet50(weights=None)
         MODEL.fc = torch.nn.Linear(MODEL.fc.in_features, int(checkpoint["num_classes"]))
         MODEL.load_state_dict(checkpoint["state_dict"])
-        log.info("Loaded fine-tuned classifier from %s", config.MODEL_PATH)
+        logger.info("Loaded fine-tuned classifier from %s", config.MODEL_PATH)
     else:
         MODEL = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
     MODEL.eval()
@@ -52,22 +51,21 @@ def load_model():
 def load_nsfw_detector():
     global NSFW_DETECTOR
     if not config.NSFW_ENABLED:
-        log.info("NSFW detection disabled by config")
+        logger.info("NSFW detection disabled by config")
         return
     try:
         from nudenet import NudeDetector
 
         NSFW_DETECTOR = NudeDetector()
-        log.info("NSFW detector loaded (nudenet)")
-    except Exception as e:
-        log.warning("NSFW detector failed to load: %s", e)
+        logger.info("NSFW detector loaded (nudenet)")
+    except Exception as error:
+        logger.warning("NSFW detector failed to load: %s", error)
         NSFW_DETECTOR = None
 
 
-def open_image_bytes(content: bytes) -> Optional[Image.Image]:
+def open_image_bytes(content: bytes) -> Image.Image | None:
     try:
-        img = Image.open(io.BytesIO(content))
-        return img.convert("RGB")
+        return Image.open(io.BytesIO(content)).convert("RGB")
     except (UnidentifiedImageError, OSError):
         return None
 
@@ -75,66 +73,72 @@ def open_image_bytes(content: bytes) -> Optional[Image.Image]:
 def _to_tensor(image: Image.Image) -> torch.Tensor:
     if image.mode != "RGB":
         image = image.convert("RGB")
-    w, h = image.size
-    if max(w, h) > config.MAX_IMAGE_SIZE:
-        ratio = config.MAX_IMAGE_SIZE / max(w, h)
-        image = image.resize((int(w * ratio), int(h * ratio)), Image.Resampling.LANCZOS)
-    return transform(image).unsqueeze(0).to(DEVICE)
+    width, height = image.size
+    if max(width, height) > config.MAX_IMAGE_SIZE:
+        ratio = config.MAX_IMAGE_SIZE / max(width, height)
+        image = image.resize((int(width * ratio), int(height * ratio)), Image.Resampling.LANCZOS)
+    return preprocess(image).unsqueeze(0).to(DEVICE)
 
 
-def class_probs(image: Image.Image) -> torch.Tensor:
+def class_probabilities(image: Image.Image) -> torch.Tensor:
     with torch.no_grad():
-        out = MODEL(_to_tensor(image))
-    return torch.softmax(out[0], dim=0)
+        logits = MODEL(_to_tensor(image))
+    return torch.softmax(logits[0], dim=0)
 
 
-def top_labels(image: Image.Image, k: int) -> list[str]:
-    probs = class_probs(image)
-    _, top_indices = torch.topk(probs, min(k, len(LABELS)))
-    result = []
-    seen = set()
-    for idx in top_indices.cpu().tolist():
-        label = LABELS[idx].strip().lower().replace(" ", "_") if idx < len(LABELS) else f"class_{idx}"
-        if label not in seen:
-            seen.add(label)
-            result.append(label)
-    return result[:k]
+def top_labels(image: Image.Image, limit: int) -> list[str]:
+    probabilities = class_probabilities(image)
+    _, top_indices = torch.topk(probabilities, min(limit, len(LABELS)))
+    labels: list[str] = []
+    for class_index in top_indices.cpu().tolist():
+        label = (
+            LABELS[class_index].strip().lower().replace(" ", "_")
+            if class_index < len(LABELS)
+            else f"class_{class_index}"
+        )
+        if label not in labels:
+            labels.append(label)
+    return labels[:limit]
 
 
-def class_scores(image: Image.Image, indices: list[int]) -> list[float]:
-    probs = class_probs(image)
-    return [float(probs[i].cpu().item()) for i in indices if i < len(probs)]
+def class_scores(image: Image.Image, class_indices: list[int]) -> list[float]:
+    probabilities = class_probabilities(image)
+    return [
+        float(probabilities[class_index].cpu().item())
+        for class_index in class_indices
+        if class_index < len(probabilities)
+    ]
 
 
 def nsfw_detections(image: Image.Image) -> list[tuple[str, float]]:
     if NSFW_DETECTOR is None:
         return []
-    fd, path = None, None
+    file_descriptor, image_path = None, None
     try:
-        buf = io.BytesIO()
-        image.save(buf, format="JPEG", quality=90)
-        fd, path = tempfile.mkstemp(suffix=".jpg")
-        os.write(fd, buf.getvalue())
-        os.close(fd)
-        fd = None
-        detections = NSFW_DETECTOR.detect(path) or []
-        result = []
-        for d in detections:
-            cls_name = (d.get("class") or d.get("label") or "").strip()
-            if cls_name:
-                result.append((cls_name, float(d.get("score") or 0)))
-        return result
-    except Exception as e:
-        log.warning("NSFW detect error: %s", e)
+        jpeg_buffer = io.BytesIO()
+        image.save(jpeg_buffer, format="JPEG", quality=90)
+        file_descriptor, image_path = tempfile.mkstemp(suffix=".jpg")
+        os.write(file_descriptor, jpeg_buffer.getvalue())
+        os.close(file_descriptor)
+        file_descriptor = None
+        detections = NSFW_DETECTOR.detect(image_path) or []
+        results: list[tuple[str, float]] = []
+        for detection in detections:
+            class_name = (detection.get("class") or detection.get("label") or "").strip()
+            if class_name:
+                results.append((class_name, float(detection.get("score") or 0)))
+        return results
+    except Exception as error:
+        logger.warning("NSFW detect error: %s", error)
         return []
     finally:
-        if fd is not None:
+        if file_descriptor is not None:
             try:
-                os.close(fd)
+                os.close(file_descriptor)
             except Exception:
                 pass
-        if path and os.path.exists(path):
+        if image_path and os.path.exists(image_path):
             try:
-                os.unlink(path)
+                os.unlink(image_path)
             except Exception:
                 pass

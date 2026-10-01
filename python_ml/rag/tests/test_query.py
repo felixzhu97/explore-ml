@@ -1,8 +1,7 @@
 """Tests for query functionality."""
 import pytest
-from unittest.mock import AsyncMock, patch, MagicMock
 
-from domain.query import QueryRequest, QueryResponse, SourceDocument
+from controller.query import QueryRequest, QueryResponse, SourceDocument
 
 
 class TestQuerySchemas:

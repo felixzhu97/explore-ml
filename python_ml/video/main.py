@@ -5,12 +5,12 @@ from fastapi.middleware.cors import CORSMiddleware
 
 import config
 from controller.api import router
-from service import video as service
+from service.video import get_video_service
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    service.startup()
+    get_video_service().startup()
     yield
 
 

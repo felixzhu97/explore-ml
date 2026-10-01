@@ -1,15 +1,28 @@
 """Moderation rules: explicit classes and verdict aggregation."""
 
-from typing import Any, Iterable
+from collections.abc import Iterable
+from dataclasses import dataclass, field
 
 EXPLICIT_PARTS = ("GENITALIA", "BREAST", "BUTTOCKS", "ANUS")
 
 
-def is_explicit_class(cls_name: str) -> bool:
-    if not cls_name or "EXPOSED" not in cls_name.upper():
+@dataclass(frozen=True)
+class ModerationCategory:
+    label: str
+    score: float
+
+
+@dataclass(frozen=True)
+class ModerationVerdict:
+    safe: bool
+    categories: list[ModerationCategory] = field(default_factory=list)
+
+
+def is_explicit_class(class_name: str) -> bool:
+    upper_name = class_name.upper()
+    if "EXPOSED" not in upper_name:
         return False
-    u = cls_name.upper()
-    return any(x in u for x in EXPLICIT_PARTS)
+    return any(part in upper_name for part in EXPLICIT_PARTS)
 
 
 def max_explicit_score(
@@ -19,25 +32,23 @@ def max_explicit_score(
 ) -> float:
     explicit = set(explicit_classes)
     max_score = 0.0
-    for cls_name, score in detections:
+    for class_name, score in detections:
         if score < threshold:
             continue
-        if (cls_name in explicit or is_explicit_class(cls_name)) and score > max_score:
+        if (class_name in explicit or is_explicit_class(class_name)) and score > max_score:
             max_score = score
     return max_score
 
 
-def verdict(categories: Iterable[dict[str, Any]]) -> dict[str, Any]:
+def verdict(categories: Iterable[ModerationCategory]) -> ModerationVerdict:
     """Keep the highest score per label; safe when nothing was flagged."""
-    best_by_label: dict[str, float] = {}
-    for c in categories:
-        label = c.get("label", "")
-        score = c.get("score", 0.0)
-        if label and (label not in best_by_label or score > best_by_label[label]):
-            best_by_label[label] = score
-    if not best_by_label:
-        return {"safe": True, "categories": []}
-    return {
-        "safe": False,
-        "categories": [{"label": k, "score": v} for k, v in best_by_label.items()],
-    }
+    best_score_by_label: dict[str, float] = {}
+    for category in categories:
+        if category.label and category.score > best_score_by_label.get(category.label, -1.0):
+            best_score_by_label[category.label] = category.score
+    return ModerationVerdict(
+        safe=not best_score_by_label,
+        categories=[
+            ModerationCategory(label, score) for label, score in best_score_by_label.items()
+        ],
+    )

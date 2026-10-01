@@ -5,7 +5,7 @@ from main import app
 client = TestClient(app)
 
 
-def test_should_reject_unsupported_audio_type_for_asr():
+def test_should_reject_unsupported_audio_type_for_transcription():
     response = client.post(
         "/api/v1/audios:transcribe",
         files={"file": ("note.txt", b"not audio", "text/plain")},

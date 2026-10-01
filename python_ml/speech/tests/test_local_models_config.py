@@ -15,7 +15,7 @@ def test_should_resolve_tts_model_under_local_models_root():
 
 
 def test_should_use_wav_for_qwen_voice():
-    assert config.VOICE_EXT == "wav"
+    assert config.VOICE_EXTENSION == "wav"
     assert config.VOICE_MEDIA_TYPE == "audio/wav"
 
 

@@ -1,10 +1,7 @@
 """Qdrant vector database client."""
-import json
 import logging
-from typing import Any, Optional
-from contextlib import asynccontextmanager
+from typing import Any
 
-import qdrant_client
 from qdrant_client import QdrantClient
 from qdrant_client.http import models
 from qdrant_client.http.exceptions import UnexpectedResponse
@@ -127,8 +124,8 @@ class QdrantService:
                 f"Upserted {len(points)} points to collection '{collection}'"
             )
             return {"status": "completed", "points_count": len(points)}
-        except Exception as e:
-            logger.error(f"Failed to upsert points: {e}")
+        except Exception as error:
+            logger.error(f"Failed to upsert points: {error}")
             raise
 
     async def search(
@@ -136,8 +133,8 @@ class QdrantService:
         collection: str,
         query_vector: list[float],
         top_k: int = 5,
-        score_threshold: Optional[float] = None,
-        query_filter: Optional[dict] = None,
+        score_threshold: float | None = None,
+        query_filter: dict | None = None,
     ) -> list[dict[str, Any]]:
         """
         Search for similar vectors in a collection.
@@ -183,7 +180,7 @@ class QdrantService:
         collection: str,
         query_vectors: list[list[float]],
         top_k: int = 5,
-        score_threshold: Optional[float] = None,
+        score_threshold: float | None = None,
     ) -> list[list[dict[str, Any]]]:
         """
         Batch search for similar vectors.
@@ -246,10 +243,10 @@ class QdrantService:
         wait: bool = True,
     ) -> dict[str, Any]:
         """Delete points matching filter conditions."""
-        filter_obj = self._build_filter(filter_conditions)
+        filter_model = self._build_filter(filter_conditions)
         result = self._client.delete(
             collection_name=collection,
-            points_selector=models.FilterSelector(filter=filter_obj),
+            points_selector=models.FilterSelector(filter=filter_model),
             wait=wait,
         )
         return {"status": "completed"}
@@ -257,7 +254,7 @@ class QdrantService:
     async def count(
         self,
         collection: str,
-        filter_conditions: Optional[dict] = None,
+        filter_conditions: dict | None = None,
     ) -> int:
         """Count points in a collection."""
         result = self._client.count(
@@ -295,7 +292,7 @@ class QdrantService:
     async def get_collections(self) -> list[str]:
         """Get list of all collection names."""
         collections = self._client.get_collections()
-        return [col.name for col in collections.collections]
+        return [collection.name for collection in collections.collections]
 
     async def get_collection_info(self, collection: str) -> dict[str, Any]:
         """Get information about a collection."""
@@ -335,8 +332,8 @@ class QdrantService:
         try:
             self._client.get_collections()
             return True
-        except Exception as e:
-            logger.error(f"Qdrant health check failed: {e}")
+        except Exception as error:
+            logger.error(f"Qdrant health check failed: {error}")
             return False
 
     def _build_filter(self, conditions: dict) -> models.Filter:
@@ -352,33 +349,33 @@ class QdrantService:
                     )
                 )
             elif isinstance(value, dict):
-                for op, val in value.items():
-                    if op == "gte":
+                for operator, bound in value.items():
+                    if operator == "gte":
                         must_conditions.append(
                             models.FieldCondition(
                                 key=key,
-                                range=models.Range(gte=val),
+                                range=models.Range(gte=bound),
                             )
                         )
-                    elif op == "lte":
+                    elif operator == "lte":
                         must_conditions.append(
                             models.FieldCondition(
                                 key=key,
-                                range=models.Range(lte=val),
+                                range=models.Range(lte=bound),
                             )
                         )
-                    elif op == "gt":
+                    elif operator == "gt":
                         must_conditions.append(
                             models.FieldCondition(
                                 key=key,
-                                range=models.Range(gt=val),
+                                range=models.Range(gt=bound),
                             )
                         )
-                    elif op == "lt":
+                    elif operator == "lt":
                         must_conditions.append(
                             models.FieldCondition(
                                 key=key,
-                                range=models.Range(lt=val),
+                                range=models.Range(lt=bound),
                             )
                         )
             else:
@@ -393,7 +390,7 @@ class QdrantService:
 
 
 # Singleton instance
-_qdrant_service: Optional[QdrantService] = None
+_qdrant_service: QdrantService | None = None
 
 
 def get_qdrant_service() -> QdrantService:

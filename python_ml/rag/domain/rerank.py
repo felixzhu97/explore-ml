@@ -12,5 +12,5 @@ def apply_rerank_scores(
         item = dict(result)
         item["score"] = score
         ranked.append(item)
-    ranked.sort(key=lambda x: x["score"], reverse=True)
+    ranked.sort(key=lambda item: item["score"], reverse=True)
     return ranked

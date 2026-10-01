@@ -1,5 +1,4 @@
 """Tests for text chunking service."""
-import pytest
 
 from domain.chunker import Chunk, TextChunker
 
@@ -22,9 +21,9 @@ class TestTextChunker:
         chunks = chunker.chunk_text(text, metadata={"source": "test"})
 
         assert len(chunks) > 0
-        assert all(isinstance(c, Chunk) for c in chunks)
-        assert all(c.text for c in chunks)
-        assert all(c.metadata.get("source") == "test" for c in chunks)
+        assert all(isinstance(chunk, Chunk) for chunk in chunks)
+        assert all(chunk.text for chunk in chunks)
+        assert all(chunk.metadata.get("source") == "test" for chunk in chunks)
 
     def test_chunk_text_empty(self):
         """Test chunking empty text."""
@@ -65,9 +64,9 @@ class TestTextChunker:
         )
 
         assert len(chunks) > 0
-        assert all(c.metadata.get("source") == "pdf" for c in chunks)
-        assert any(c.metadata.get("page") == 1 for c in chunks)
-        assert any(c.metadata.get("page") == 2 for c in chunks)
+        assert all(chunk.metadata.get("source") == "pdf" for chunk in chunks)
+        assert any(chunk.metadata.get("page") == 1 for chunk in chunks)
+        assert any(chunk.metadata.get("page") == 2 for chunk in chunks)
 
     def test_chunk_ids_unique(self):
         """Test that chunk IDs are unique."""
@@ -87,7 +86,7 @@ class TestTextChunker:
 
         chunks = chunker.chunk_text(text, source_id="doc_123")
 
-        chunk_ids = [c.id for c in chunks]
+        chunk_ids = [chunk.id for chunk in chunks]
         assert len(chunk_ids) == len(set(chunk_ids)), "Chunk IDs should be unique"
 
     def test_long_paragraph_splitting(self):
@@ -95,7 +94,7 @@ class TestTextChunker:
         chunker = TextChunker(chunk_size=50, chunk_overlap=10)
 
         # Create a long paragraph
-        long_text = ". ".join([f"This is sentence number {i}" for i in range(100)])
+        long_text = ". ".join([f"This is sentence number {number}" for number in range(100)])
 
         chunks = chunker.chunk_text(long_text)
 

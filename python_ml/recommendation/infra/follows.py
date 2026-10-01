@@ -1,39 +1,38 @@
 import psycopg2
-from typing import List, Tuple
-import config as cfg
+import config
 
 
-def load_follows(limit_following_per_user: int = 0) -> List[Tuple[str, str]]:
-    conn = psycopg2.connect(cfg.DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute(
+def load_follows(limit_following_per_user: int = 0) -> list[tuple[str, str]]:
+    connection = psycopg2.connect(config.DATABASE_URL)
+    cursor = connection.cursor()
+    cursor.execute(
         """
         SELECT follower_id, following_id
         FROM user_follows
         ORDER BY follower_id, following_id
         """
     )
-    rows = cur.fetchall()
-    cur.close()
-    conn.close()
+    rows = cursor.fetchall()
+    cursor.close()
+    connection.close()
     if limit_following_per_user <= 0:
-        return [(r[0], r[1]) for r in rows]
+        return [(row[0], row[1]) for row in rows]
     from collections import defaultdict
-    by_follower = defaultdict(list)
-    for a, b in rows:
-        by_follower[a].append(b)
-    out = []
-    for a, followers in by_follower.items():
-        for b in followers[:limit_following_per_user]:
-            out.append((a, b))
-    return out
+    following_by_follower = defaultdict(list)
+    for follower_id, following_id in rows:
+        following_by_follower[follower_id].append(following_id)
+    limited_follows = []
+    for follower_id, following_ids in following_by_follower.items():
+        for following_id in following_ids[:limit_following_per_user]:
+            limited_follows.append((follower_id, following_id))
+    return limited_follows
 
 
 def load_user_ids() -> set:
-    conn = psycopg2.connect(cfg.DATABASE_URL)
-    cur = conn.cursor()
-    cur.execute("SELECT id FROM users")
-    ids = {r[0] for r in cur.fetchall()}
-    cur.close()
-    conn.close()
-    return ids
+    connection = psycopg2.connect(config.DATABASE_URL)
+    cursor = connection.cursor()
+    cursor.execute("SELECT id FROM users")
+    user_ids = {row[0] for row in cursor.fetchall()}
+    cursor.close()
+    connection.close()
+    return user_ids

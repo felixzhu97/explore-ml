@@ -5,8 +5,9 @@ import threading
 
 import config
 
-image_pipe = None
-pipe_lock = threading.Lock()
+image_pipeline = None
+pipeline_lock = threading.Lock()
+LORA_ADAPTER_NAME = "fine_tuned"
 
 
 def _ensure_torch_xpu_stub():
@@ -47,7 +48,7 @@ def _ensure_torch_distributed_device_mesh():
     from types import ModuleType, SimpleNamespace
 
     stub_module = ModuleType("device_mesh")
-    _mesh_stub = SimpleNamespace(get_group=lambda *a, **k: None)
+    mesh_stub = SimpleNamespace(get_group=lambda *args, **kwargs: None)
 
     class _DeviceMeshStub:
         def get_group(self, *args, **kwargs):
@@ -56,37 +57,37 @@ def _ensure_torch_distributed_device_mesh():
     stub_module.DeviceMesh = _DeviceMeshStub
 
     def _init_device_mesh(*args, **kwargs):
-        return _mesh_stub
+        return mesh_stub
 
     stub_module.init_device_mesh = _init_device_mesh
     torch.distributed.device_mesh = stub_module
 
 
-def _device():
+def _select_device() -> str:
     import torch
 
     if os.environ.get("IMAGE_PLAYGROUND_DEVICE") == "cpu":
         return "cpu"
     if torch.cuda.is_available():
         return "cuda"
-    mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
+    mps_backend = getattr(torch.backends, "mps", None)
+    if mps_backend is not None and mps_backend.is_available():
         return "mps"
     return "cpu"
 
 
 def get_image_pipeline():
-    global image_pipe
-    with pipe_lock:
-        if image_pipe is None:
+    global image_pipeline
+    with pipeline_lock:
+        if image_pipeline is None:
             try:
                 import numpy as np
 
                 _ = np.__version__
-            except ImportError as e:
+            except ImportError as error:
                 raise RuntimeError(
                     "numpy is required for image generation. Install with: pip install numpy"
-                ) from e
+                ) from error
             import torch
 
             _ensure_torch_xpu_stub()
@@ -95,11 +96,11 @@ def get_image_pipeline():
 
             _ = getattr(torchvision, "__version__", None)
             model_id = config.IMAGE_MODEL
-            device = _device()
+            device = _select_device()
             if config.IMAGE_BACKEND == "sd":
                 from diffusers import StableDiffusionPipeline
 
-                image_pipe = StableDiffusionPipeline.from_pretrained(
+                image_pipeline = StableDiffusionPipeline.from_pretrained(
                     model_id,
                     torch_dtype=torch.float16 if device != "cpu" else torch.float32,
                 )
@@ -112,42 +113,44 @@ def get_image_pipeline():
                     dtype = torch.float32
                 else:
                     dtype = torch.float16
-                image_pipe = DiffusionPipeline.from_pretrained(
+                image_pipeline = DiffusionPipeline.from_pretrained(
                     model_id,
                     torch_dtype=dtype,
                 )
-            apply_lora(image_pipe)
-            image_pipe = image_pipe.to(device)
-    return image_pipe
+            apply_lora(image_pipeline)
+            image_pipeline = image_pipeline.to(device)
+    return image_pipeline
 
 
-def apply_lora(pipe) -> None:
+def apply_lora(diffusion_pipeline) -> None:
     if not config.IMAGE_LORA_PATH:
         return
-    pipe.load_lora_weights(config.IMAGE_LORA_PATH, adapter_name="ft")
-    pipe.set_adapters(["ft"], adapter_weights=[config.IMAGE_LORA_SCALE])
+    diffusion_pipeline.load_lora_weights(config.IMAGE_LORA_PATH, adapter_name=LORA_ADAPTER_NAME)
+    diffusion_pipeline.set_adapters(
+        [LORA_ADAPTER_NAME], adapter_weights=[config.IMAGE_LORA_SCALE]
+    )
 
 
-def generate(prompt: str, negative_prompt: str, out_path) -> None:
-    pipe = get_image_pipeline()
+def generate(prompt: str, negative_prompt: str, output_path) -> None:
+    diffusion_pipeline = get_image_pipeline()
     if config.IMAGE_BACKEND == "sd":
-        result = pipe(
+        result = diffusion_pipeline(
             prompt=prompt,
             negative_prompt=negative_prompt or None,
             num_inference_steps=30,
             guidance_scale=7.5,
         )
     else:
-        result = pipe(
+        result = diffusion_pipeline(
             prompt,
             negative_prompt=negative_prompt or " ",
             num_inference_steps=20,
         )
         import torch
 
-        if _device() == "mps" and hasattr(torch, "mps"):
+        if _select_device() == "mps" and hasattr(torch, "mps"):
             try:
                 torch.mps.synchronize()
             except Exception:
                 pass
-    result.images[0].save(str(out_path))
+    result.images[0].save(str(output_path))

@@ -2,12 +2,11 @@
 
 import uuid
 from pathlib import Path
-from typing import Optional
 
 ALLOWED_AUDIO_SUFFIXES = {".wav", ".mp3", ".m4a", ".flac", ".ogg", ".webm", ".aac"}
 
 
-def audio_suffix(filename: Optional[str]) -> str:
+def audio_suffix(filename: str | None) -> str:
     return Path(filename or "audio.wav").suffix.lower() or ".wav"
 
 

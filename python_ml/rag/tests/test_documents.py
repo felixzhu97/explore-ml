@@ -1,5 +1,4 @@
 """Tests for document parsing utilities."""
-import pytest
 
 from infra.pdf_parser import (
     HTMLParser,
@@ -99,7 +98,7 @@ class TestMarkdownParser:
 
     def test_parse_headings(self):
         """Test parsing markdown headings."""
-        md = """
+        markdown = """
 # Main Title
 
 Some content here.
@@ -113,14 +112,14 @@ Content in section 1.
 Content in section 2.
 """
 
-        result = MarkdownParser.parse(md)
+        result = MarkdownParser.parse(markdown)
 
         assert "Main Title" in result["title"]
         assert len(result["sections"]) >= 2
 
     def test_parse_sections(self):
         """Test that sections are correctly parsed."""
-        md = """
+        markdown = """
 # Document Title
 
 ## First Section
@@ -132,10 +131,10 @@ Content of first section.
 Content of second section.
 """
 
-        result = MarkdownParser.parse(md)
+        result = MarkdownParser.parse(markdown)
 
         assert len(result["sections"]) >= 2
-        assert any(s["title"] == "First Section" for s in result["sections"])
+        assert any(section["title"] == "First Section" for section in result["sections"])
 
     def test_parse_empty_document(self):
         """Test parsing empty markdown."""

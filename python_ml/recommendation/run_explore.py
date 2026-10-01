@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-import config as cfg
+import config
 from infra.cassandra_engagement import (
     get_cassandra_session,
     load_engagement_and_posts,
@@ -14,25 +14,25 @@ from infra.explore_export import write_explore_hot
 def main() -> int:
     try:
         session, cluster = get_cassandra_session()
-    except Exception as e:
-        print(f"Cassandra connect failed: {e}")
+    except Exception as error:
+        print(f"Cassandra connect failed: {error}")
         return 1
     try:
-        data = load_engagement_and_posts(session, max_posts=1000)
+        engagement_rows = load_engagement_and_posts(session, max_posts=1000)
     finally:
         cluster.shutdown()
-    if not data:
+    if not engagement_rows:
         print("No engagement data, skipping explore.")
         return 0
-    scored = [
+    scored_posts = [
         (hot_score(created_at, like_count, comment_count), post_id, author_id, created_at)
-        for post_id, author_id, created_at, like_count, comment_count in data
+        for post_id, author_id, created_at, like_count, comment_count in engagement_rows
     ]
-    scored.sort(key=lambda x: -x[0])
-    top = scored[:500]
+    scored_posts.sort(key=lambda scored_post: -scored_post[0])
+    top_posts = scored_posts[:500]
     entries = [
         {"postId": post_id, "authorId": author_id, "createdAt": created_at}
-        for _, post_id, author_id, created_at in top
+        for _, post_id, author_id, created_at in top_posts
     ]
     write_explore_hot(entries)
     print(f"Wrote {len(entries)} explore hot entries.")

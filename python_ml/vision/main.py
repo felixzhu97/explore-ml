@@ -3,13 +3,13 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 import config
-from service import vision as service
+from service.vision import get_vision_service
 from controller.api import router
 
 
 @asynccontextmanager
 async def lifespan(_app: FastAPI):
-    service.startup()
+    get_vision_service().startup()
     yield
 
 

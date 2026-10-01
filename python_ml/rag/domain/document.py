@@ -1,73 +1,45 @@
-"""Schemas for document operations."""
-from datetime import datetime
-from typing import Optional
-from uuid import uuid4
+"""Uploaded document rules and value types."""
 
-from pydantic import BaseModel, Field
+from dataclasses import dataclass
+
+from domain.errors import InvalidRequestError
+
+DOCUMENTS_COLLECTION = "documents"
+ALLOWED_EXTENSIONS = (".pdf", ".html", ".htm", ".md", ".txt", ".docx", ".doc")
+MAX_UPLOAD_BYTES = 50 * 1024 * 1024
+DEFAULT_CONTENT_TYPE = "application/octet-stream"
 
 
-class DocumentUploadResponse(BaseModel):
-    """Response after uploading a document."""
-
-    id: str = Field(default_factory=lambda: str(uuid4()))
+@dataclass(frozen=True)
+class IndexedDocument:
+    id: str
     filename: str
-    file_size: int
-    content_type: str
-    status: str = "processing"
-    chunks_count: int = 0
-
-
-class DocumentInfo(BaseModel):
-    """Document information."""
-
-    id: str
-    filename: Optional[str] = None
-    source_url: Optional[str] = None
     content_type: str
     file_size: int
-    status: str
     chunks_count: int
-    created_at: Optional[datetime] = None
-    updated_at: Optional[datetime] = None
 
 
-class DocumentListResponse(BaseModel):
-    """List of documents response (AIP-158)."""
-
-    documents: list[DocumentInfo]
-    next_page_token: Optional[str] = None
-
-
-class ScrapeRequest(BaseModel):
-    """Request to scrape a webpage."""
-
-    url: str
-    max_depth: int = Field(default=1, ge=1, le=3)
-    include_subpages: bool = False
-
-
-class ScrapeResponse(BaseModel):
-    """Response after scraping a webpage."""
-
+@dataclass(frozen=True)
+class DocumentSummary:
     id: str
-    url: str
-    title: str
-    content_length: int
+    filename: str | None
+    content_type: str
     chunks_count: int
-    status: str
 
 
-class CrawlRequest(BaseModel):
-    """Request to crawl multiple URLs."""
+def validate_filename(filename: str | None) -> str:
+    if not filename:
+        raise InvalidRequestError("No filename provided")
+    extension = "." + filename.lower().rsplit(".", 1)[-1]
+    if extension not in ALLOWED_EXTENSIONS:
+        raise InvalidRequestError(
+            f"Unsupported file type. Allowed: {', '.join(ALLOWED_EXTENSIONS)}"
+        )
+    return filename
 
-    urls: list[str] = Field(min_length=1, max_length=50)
-    max_depth: int = Field(default=1, ge=1, le=3)
 
-
-class CrawlResponse(BaseModel):
-    """Response after crawling multiple URLs."""
-
-    total_urls: int
-    successful: int
-    failed: int
-    results: list[ScrapeResponse]
+def validate_content(content: bytes) -> None:
+    if not content:
+        raise InvalidRequestError("Empty file")
+    if len(content) > MAX_UPLOAD_BYTES:
+        raise InvalidRequestError("File too large (max 50MB)")
