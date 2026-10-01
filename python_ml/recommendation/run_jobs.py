@@ -11,13 +11,13 @@ def main() -> int:
         choices=["suggestions", "feed_rank", "explore"],
         default="suggestions",
     )
-    args = parser.parse_args()
+    args, rest = parser.parse_known_args()
     if args.job == "suggestions":
         from run_user_suggestions import main as run_suggestions
         return run_suggestions()
     if args.job == "feed_rank":
         from domain.models.pytorch_feed_ranker import main as run_feed_rank
-        return run_feed_rank()
+        return run_feed_rank(rest)
     if args.job == "explore":
         from run_explore import main as run_explore
         return run_explore()

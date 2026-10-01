@@ -1,5 +1,7 @@
+import argparse
 from dataclasses import dataclass
-from typing import List, Tuple, Dict
+from pathlib import Path
+from typing import Dict, List, Optional, Sequence, Tuple
 import math
 import random
 from datetime import datetime, timezone
@@ -107,7 +109,44 @@ class TrainConfig:
     negative_ratio: int = 3
     max_interactions: int = 500000
     device: str = "cuda" if torch.cuda.is_available() else "cpu"
-    output_path: str = "models/feed_ranker.pt"
+    output_path: str = ""
+    init_from: Optional[str] = None
+
+
+def warm_start(
+    model: FeedRanker,
+    checkpoint: dict,
+    user_index: Dict[str, int],
+    post_index: Dict[str, int],
+) -> Tuple[int, int]:
+    """Copy MLP weights and embeddings for ids seen by a previous checkpoint."""
+    state = checkpoint["model_state"]
+    model.mlp.load_state_dict(
+        {k[len("mlp."):]: v for k, v in state.items() if k.startswith("mlp.")}
+    )
+
+    def copy_rows(target: nn.Embedding, source, old: Dict[str, int], new: Dict[str, int]) -> int:
+        shared = [(new[k], old[k]) for k in new.keys() & old.keys()]
+        if not shared:
+            return 0
+        dst, src = zip(*shared)
+        with torch.no_grad():
+            target.weight[list(dst)] = source[list(src)].to(target.weight.device)
+        return len(shared)
+
+    users = copy_rows(
+        model.user_embedding,
+        state["user_embedding.weight"],
+        dict(checkpoint.get("user_index") or {}),
+        user_index,
+    )
+    posts = copy_rows(
+        model.post_embedding,
+        state["post_embedding.weight"],
+        dict(checkpoint.get("post_index") or {}),
+        post_index,
+    )
+    return users, posts
 
 
 def build_post_stats() -> Dict[str, Tuple[int, int, float]]:
@@ -163,6 +202,10 @@ def train_feed_ranker(config: TrainConfig) -> None:
         num_posts=num_posts,
         feature_dim=3,
     ).to(device)
+    if config.init_from:
+        checkpoint = torch.load(config.init_from, map_location=device)
+        users, posts = warm_start(model, checkpoint, dataset.user_index, dataset.post_index)
+        print(f"Warm-started from {config.init_from}: {users} users, {posts} posts reused")
     optimizer = torch.optim.Adam(model.parameters(), lr=config.learning_rate)
     criterion = nn.BCELoss()
     model.train()
@@ -184,6 +227,7 @@ def train_feed_ranker(config: TrainConfig) -> None:
             total_examples += batch_size
         avg_loss = total_loss / max(1, total_examples)
         print(f"Epoch {epoch + 1}/{config.epochs} loss={avg_loss:.4f}")
+    Path(config.output_path).parent.mkdir(parents=True, exist_ok=True)
     torch.save(
         {
             "model_state": model.state_dict(),
@@ -197,8 +241,21 @@ def train_feed_ranker(config: TrainConfig) -> None:
     print(f"Saved feed ranker model to {config.output_path}")
 
 
-def main() -> int:
-    config = TrainConfig()
+def main(argv: Optional[Sequence[str]] = None) -> int:
+    import config as cfg
+
+    parser = argparse.ArgumentParser(description="Train or warm-start the feed ranker")
+    parser.add_argument("--init-from", help="Checkpoint to warm-start from")
+    parser.add_argument("--output", default=str(cfg.FEED_RANKER_MODEL))
+    parser.add_argument("--epochs", type=int, default=TrainConfig.epochs)
+    parser.add_argument("--learning-rate", type=float, default=TrainConfig.learning_rate)
+    args = parser.parse_args(argv)
+    config = TrainConfig(
+        epochs=args.epochs,
+        learning_rate=args.learning_rate,
+        output_path=args.output,
+        init_from=args.init_from,
+    )
     train_feed_ranker(config)
     return 0
 
