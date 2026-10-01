@@ -1,0 +1,7 @@
+# Every module in one environment: pip install -r requirements.txt
+-r recommendation/requirements.txt
+-r vision/requirements.txt
+-r rag/requirements.txt
+-r image_playground/requirements.txt
+-r speech/requirements.txt
+-r video/requirements.txt

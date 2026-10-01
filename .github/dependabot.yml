@@ -12,13 +12,22 @@ updates:
       prefix: "chore"
 
   - package-ecosystem: "pip"
-    directory: "/python_ml/image-playground"
+    directory: "/python_ml/image_playground"
     schedule:
       interval: "weekly"
     groups:
       pip-image-playground:
         patterns:
           - "*"
+    # qwen-tts / qwen-asr pin transformers 4.57.x and accelerate 1.12.0, and
+    # every module shares one environment.
+    ignore:
+      - dependency-name: "transformers"
+        versions: [">=4.58"]
+      - dependency-name: "accelerate"
+        versions: [">=1.13"]
+      - dependency-name: "diffusers"
+        versions: [">=0.40"]
 
   - package-ecosystem: "pip"
     directory: "/python_ml/rag"
@@ -28,6 +37,10 @@ updates:
       pip-rag:
         patterns:
           - "*"
+    # celery[redis] caps redis below 6.5, and every module shares one environment.
+    ignore:
+      - dependency-name: "redis"
+        versions: [">=6.5"]
 
   - package-ecosystem: "pip"
     directory: "/python_ml/recommendation"
@@ -37,6 +50,10 @@ updates:
       pip-recommendation:
         patterns:
           - "*"
+    # celery[redis] caps redis below 6.5, and every module shares one environment.
+    ignore:
+      - dependency-name: "redis"
+        versions: [">=6.5"]
 
   - package-ecosystem: "pip"
     directory: "/python_ml/speech"
@@ -55,6 +72,15 @@ updates:
       pip-video:
         patterns:
           - "*"
+    # qwen-tts / qwen-asr pin transformers 4.57.x and accelerate 1.12.0, and
+    # every module shares one environment.
+    ignore:
+      - dependency-name: "transformers"
+        versions: [">=4.58"]
+      - dependency-name: "accelerate"
+        versions: [">=1.13"]
+      - dependency-name: "diffusers"
+        versions: [">=0.40"]
 
   - package-ecosystem: "pip"
     directory: "/python_ml/vision"
@@ -66,10 +92,10 @@ updates:
           - "*"
 
   - package-ecosystem: "docker"
-    directory: "/python_ml/vision"
+    directory: "/python_ml"
     schedule:
       interval: "weekly"
     groups:
-      docker-vision:
+      docker-python-ml:
         patterns:
           - "*"

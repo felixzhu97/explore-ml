@@ -1,6 +1,6 @@
 import json
 import redis
-import config
+from recommendation import config
 
 EXPLORE_HOT_KEY = "explore:hot"
 EXPLORE_TTL_SECONDS = 300

@@ -11,7 +11,7 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
-from infra.cassandra_engagement import get_cassandra_session, load_post_likes, load_engagement_and_posts
+from recommendation.infra.cassandra_engagement import get_cassandra_session, load_post_likes, load_engagement_and_posts
 
 
 def parse_iso_to_datetime(value: str) -> datetime:
@@ -242,7 +242,7 @@ def train_feed_ranker(config: TrainConfig) -> None:
 
 
 def main(argv: Optional[Sequence[str]] = None) -> int:
-    import config as cfg
+    from recommendation import config as cfg
 
     parser = argparse.ArgumentParser(description="Train or warm-start the feed ranker")
     parser.add_argument("--init-from", help="Checkpoint to warm-start from")

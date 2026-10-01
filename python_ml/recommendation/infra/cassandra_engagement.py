@@ -1,6 +1,6 @@
 import math
 from datetime import datetime, UTC
-import config
+from recommendation import config
 
 
 def get_cassandra_session():

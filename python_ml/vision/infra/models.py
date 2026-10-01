@@ -4,7 +4,7 @@ import logging
 import os
 import tempfile
 
-import config
+from vision import config
 import torch
 from torchvision import transforms
 from PIL import Image, UnidentifiedImageError

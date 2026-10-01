@@ -1,6 +1,6 @@
 """Tests for document parsing utilities."""
 
-from infra.pdf_parser import (
+from rag.infra.pdf_parser import (
     HTMLParser,
     MarkdownParser,
     TextParser,

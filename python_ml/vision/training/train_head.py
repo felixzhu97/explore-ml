@@ -11,7 +11,7 @@ from torch import nn
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
-from training.head import (
+from vision.training.head import (
     TRAIN_TRANSFORM,
     build_model,
     freeze_backbone,

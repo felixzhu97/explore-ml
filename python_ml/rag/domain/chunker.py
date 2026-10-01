@@ -4,7 +4,7 @@ import re
 import uuid
 from dataclasses import dataclass
 
-from config import get_settings
+from rag.config import get_settings
 
 logger = logging.getLogger(__name__)
 

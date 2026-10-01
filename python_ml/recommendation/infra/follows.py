@@ -1,5 +1,5 @@
 import psycopg2
-import config
+from recommendation import config
 
 
 def load_follows(limit_following_per_user: int = 0) -> list[tuple[str, str]]:

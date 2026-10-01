@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import config
+from speech import config
 
 
 def test_should_default_voice_backend_to_qwen():
@@ -28,5 +28,5 @@ def test_should_resolve_asr_model_under_local_models_root():
     assert Path(config.ASR_MODEL) == root / "asr" / "models" / "Qwen3-ASR-1.7B"
 
 
-def test_should_default_port_to_8004():
-    assert config.PORT == 8004
+def test_should_build_asset_urls_on_the_shared_port():
+    assert config.BASE_URL == "http://localhost:8000"

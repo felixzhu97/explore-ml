@@ -5,9 +5,9 @@ import torch
 from torch import nn
 from torch.utils.data import Dataset, DataLoader
 
-from infra.cassandra_engagement import get_cassandra_session, load_post_likes
-from infra.vector_store import RedisVectorStore
-import config as cfg
+from recommendation.infra.cassandra_engagement import get_cassandra_session, load_post_likes
+from recommendation.infra.vector_store import RedisVectorStore
+from recommendation import config as cfg
 import redis
 
 

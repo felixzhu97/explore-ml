@@ -5,19 +5,19 @@ import logging
 import time
 from functools import lru_cache
 
-from config import get_settings
-from domain.chunker import TextChunker, get_chunker
-from domain.webpage import (
+from rag.config import get_settings
+from rag.domain.chunker import TextChunker, get_chunker
+from rag.domain.webpage import (
     MAX_CONCURRENT_CRAWLS,
     MAX_WEBPAGE_TEXT_LENGTH,
     WEBPAGES_COLLECTION,
     CrawlReport,
     ScrapedWebpage,
 )
-from infra.document_processor import DocumentProcessor, get_document_processor
-from infra.pdf_parser import HTMLParser
-from infra.web_fetcher import fetch_webpage
-from service.indexing import ChunkIndexer, get_chunk_indexer
+from rag.infra.document_processor import DocumentProcessor, get_document_processor
+from rag.infra.pdf_parser import HTMLParser
+from rag.infra.web_fetcher import fetch_webpage
+from rag.service.indexing import ChunkIndexer, get_chunk_indexer
 
 logger = logging.getLogger(__name__)
 

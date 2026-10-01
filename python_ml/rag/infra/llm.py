@@ -7,8 +7,8 @@ from functools import lru_cache
 import ollama
 from openai import AsyncOpenAI
 
-from config import get_settings
-from domain.errors import ServiceUnavailableError
+from rag.config import get_settings
+from rag.domain.errors import ServiceUnavailableError
 
 logger = logging.getLogger(__name__)
 

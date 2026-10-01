@@ -5,10 +5,10 @@ from __future__ import annotations
 import os
 from functools import lru_cache
 
-from domain.vector_store import VectorStore
-from infra.factories import RankerFactory, VectorStoreFactory
-from infra.feed_ranker import FeedRankingService
-from infra.vector_store import RedisVectorStore
+from recommendation.domain.vector_store import VectorStore
+from recommendation.infra.factories import RankerFactory, VectorStoreFactory
+from recommendation.infra.feed_ranker import FeedRankingService
+from recommendation.infra.vector_store import RedisVectorStore
 
 FALLBACK_SCORE = 1.0
 

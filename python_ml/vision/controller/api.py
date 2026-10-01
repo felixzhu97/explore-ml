@@ -8,9 +8,9 @@ from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile
 from PIL import Image
 from pydantic import BaseModel
 
-import config
-from domain.moderation import ModerationVerdict
-from service.vision import VisionService, get_vision_service
+from vision import config
+from vision.domain.moderation import ModerationVerdict
+from vision.service.vision import VisionService, get_vision_service
 
 router = APIRouter()
 
@@ -45,11 +45,6 @@ class ModerationResponse(BaseModel):
 
 
 SAFE_RESPONSE = ModerationResponse(safe=True)
-
-
-@router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "model": "resnet50"}
 
 
 async def _download(url: str, timeout_seconds: float, kind: str) -> bytes:

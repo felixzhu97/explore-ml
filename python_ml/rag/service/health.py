@@ -3,9 +3,9 @@
 import logging
 from functools import lru_cache
 
-from domain.health import HealthReport, Readiness
-from infra.embedding import EmbeddingService, get_embedding_service
-from infra.qdrant_client import QdrantService, get_qdrant_service
+from rag.domain.health import HealthReport, Readiness
+from rag.infra.embedding import EmbeddingService, get_embedding_service
+from rag.infra.qdrant_client import QdrantService, get_qdrant_service
 
 logger = logging.getLogger(__name__)
 

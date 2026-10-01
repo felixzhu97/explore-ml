@@ -1,9 +1,9 @@
 import json
 
-from training.eval_answers import build_question, parse_score
-from training.eval_retrieval import first_hit_rank, score
-from training.train_embedding import load_pairs
-from training.train_reranker import format_pair
+from rag.training.eval_answers import build_question, parse_score
+from rag.training.eval_retrieval import first_hit_rank, score
+from rag.training.train_embedding import load_pairs
+from rag.training.train_reranker import format_pair
 
 
 def test_should_prefix_query_and_document_for_nomic_embeddings(tmp_path):

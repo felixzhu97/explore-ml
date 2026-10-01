@@ -5,7 +5,7 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 
-from service.recommendation import RecommendationService, get_recommendation_service
+from recommendation.service.recommendation import RecommendationService, get_recommendation_service
 
 router = APIRouter()
 
@@ -40,11 +40,6 @@ class RankedItemsResponse(BaseModel):
     @classmethod
     def from_pairs(cls, scored_ids: list[tuple[str, float]]) -> "RankedItemsResponse":
         return cls(items=[RankedItem(id=item_id, score=score) for item_id, score in scored_ids])
-
-
-@router.get("/health")
-def health() -> dict[str, str]:
-    return {"status": "ok", "service": "recommendation"}
 
 
 def _rank(

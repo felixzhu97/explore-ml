@@ -1,8 +1,8 @@
-import config
+from video import config
 
 
-def test_should_default_port_to_8005():
-    assert config.PORT == 8005
+def test_should_build_asset_urls_on_the_shared_port():
+    assert config.BASE_URL == "http://localhost:8000"
 
 
 def test_should_default_cogvideox_model():

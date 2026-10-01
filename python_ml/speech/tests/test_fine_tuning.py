@@ -1,7 +1,7 @@
 import json
 
-from training.eval_wer import error_rate, tokenize
-from training.train_asr import absolutize_manifest, latest_checkpoint
+from speech.training.eval_wer import error_rate, tokenize
+from speech.training.train_asr import absolutize_manifest, latest_checkpoint
 
 
 def test_should_count_word_errors_for_spaced_text():

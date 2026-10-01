@@ -11,7 +11,7 @@ import torch
 from torch.utils.data import DataLoader
 from torchvision.datasets import ImageFolder
 
-from training.head import EVAL_TRANSFORM, load_checkpoint, pick_device
+from vision.training.head import EVAL_TRANSFORM, load_checkpoint, pick_device
 
 
 def evaluate(model_dir: Path, data_dir: Path, batch_size: int = 32) -> Dict[str, object]:

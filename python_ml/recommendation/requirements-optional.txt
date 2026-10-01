@@ -1,0 +1,3 @@
+# Optional LightFM candidates for user suggestions; skipped when not installed.
+# lightfm 1.17 does not build on Python 3.12.
+lightfm>=1.17

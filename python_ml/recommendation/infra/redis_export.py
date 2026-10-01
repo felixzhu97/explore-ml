@@ -1,6 +1,6 @@
 import json
 import redis
-import config
+from recommendation import config
 
 
 def get_redis_client() -> redis.Redis:

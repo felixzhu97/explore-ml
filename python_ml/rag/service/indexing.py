@@ -4,9 +4,9 @@ from collections.abc import Callable
 from functools import lru_cache
 from typing import Any
 
-from domain.chunker import Chunk
-from infra.embedding import EmbeddingService, get_embedding_service
-from infra.qdrant_client import QdrantService, get_qdrant_service
+from rag.domain.chunker import Chunk
+from rag.infra.embedding import EmbeddingService, get_embedding_service
+from rag.infra.qdrant_client import QdrantService, get_qdrant_service
 
 EMBEDDING_BATCH_SIZE = 10
 

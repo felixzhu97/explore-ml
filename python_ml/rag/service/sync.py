@@ -7,10 +7,10 @@ from datetime import UTC, datetime, timedelta
 from functools import lru_cache
 from typing import Any
 
-from domain.chunker import TextChunker, get_chunker
-from domain.sync import SyncResult
-from infra.content_api import ContentApiClient, get_content_api_client
-from service.indexing import ChunkIndexer, get_chunk_indexer
+from rag.domain.chunker import TextChunker, get_chunker
+from rag.domain.sync import SyncResult
+from rag.infra.content_api import ContentApiClient, get_content_api_client
+from rag.service.indexing import ChunkIndexer, get_chunk_indexer
 
 logger = logging.getLogger(__name__)
 

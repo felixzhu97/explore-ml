@@ -4,15 +4,6 @@ from functools import lru_cache
 from pathlib import Path
 from types import SimpleNamespace
 
-from dotenv import load_dotenv
-
-load_dotenv()
-
-HOST = os.getenv("HOST", "0.0.0.0")
-PORT = int(os.getenv("PORT", "8002"))
-DEBUG = os.getenv("DEBUG", "false").lower() == "true"
-WORKERS = int(os.getenv("WORKERS", "4"))
-
 UPLOADS_DIR = Path(os.getenv("UPLOADS_DIR", str(Path(__file__).parent / "uploads")))
 
 QDRANT_URL = os.getenv("QDRANT_URL", "")
@@ -40,7 +31,6 @@ CHUNK_OVERLAP = int(os.getenv("CHUNK_OVERLAP", "50"))
 DEFAULT_TOP_K = int(os.getenv("DEFAULT_TOP_K", "5"))
 RAG_TIMEOUT = int(os.getenv("RAG_TIMEOUT", "30000"))
 
-REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 CACHE_TTL = int(os.getenv("CACHE_TTL", "3600"))
 
 RATE_LIMIT_REQUESTS = int(os.getenv("RATE_LIMIT_REQUESTS", "100"))
@@ -49,7 +39,7 @@ RATE_LIMIT_WINDOW = int(os.getenv("RATE_LIMIT_WINDOW", "60"))
 CRAWLER_TIMEOUT = int(os.getenv("CRAWLER_TIMEOUT", "30"))
 CRAWLER_MAX_DEPTH = int(os.getenv("CRAWLER_MAX_DEPTH", "2"))
 
-DATABASE_URL = os.getenv("DATABASE_URL", "")
+CONTENT_API_URL = os.getenv("CONTENT_API_URL", "")
 
 # Rerank: default points at local Qwen3-Reranker (HTTP serve under ~/Codes/models/rerank).
 # Set RERANK_ENABLED=false to skip; RERANK_URL / RERANK_MODEL override defaults.
@@ -76,10 +66,6 @@ def ensure_directories() -> None:
 def get_settings() -> SimpleNamespace:
     """Get cached settings instance."""
     return SimpleNamespace(
-        host=HOST,
-        port=PORT,
-        debug=DEBUG,
-        workers=WORKERS,
         uploads_dir=UPLOADS_DIR,
         qdrant_url=QDRANT_URL,
         qdrant_path=QDRANT_PATH,
@@ -98,13 +84,12 @@ def get_settings() -> SimpleNamespace:
         chunk_overlap=CHUNK_OVERLAP,
         default_top_k=DEFAULT_TOP_K,
         rag_timeout=RAG_TIMEOUT,
-        redis_url=REDIS_URL,
         cache_ttl=CACHE_TTL,
         rate_limit_requests=RATE_LIMIT_REQUESTS,
         rate_limit_window=RATE_LIMIT_WINDOW,
         crawler_timeout=CRAWLER_TIMEOUT,
         crawler_max_depth=CRAWLER_MAX_DEPTH,
-        database_url=DATABASE_URL,
+        content_api_url=CONTENT_API_URL,
         local_models_root=LOCAL_MODELS_ROOT,
         rerank_enabled=RERANK_ENABLED,
         rerank_url=RERANK_URL,

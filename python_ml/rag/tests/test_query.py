@@ -1,7 +1,7 @@
 """Tests for query functionality."""
 import pytest
 
-from controller.query import QueryRequest, QueryResponse, SourceDocument
+from rag.controller.query import QueryRequest, QueryResponse, SourceDocument
 
 
 class TestQuerySchemas:

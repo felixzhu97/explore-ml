@@ -6,10 +6,10 @@ from pathlib import Path
 
 import aiofiles
 
-from config import get_settings
+from rag.config import get_settings
 
-from domain.chunker import Chunk, get_chunker
-from infra.pdf_parser import parse_file
+from rag.domain.chunker import Chunk, get_chunker
+from rag.infra.pdf_parser import parse_file
 
 logger = logging.getLogger(__name__)
 
@@ -101,7 +101,7 @@ class DocumentProcessor:
         document_id = self._generate_document_id(url, content.encode())
 
         # Parse HTML
-        from infra.pdf_parser import HTMLParser
+        from rag.infra.pdf_parser import HTMLParser
         parsed = HTMLParser.parse(content)
 
         # Chunk the text

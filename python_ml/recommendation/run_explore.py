@@ -1,14 +1,10 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-
-import config
-from infra.cassandra_engagement import (
+from recommendation import config
+from recommendation.infra.cassandra_engagement import (
     get_cassandra_session,
     load_engagement_and_posts,
     hot_score,
 )
-from infra.explore_export import write_explore_hot
+from recommendation.infra.explore_export import write_explore_hot
 
 
 def main() -> int:
@@ -40,4 +36,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -2,8 +2,8 @@
 
 import httpx
 
-from domain.errors import UpstreamError
-from domain.webpage import FetchedWebpage
+from rag.domain.errors import UpstreamError
+from rag.domain.webpage import FetchedWebpage
 
 USER_AGENT = "Mozilla/5.0 (compatible; RAGBot/1.0)"
 SUPPORTED_CONTENT_TYPES = ("text/html", "text/plain")

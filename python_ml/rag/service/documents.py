@@ -4,18 +4,18 @@ import logging
 import time
 from functools import lru_cache
 
-from domain.chunker import TextChunker, get_chunker
-from domain.document import (
+from rag.domain.chunker import TextChunker, get_chunker
+from rag.domain.document import (
     DOCUMENTS_COLLECTION,
     DocumentSummary,
     IndexedDocument,
     validate_content,
 )
-from domain.errors import NotFoundError
-from infra.document_processor import DocumentProcessor, get_document_processor
-from infra.pdf_parser import parse_file
-from infra.qdrant_client import QdrantService, get_qdrant_service
-from service.indexing import ChunkIndexer, get_chunk_indexer
+from rag.domain.errors import NotFoundError
+from rag.infra.document_processor import DocumentProcessor, get_document_processor
+from rag.infra.pdf_parser import parse_file
+from rag.infra.qdrant_client import QdrantService, get_qdrant_service
+from rag.service.indexing import ChunkIndexer, get_chunk_indexer
 
 logger = logging.getLogger(__name__)
 

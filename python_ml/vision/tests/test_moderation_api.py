@@ -3,9 +3,11 @@ import io
 from fastapi.testclient import TestClient
 from PIL import Image
 
-from domain.moderation import ModerationCategory, verdict
-from main import app
-from service.vision import get_vision_service
+from vision.domain.moderation import ModerationCategory, verdict
+from vision.service.vision import get_vision_service
+from server import create_app
+
+app = create_app(["vision"])
 
 
 class FakeVisionService:

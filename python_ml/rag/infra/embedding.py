@@ -4,7 +4,7 @@ import logging
 import ollama
 from openai import AsyncOpenAI
 
-from config import get_settings
+from rag.config import get_settings
 
 logger = logging.getLogger(__name__)
 

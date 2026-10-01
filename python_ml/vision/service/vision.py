@@ -5,9 +5,9 @@ from functools import lru_cache
 
 from PIL import Image
 
-import config
-from domain.moderation import ModerationCategory, ModerationVerdict, max_explicit_score, verdict
-from infra import models, video
+from vision import config
+from vision.domain.moderation import ModerationCategory, ModerationVerdict, max_explicit_score, verdict
+from vision.infra import models, video
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger("vision")

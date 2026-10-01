@@ -2,7 +2,7 @@
 
 from dataclasses import dataclass
 
-from domain.errors import InvalidRequestError
+from rag.domain.errors import InvalidRequestError
 
 DOCUMENTS_COLLECTION = "documents"
 ALLOWED_EXTENSIONS = (".pdf", ".html", ".htm", ".md", ".txt", ".docx", ".doc")

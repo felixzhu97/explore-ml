@@ -6,9 +6,9 @@ import os
 
 import redis
 
-import config
-from infra.feed_ranker import FeedRankingService
-from infra.vector_store import FaissVectorStore, RedisVectorStore
+from recommendation import config
+from recommendation.infra.feed_ranker import FeedRankingService
+from recommendation.infra.vector_store import FaissVectorStore, RedisVectorStore
 
 
 class VectorStoreFactory:

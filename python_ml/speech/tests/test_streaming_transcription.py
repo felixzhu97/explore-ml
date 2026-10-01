@@ -3,9 +3,11 @@ import json
 
 from fastapi.testclient import TestClient
 
-from controller.api import router
-from main import app
-from infra.streaming_transcription import StreamingTranscriptionSession, pcm16_le_to_wav_bytes
+from speech.controller.api import router
+from speech.infra.streaming_transcription import StreamingTranscriptionSession, pcm16_le_to_wav_bytes
+from server import create_app
+
+app = create_app(["speech"])
 
 
 def test_should_register_streaming_transcription_websocket_route():

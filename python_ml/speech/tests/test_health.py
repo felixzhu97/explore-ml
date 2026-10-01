@@ -1,4 +1,4 @@
-from controller.api import router
+from speech.controller.api import router
 
 
 def test_should_register_speech_routes():

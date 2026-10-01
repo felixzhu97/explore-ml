@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import threading
 
-import config
+from video import config
 
 video_pipeline = None
 pipeline_lock = threading.Lock()
