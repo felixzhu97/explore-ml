@@ -5,7 +5,7 @@ sibling Explore products. You can use it to serve recommendation, vision, RAG,
 and media generation — including speech transcription — on loopback.
 
 Product clients never call these helpers directly. A Spring (or other) API
-proxies over localhost. Four services live under `python_ml/` today on
+proxies over localhost. Six services live under `python_ml/` today on
 contiguous ports `8000`–`8005`. A future cut may fold them behind one port
 without moving the folder boundary. `ui/` is an Angular model-test front end
 for those helpers; `data/` holds small fixtures.
@@ -39,17 +39,18 @@ uvicorn main:app --host 0.0.0.0 --port 8000
 ```
 
 This creates a virtualenv, installs dependencies, copies the example env file,
-and starts the recommendation API on port `8000`. Swap the directory and port
-for the other helpers:
+and starts the recommendation API on port `8000`. Only RAG and recommendation
+load `.env` automatically; for the other helpers, export the variables in your
+shell instead. Swap the directory and port for the other helpers:
 
-| Service        | Default port | Health (typical) |
-| -------------- | ------------ | ---------------- |
-| recommendation | 8000         | `GET /health`    |
-| vision         | 8001         | `GET /health`    |
-| rag            | 8002         | `GET /health`    |
-| image-playground | 8003       | `GET /health`    |
-| speech         | 8004         | `GET /health`    |
-| video          | 8005         | `GET /health`    |
+| Service          | Default port | Health check                       |
+| ---------------- | ------------ | ---------------------------------- |
+| recommendation   | 8000         | `GET /health`                      |
+| vision           | 8001         | `GET /health`                      |
+| rag              | 8002         | `GET /health`, `GET /health/ready` |
+| image-playground | 8003         | none; `GET /openapi.json`          |
+| speech           | 8004         | none; `GET /openapi.json`          |
+| video            | 8005         | none; `GET /openapi.json`          |
 
 Wire your product’s upstream or env config to these loopback URLs. For a fuller
 walkthrough, see the [User Guide](docs/user-guide/README.md).
@@ -62,8 +63,8 @@ npm ci
 npm start
 ```
 
-This serves the UI at <http://localhost:4200>. It proxies `/svc/<name>` to the
-helpers above without CORS setup. Each helper module has one page where you
+This serves the UI at <http://localhost:4200>. It proxies `/svc/<id>` to the
+helpers above without CORS setup (`image` is Image Playground). Each helper module has one page where you
 can call all of its endpoints. See
 [ui/README.md](ui/README.md).
 
@@ -71,9 +72,10 @@ can call all of its endpoints. See
 
 Each service ships `.env.example`. Do not commit real secrets. Large model
 weights stay out of git under `LOCAL_MODELS_ROOT`; download them with the
-[Model download](docs/user-guide/model-download.md) guide. Image Playground / Speech / Video and RAG
-rerank prefer those local Qwen paths and can be overridden via env. Put small
-fixtures under `data/`.
+[Model download](docs/user-guide/model-download.md) guide. Image Playground,
+Speech, RAG rerank and the recommendation feed ranker read those paths; Video
+loads a Hugging Face id (`COGVIDEOX_MODEL`). Every path can be overridden via
+env. Put small fixtures under `data/`.
 
 ### Checks
 
@@ -83,8 +85,9 @@ cd python_ml/<name> && pytest
 
 For the UI, run `npm test` and `npm run build` in `ui/`.
 
-Pull requests run `pytest` for the RAG helper and the UI tests and build on
-GitHub Actions.
+GitHub Actions runs on every pull request and every push to `main`: `pytest`
+for the RAG helper (Python 3.12) and the UI tests and build (Node 22). Run the
+other helpers' suites locally.
 
 ## Next steps
 
