@@ -3,6 +3,8 @@ import * as d3 from 'd3';
 export interface BarDatum {
   label: string;
   value: number | null;
+  /** Per-row cut-off: drawn as a tick; bars below it are grey, at or above it accent. */
+  threshold?: number;
 }
 
 export const CHART_COLORS = {

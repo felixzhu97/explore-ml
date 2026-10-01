@@ -64,3 +64,32 @@ export function appendSamples(
     return { label, points: next.slice(-capacity) };
   });
 }
+
+export interface ScoredFrame {
+  offset_seconds: number;
+  scores: Record<string, number>;
+}
+
+/** One series per category over frame offsets, in first-seen category order. */
+export function frameSeries(frames: readonly ScoredFrame[]): Series[] {
+  const byLabel = new Map<string, Point[]>();
+  for (const frame of frames) {
+    for (const [label, score] of Object.entries(frame.scores)) {
+      if (!byLabel.has(label)) byLabel.set(label, []);
+      byLabel.get(label)!.push({ x: frame.offset_seconds, y: score });
+    }
+  }
+  return [...byLabel].map(([label, points]) => ({ label, points }));
+}
+
+/** Frame scores that reach their category threshold. */
+export function flaggedPoints(
+  frames: readonly ScoredFrame[],
+  thresholds: Record<string, number>,
+): Point[] {
+  return frames.flatMap((frame) =>
+    Object.entries(frame.scores)
+      .filter(([label, score]) => label in thresholds && score >= thresholds[label])
+      .map(([, score]) => ({ x: frame.offset_seconds, y: score })),
+  );
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { appendSamples, rankShifts, scoreBins } from './chart-math';
+import { appendSamples, flaggedPoints, frameSeries, rankShifts, scoreBins } from './chart-math';
 
 describe('scoreBins', () => {
   it('should count every value exactly once', () => {
@@ -62,5 +62,35 @@ describe('appendSamples', () => {
         ],
       },
     ]);
+  });
+});
+
+describe('frame timeline', () => {
+  const frames = [
+    { offset_seconds: 0, scores: { nude: 0.1, prohibited: 0.7 } },
+    { offset_seconds: 1.5, scores: { nude: 0.8, prohibited: 0.2 } },
+  ];
+
+  it('should build one series per category over frame offsets', () => {
+    expect(frameSeries(frames)).toEqual([
+      {
+        label: 'nude',
+        points: [
+          { x: 0, y: 0.1 },
+          { x: 1.5, y: 0.8 },
+        ],
+      },
+      {
+        label: 'prohibited',
+        points: [
+          { x: 0, y: 0.7 },
+          { x: 1.5, y: 0.2 },
+        ],
+      },
+    ]);
+  });
+
+  it('should flag frame scores that reach their category threshold', () => {
+    expect(flaggedPoints(frames, { nude: 0.8, prohibited: 0.9 })).toEqual([{ x: 1.5, y: 0.8 }]);
   });
 });
