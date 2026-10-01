@@ -1,6 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
   appendSamples,
+  audioEnvelope,
+  channelHistogram,
+  rms,
+  statusSegments,
   flaggedPoints,
   frameSeries,
   groupCounts,
@@ -144,5 +148,52 @@ describe('chunk labels', () => {
       { key: 'a', count: 2 },
       { key: 'c', count: 1 },
     ]);
+  });
+});
+
+describe('statusSegments', () => {
+  it('should merge repeated statuses and end the last span at endAt', () => {
+    expect(
+      statusSegments(
+        [
+          { at: 0, status: 'submitted' },
+          { at: 100, status: 'pending' },
+          { at: 1600, status: 'pending' },
+          { at: 3100, status: 'running' },
+          { at: 9000, status: 'succeeded' },
+        ],
+        9000,
+      ),
+    ).toEqual([
+      { status: 'submitted', start: 0, end: 100 },
+      { status: 'pending', start: 100, end: 3100 },
+      { status: 'running', start: 3100, end: 9000 },
+      { status: 'succeeded', start: 9000, end: 9000 },
+    ]);
+  });
+});
+
+describe('channelHistogram', () => {
+  it('should give each channel the share of pixels per intensity bin', () => {
+    const pixels = [255, 0, 0, 255, 255, 0, 128, 255];
+    const [red, green, blue] = channelHistogram(pixels, 2);
+    expect(red.points.map((point) => point.y)).toEqual([0, 1]);
+    expect(green.points.map((point) => point.y)).toEqual([1, 0]);
+    expect(blue.points.map((point) => point.y)).toEqual([0.5, 0.5]);
+    expect(red.points.map((point) => point.x)).toEqual([64, 192]);
+  });
+});
+
+describe('audio helpers', () => {
+  it('should keep min and max per bucket', () => {
+    expect(audioEnvelope([0, 0.5, -0.5, 1, -1, 0.2], 2)).toEqual([
+      { min: -0.5, max: 0.5 },
+      { min: -1, max: 1 },
+    ]);
+  });
+
+  it('should compute root mean square level', () => {
+    expect(rms([1, -1, 1, -1])).toBe(1);
+    expect(rms([])).toBe(0);
   });
 });

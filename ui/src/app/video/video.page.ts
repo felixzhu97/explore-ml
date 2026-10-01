@@ -4,12 +4,14 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { Call } from '../shared/call';
 import { Endpoint } from '../shared/endpoint';
+import { JobTimeline } from '../shared/job-timeline';
+import { JobTrace } from '../shared/job-trace';
 import { ModulePage } from '../shared/module-page';
 import { VideoService } from './video.service';
 
 @Component({
   selector: 'app-video-page',
-  imports: [Endpoint, FormField, ModulePage, NzButtonModule, NzInputModule],
+  imports: [Endpoint, FormField, JobTimeline, ModulePage, NzButtonModule, NzInputModule],
   template: `
     <app-module-page module="video">
       <app-endpoint
@@ -33,6 +35,13 @@ import { VideoService } from './video.service';
             生成
           </button>
         </div>
+        @if (trace.segments().length) {
+          <app-job-timeline
+            [segments]="trace.segments()"
+            [polls]="trace.polls()"
+            ariaLabel="视频生成任务状态时间线"
+          />
+        }
         @if (url()) {
           <video class="max-w-full rounded-md" [src]="url()" controls></video>
         }
@@ -46,11 +55,16 @@ export class VideoPage {
   protected readonly requestForm = form(this.formModel);
   protected readonly generateCall = new Call<{ status: string; jobId?: string; url?: string }>();
   protected readonly url = computed(() => this.generateCall.value()?.url);
+  protected readonly trace = new JobTrace();
 
   protected run(): Promise<void> {
+    this.trace.start();
     return this.generateCall.run(async (setValue) => {
       const generated = await this.videoService.generate(this.formModel().prompt.trim(), {
-        onStatus: (status) => setValue({ status }),
+        onStatus: (status) => {
+          this.trace.record(status);
+          setValue({ status });
+        },
       });
       return { status: 'succeeded', ...generated };
     });
