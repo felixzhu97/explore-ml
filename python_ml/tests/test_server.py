@@ -7,10 +7,10 @@ import pytest
 from fastapi import APIRouter
 from fastapi.testclient import TestClient
 
-from server import MODULE_NAMES, build_app, create_app, load_modules
+from server import build_app
 
 
-def fake_module(name: str, *, status: str = "ok", ready: bool = True, events: list | None = None):
+def fake_module(name: str, *, status: str = "ok", events: list | None = None):
     router = APIRouter()
 
     @router.get(f"/api/v1/{name}s:ping")
@@ -20,9 +20,6 @@ def fake_module(name: str, *, status: str = "ok", ready: bool = True, events: li
     async def health() -> dict:
         return {"status": status}
 
-    async def readiness() -> tuple[bool, str | None]:
-        return ready, None if ready else f"{name} down"
-
     @asynccontextmanager
     async def lifespan():
         if events is not None:
@@ -31,7 +28,7 @@ def fake_module(name: str, *, status: str = "ok", ready: bool = True, events: li
         if events is not None:
             events.append(f"stop {name}")
 
-    return SimpleNamespace(router=router, health=health, readiness=readiness, lifespan=lifespan)
+    return SimpleNamespace(router=router, health=health, lifespan=lifespan)
 
 
 def test_should_serve_every_module_route_on_one_app():
@@ -60,48 +57,6 @@ def test_should_report_degraded_when_one_module_is_unhealthy():
     assert client.get("/health").json()["status"] == "degraded"
 
 
-def test_should_report_error_when_a_module_health_check_raises():
-    broken = fake_module("alpha")
-
-    async def health() -> dict:
-        raise RuntimeError("boom")
-
-    broken.health = health
-    body = TestClient(build_app({"alpha": broken})).get("/health").json()
-
-    assert body["modules"]["alpha"] == {
-        "status": "error",
-        "detail": "boom",
-        "latency_ms": body["modules"]["alpha"]["latency_ms"],
-    }
-
-
-def test_should_treat_a_module_without_health_check_as_ok():
-    module = SimpleNamespace(router=APIRouter())
-
-    body = TestClient(build_app({"alpha": module})).get("/health").json()
-
-    assert body["modules"]["alpha"]["status"] == "ok"
-
-
-def test_should_return_503_with_reasons_when_a_module_is_not_ready():
-    client = TestClient(
-        build_app({"alpha": fake_module("alpha"), "beta": fake_module("beta", ready=False)})
-    )
-
-    response = client.get("/health/ready")
-
-    assert response.status_code == 503
-    assert response.json() == {"status": "not ready", "modules": {"beta": "beta down"}}
-
-
-def test_should_be_ready_when_every_module_is_ready():
-    response = TestClient(build_app({"alpha": fake_module("alpha")})).get("/health/ready")
-
-    assert response.status_code == 200
-    assert response.json() == {"status": "ready"}
-
-
 def test_should_start_modules_in_order_and_stop_them_in_reverse():
     events: list[str] = []
     app = build_app(
@@ -114,11 +69,12 @@ def test_should_start_modules_in_order_and_stop_them_in_reverse():
     assert events == ["start alpha", "start beta", "stop beta", "stop alpha"]
 
 
-def test_should_list_modules_on_the_root_route():
-    body = TestClient(build_app({"alpha": fake_module("alpha")})).get("/").json()
+def test_should_start_modules_without_a_lifespan():
+    module = fake_module("alpha")
+    del module.lifespan
 
-    assert body["modules"] == ["alpha"]
-    assert body["health"] == "/health"
+    with TestClient(build_app({"alpha": module})) as client:
+        assert client.get("/health").json()["status"] == "ok"
 
 
 def operations(app) -> set[tuple[str, str]]:
@@ -129,18 +85,15 @@ def operations(app) -> set[tuple[str, str]]:
     }
 
 
-def test_should_mount_only_the_requested_modules():
-    paths = {path for _, path in operations(create_app(["rag"]))}
-
-    assert "/api/v1/documents:query" in paths
-    assert "/api/v1/images:generate" not in paths
-
-
 def test_should_not_register_the_same_operation_in_two_modules():
     try:
-        modules = load_modules(MODULE_NAMES)
+        import main
     except ImportError as error:
         pytest.skip(f"not every module's dependencies are installed: {error}")
+    modules = {
+        name: getattr(main, name).module
+        for name in ("recommendation", "vision", "rag", "image_playground", "speech", "video")
+    }
     shared = operations(build_app({}))
     owners: dict[tuple[str, str], str] = {}
     for name, module in modules.items():

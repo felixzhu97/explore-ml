@@ -2,9 +2,10 @@ from fastapi.testclient import TestClient
 
 from image_playground.infra import pipeline
 from image_playground.service.image import get_image_service
-from server import create_app
+import image_playground.module
+from server import build_app
 
-app = create_app(["image_playground"])
+app = build_app({"image_playground": image_playground.module})
 
 client = TestClient(app)
 

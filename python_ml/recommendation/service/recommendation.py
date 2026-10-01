@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from functools import lru_cache
+from functools import cached_property, lru_cache
 
 from recommendation.domain.vector_store import VectorStore
 from recommendation.infra.factories import RankerFactory, VectorStoreFactory
@@ -13,29 +13,15 @@ FALLBACK_SCORE = 1.0
 
 
 class RecommendationService:
-    """Lazily builds the feed ranker and vector stores on first use."""
+    """Builds the feed ranker and vector store on first use."""
 
-    def __init__(self) -> None:
-        self._ranker: FeedRankingService | None = None
-        self._ranker_loaded = False
-        self._vector_store: VectorStore | None = None
-
-    @property
+    @cached_property
     def ranker(self) -> FeedRankingService | None:
-        if not self._ranker_loaded:
-            self._ranker = RankerFactory.create_ranker()
-            self._ranker_loaded = True
-        return self._ranker
+        return RankerFactory.create_ranker()
 
+    @cached_property
     def vector_store(self) -> VectorStore:
-        if self._vector_store is None:
-            self._vector_store = VectorStoreFactory.get_vector_store()
-        return self._vector_store
-
-    def clear(self) -> None:
-        self._ranker = None
-        self._ranker_loaded = False
-        self._vector_store = None
+        return VectorStoreFactory.get_vector_store()
 
     def rank_candidates(
         self,
@@ -64,7 +50,7 @@ class RecommendationService:
         return ranked[:limit]
 
     def recall_similar_items(self, user_id: str, limit: int) -> list[tuple[str, float]]:
-        store = self.vector_store()
+        store = self.vector_store
         if not isinstance(store, RedisVectorStore):
             return []
         stored_vector = store.client.get(f"{store.user_key_prefix}{user_id}")

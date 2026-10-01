@@ -3,14 +3,25 @@
 import logging
 
 import config
-from server import create_app
+import image_playground.module
+import rag.module
+import recommendation.module
+import speech.module
+import video.module
+import vision.module
+from server import build_app
 
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
-)
+logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
 
-app = create_app()
+app = build_app({
+    "recommendation": recommendation.module,
+    "vision": vision.module,
+    "rag": rag.module,
+    "image_playground": image_playground.module,
+    "speech": speech.module,
+    "video": video.module,
+})
+rag.module.register_exception_handlers(app)
 
 
 if __name__ == "__main__":

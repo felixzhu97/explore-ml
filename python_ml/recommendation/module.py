@@ -1,23 +1,9 @@
-"""Recommendation module entry: routes, lifespan and health for the Explore ML app."""
-
-import logging
-from contextlib import asynccontextmanager
+"""Recommendation module entry: routes and health for the Explore ML app."""
 
 from recommendation.controller.api import router
 from recommendation.service.recommendation import get_recommendation_service
 
-__all__ = ["health", "lifespan", "router"]
-
-logger = logging.getLogger(__name__)
-
-
-@asynccontextmanager
-async def lifespan():
-    recommendation_service = get_recommendation_service()
-    if recommendation_service.ranker:
-        logger.info("Ranker loaded successfully")
-    yield
-    recommendation_service.clear()
+__all__ = ["health", "router"]
 
 
 async def health() -> dict:
