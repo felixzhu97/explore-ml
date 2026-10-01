@@ -73,25 +73,29 @@ npm test        # Vitest unit tests via ng test
 npm run build   # production build with template type-checking
 ```
 
-CI runs both on every pull request.
+CI runs both on every pull request and every push to `main` (Node 22).
 
 ## Layout
 
 ```text
 src/app/
-├── shared/    helper registry, /svc proxy, HealthService, SSE, polling,
-│              Call state, d3 bar chart, module page frame, endpoint card,
-│              file picker
-├── home/      home.page.ts
+├── shared/    helpers.ts (HELPERS registry, findHelper, helperUrl,
+│              toProxyUrl), proxy.ts (used by proxy.conf.mjs),
+│              health.ts (HealthService), call.ts (Call state), sse.ts,
+│              poll.ts, error-message.ts, scales.ts + bar-chart.ts (d3),
+│              observe-width.ts, module-page.ts, endpoint.ts, file-pick.ts
+├── home/      home.page.ts (no service; uses HealthService)
 └── <module>/  recommendation, vision, rag, image, speech, video
                <module>.page.ts     page; injects the service with inject()
                <module>.service.ts  @Service() class calling the helper over
                                     HttpClient, plus its request and
                                     response types
+speech/live-transcription.ts        WebSocket client for live ASR
 ```
 
 Each folder holds flat files only; specs sit next to the file they test.
-Service specs use `HttpTestingController` instead of a real helper.
+Service specs use `HttpTestingController` instead of a real helper; every
+module service has one except `video`.
 
 ## Theme
 
