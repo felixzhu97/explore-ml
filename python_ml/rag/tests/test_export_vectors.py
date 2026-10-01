@@ -5,8 +5,8 @@ import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 
-from controller.query import router as query_router
-from service.query import QueryService, get_query_service
+from rag.controller.query import router as query_router
+from rag.service.query import QueryService, get_query_service
 
 
 def _record(i: int, collection: str, text: str = "chunk") -> dict:

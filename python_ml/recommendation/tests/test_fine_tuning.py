@@ -1,7 +1,7 @@
 import torch
 
-from training.pytorch_feed_ranker import FeedRanker, warm_start
-from training.eval_feed_ranker import ndcg_at_k, recall_at_k
+from recommendation.training.pytorch_feed_ranker import FeedRanker, warm_start
+from recommendation.training.eval_feed_ranker import ndcg_at_k, recall_at_k
 
 
 def test_should_score_perfect_ranking_as_one():

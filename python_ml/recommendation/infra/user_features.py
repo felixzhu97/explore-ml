@@ -1,7 +1,7 @@
 import psycopg2
 from datetime import datetime
 import numpy as np
-import config
+from recommendation import config
 
 
 def load_user_features() -> list[tuple[str, int]]:

@@ -6,7 +6,7 @@ import os
 import torch
 from torch import nn
 
-from infra.cassandra_engagement import get_cassandra_session
+from recommendation.infra.cassandra_engagement import get_cassandra_session
 
 
 class FeedRanker(nn.Module):

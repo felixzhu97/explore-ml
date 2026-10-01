@@ -8,8 +8,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends, File, HTTPException, Query, Response, UploadFile, status
 from pydantic import BaseModel
 
-from domain.document import DEFAULT_CONTENT_TYPE, DocumentSummary, validate_filename
-from service.documents import DocumentService, get_document_service
+from rag.domain.document import DEFAULT_CONTENT_TYPE, DocumentSummary, validate_filename
+from rag.service.documents import DocumentService, get_document_service
 
 router = APIRouter(prefix="/documents", tags=["Documents"])
 

@@ -3,9 +3,9 @@
 from functools import lru_cache
 from pathlib import Path
 
-import config
-from domain.job import Job, JobStore
-from infra import pipeline
+from video import config
+from video.domain.job import Job, JobStore
+from video.infra import pipeline
 
 UNSUPPORTED_PLATFORM = (
     "Local video generation not supported on this platform. "

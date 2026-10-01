@@ -22,7 +22,7 @@ markdown>=3.10.3
 
 # Utilities
 aiofiles>=25.1.0
-redis>=8.1.0
+redis>=6.4.0
 tenacity>=9.1.4
 httpx>=0.28.1
 

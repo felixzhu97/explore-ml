@@ -13,12 +13,10 @@ if "HF_ENDPOINT" not in os.environ:
 
 from pathlib import Path
 
-OUTPUT_BASE = Path(os.environ.get("VIDEO_OUTPUT_DIR", "output"))
+OUTPUT_BASE = Path(os.environ.get("VIDEO_OUTPUT_DIR") or Path(__file__).parent / "output")
 VIDEO_OUTPUT = OUTPUT_BASE / "video"
 VIDEO_OUTPUT.mkdir(parents=True, exist_ok=True)
 
-HOST = os.environ.get("VIDEO_HOST", "0.0.0.0")
-PORT = int(os.environ.get("VIDEO_PORT", os.environ.get("PORT", "8005")))
-BASE_URL = os.environ.get("VIDEO_BASE_URL", f"http://localhost:{PORT}")
+BASE_URL = os.environ.get("BASE_URL", f"http://localhost:{os.environ.get('PORT', '8000')}")
 
 COGVIDEOX_MODEL = os.environ.get("COGVIDEOX_MODEL", "THUDM/CogVideoX-2b")

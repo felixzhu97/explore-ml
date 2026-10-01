@@ -1,12 +1,9 @@
-import sys
-import os
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
-import config
-from infra.follows import load_follows, load_user_ids
-from infra.user_features import load_user_features
-from infra.user_suggestions import friend_of_friend_candidates, implicit_als_with_annoy
-from infra.lightfm_suggestions import build_lightfm_suggestions
-from infra.redis_export import write_user_suggestions
+from recommendation import config
+from recommendation.infra.follows import load_follows, load_user_ids
+from recommendation.infra.user_features import load_user_features
+from recommendation.infra.user_suggestions import friend_of_friend_candidates, implicit_als_with_annoy
+from recommendation.infra.lightfm_suggestions import build_lightfm_suggestions
+from recommendation.infra.redis_export import write_user_suggestions
 
 
 def main() -> int:
@@ -63,4 +60,4 @@ def main() -> int:
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    raise SystemExit(main())

@@ -1,6 +1,6 @@
 
-from infra.engagement_features import build_user_recent_engagement_features
-from domain.feature_registry import FeatureDefinition, registry
+from recommendation.infra.engagement_features import build_user_recent_engagement_features
+from recommendation.domain.feature_registry import FeatureDefinition, registry
 
 
 def register_offline_features() -> None:

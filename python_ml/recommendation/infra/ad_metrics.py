@@ -1,7 +1,7 @@
 
 import psycopg2
 
-import config
+from recommendation import config
 
 
 def load_ad_events(max_rows: int = 1000000) -> dict[tuple[str, str, str], dict[str, float]]:

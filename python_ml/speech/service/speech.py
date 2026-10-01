@@ -4,9 +4,9 @@ import asyncio
 from functools import lru_cache
 from pathlib import Path
 
-import config
-from infra import models
-from infra.streaming_transcription import StreamingTranscriptionSession
+from speech import config
+from speech.infra import models
+from speech.infra.streaming_transcription import StreamingTranscriptionSession
 
 STREAM_SAMPLE_RATE = 16000
 

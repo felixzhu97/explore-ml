@@ -1,6 +1,6 @@
 """Tests for text chunking service."""
 
-from domain.chunker import Chunk, TextChunker
+from rag.domain.chunker import Chunk, TextChunker
 
 
 class TestTextChunker:

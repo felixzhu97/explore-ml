@@ -5,12 +5,14 @@ from unittest.mock import AsyncMock
 import pytest
 from fastapi.testclient import TestClient
 
-from domain.chunker import get_chunker
-from domain.errors import ServiceUnavailableError, UpstreamError
-from main import app
-from service.documents import DocumentService, get_document_service
-from service.query import QueryService, get_query_service
-from service.sync import SyncService, get_sync_service
+from rag.domain.chunker import get_chunker
+from rag.domain.errors import ServiceUnavailableError, UpstreamError
+from rag.service.documents import DocumentService, get_document_service
+from rag.service.query import QueryService, get_query_service
+from rag.service.sync import SyncService, get_sync_service
+from server import create_app
+
+app = create_app(["rag"])
 
 
 @pytest.fixture
@@ -21,7 +23,7 @@ def client():
 
 @pytest.fixture
 def no_rerank(monkeypatch):
-    monkeypatch.setattr("service.query.rerank_documents", AsyncMock(return_value=None))
+    monkeypatch.setattr("rag.service.query.rerank_documents", AsyncMock(return_value=None))
 
 
 def _query_service(mock_qdrant, mock_embeddings, llm) -> QueryService:

@@ -7,7 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 @pytest.fixture
 def mock_settings():
     """Mock settings for testing."""
-    with patch("config.get_settings") as mock:
+    with patch("rag.config.get_settings") as mock:
         settings = MagicMock()
         settings.qdrant_url = "http://localhost:6333"
         settings.qdrant_vector_size = 768

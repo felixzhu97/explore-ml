@@ -4,7 +4,7 @@ from fastapi import APIRouter, BackgroundTasks, Depends, HTTPException
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-from service.video import VideoService, get_video_service
+from video.service.video import VideoService, get_video_service
 
 router = APIRouter()
 

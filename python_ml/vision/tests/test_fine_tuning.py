@@ -2,11 +2,11 @@ from pathlib import Path
 
 from PIL import Image
 
-import config
-from infra import models
-from service.vision import get_vision_service
-from training.eval_head import evaluate
-from training.train_head import train
+from vision import config
+from vision.infra import models
+from vision.service.vision import get_vision_service
+from vision.training.eval_head import evaluate
+from vision.training.train_head import train
 
 
 def _write_images(root: Path) -> None:

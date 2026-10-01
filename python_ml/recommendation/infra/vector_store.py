@@ -3,7 +3,7 @@ from collections.abc import Iterable
 import math
 import numpy as np
 
-from domain.vector_store import VectorStore
+from recommendation.domain.vector_store import VectorStore
 
 
 class RedisVectorStore(VectorStore):

@@ -1,8 +1,6 @@
 import os
 from pathlib import Path
 
-HOST = os.environ.get("VISION_HOST", "0.0.0.0")
-PORT = int(os.environ.get("VISION_PORT", "8001"))
 MODEL_PATH = os.environ.get("VISION_MODEL_PATH") or None
 LABELS_PATH = Path(
     os.environ.get("VISION_LABELS_PATH")

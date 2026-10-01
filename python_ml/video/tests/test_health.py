@@ -1,4 +1,4 @@
-from controller.api import router
+from video.controller.api import router
 
 
 def test_should_register_video_routes():

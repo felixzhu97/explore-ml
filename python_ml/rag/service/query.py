@@ -6,7 +6,7 @@ from collections.abc import AsyncIterator
 from functools import lru_cache
 from typing import Any
 
-from domain.query import (
+from rag.domain.query import (
     NO_RESULTS_ANSWER,
     RERANK_CANDIDATE_FACTOR,
     SEARCHABLE_COLLECTIONS,
@@ -17,11 +17,11 @@ from domain.query import (
     SearchHit,
     build_system_prompt,
 )
-from domain.rerank import apply_rerank_scores
-from infra.embedding import EmbeddingService, get_embedding_service
-from infra.llm import LlmClient, get_llm_client
-from infra.qdrant_client import QdrantService, get_qdrant_service
-from infra.reranker import rerank_documents
+from rag.domain.rerank import apply_rerank_scores
+from rag.infra.embedding import EmbeddingService, get_embedding_service
+from rag.infra.llm import LlmClient, get_llm_client
+from rag.infra.qdrant_client import QdrantService, get_qdrant_service
+from rag.infra.reranker import rerank_documents
 
 logger = logging.getLogger(__name__)
 

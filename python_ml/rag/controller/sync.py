@@ -6,7 +6,7 @@ from typing import Annotated, Any
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from service.sync import FULL_SYNC_LIMIT, SyncService, get_sync_service
+from rag.service.sync import FULL_SYNC_LIMIT, SyncService, get_sync_service
 
 router = APIRouter(tags=["Sync"])
 

@@ -13,15 +13,13 @@ if "HF_ENDPOINT" not in os.environ:
 
 from pathlib import Path
 
-OUTPUT_BASE = Path(os.environ.get("SPEECH_OUTPUT_DIR", "output"))
+OUTPUT_BASE = Path(os.environ.get("SPEECH_OUTPUT_DIR") or Path(__file__).parent / "output")
 VOICE_OUTPUT = OUTPUT_BASE / "voice"
 ASR_UPLOADS = OUTPUT_BASE / "asr"
 for directory in (VOICE_OUTPUT, ASR_UPLOADS):
     directory.mkdir(parents=True, exist_ok=True)
 
-HOST = os.environ.get("SPEECH_HOST", "0.0.0.0")
-PORT = int(os.environ.get("SPEECH_PORT", os.environ.get("PORT", "8004")))
-BASE_URL = os.environ.get("SPEECH_BASE_URL", f"http://localhost:{PORT}")
+BASE_URL = os.environ.get("BASE_URL", f"http://localhost:{os.environ.get('PORT', '8000')}")
 
 LOCAL_MODELS_ROOT = Path(
     os.environ.get("LOCAL_MODELS_ROOT", str(Path.home() / "Codes" / "models"))

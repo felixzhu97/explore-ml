@@ -2,7 +2,7 @@
 import psycopg2
 import json
 
-import config
+from recommendation import config
 
 
 def load_reels_events(

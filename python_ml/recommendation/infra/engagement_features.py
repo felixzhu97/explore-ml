@@ -1,7 +1,7 @@
 from collections import defaultdict
 from datetime import datetime, UTC
 
-from infra.cassandra_engagement import get_cassandra_session, load_post_likes
+from recommendation.infra.cassandra_engagement import get_cassandra_session, load_post_likes
 
 
 def load_user_post_engagement(

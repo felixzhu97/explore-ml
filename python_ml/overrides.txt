@@ -1,0 +1,3 @@
+# qwen-tts pins transformers==4.57.3 and qwen-asr pins 4.57.6; use with
+# uv pip install -r requirements.txt --override overrides.txt
+transformers==4.57.6

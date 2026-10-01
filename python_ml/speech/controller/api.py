@@ -15,9 +15,9 @@ from fastapi import (
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 
-import config
-from domain.audio import ALLOWED_AUDIO_SUFFIXES, audio_suffix, is_allowed_audio, new_job_id
-from service.speech import SpeechService, get_speech_service
+from speech import config
+from speech.domain.audio import ALLOWED_AUDIO_SUFFIXES, audio_suffix, is_allowed_audio, new_job_id
+from speech.service.speech import SpeechService, get_speech_service
 
 router = APIRouter()
 

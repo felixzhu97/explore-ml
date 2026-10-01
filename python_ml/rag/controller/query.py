@@ -7,8 +7,8 @@ from fastapi import APIRouter, Depends
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel, Field
 
-from domain.query import SOURCE_TEXT_LIMIT, SearchHit
-from service.query import QueryService, get_query_service
+from rag.domain.query import SOURCE_TEXT_LIMIT, SearchHit
+from rag.service.query import QueryService, get_query_service
 
 router = APIRouter(tags=["Query"])
 

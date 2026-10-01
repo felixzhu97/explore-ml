@@ -5,8 +5,8 @@ from typing import Annotated
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel, Field
 
-from domain.webpage import ScrapedWebpage
-from service.webpages import WebpageService, get_webpage_service
+from rag.domain.webpage import ScrapedWebpage
+from rag.service.webpages import WebpageService, get_webpage_service
 
 router = APIRouter(tags=["Crawler"])
 

@@ -1,6 +1,8 @@
 from fastapi.testclient import TestClient
 
-from main import app
+from server import create_app
+
+app = create_app(["speech"])
 
 client = TestClient(app)
 

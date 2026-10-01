@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import threading
 
-import config
+from speech import config
 
 synthesis_model = None
 transcription_model = None
