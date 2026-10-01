@@ -3,12 +3,13 @@ import json
 
 from fastapi.testclient import TestClient
 
+from controller.api import router
 from main import app
-from streaming_asr import StreamingAsrSession, pcm16_le_to_wav_bytes
+from infra.streaming_asr import StreamingAsrSession, pcm16_le_to_wav_bytes
 
 
 def test_should_register_streaming_asr_websocket_route():
-    paths = {getattr(r, "path", None) for r in app.routes}
+    paths = {getattr(r, "path", None) for r in router.routes}
     assert "/ws/v1/audios:transcribe" in paths
 
 

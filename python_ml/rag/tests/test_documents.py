@@ -1,7 +1,7 @@
 """Tests for document parsing utilities."""
 import pytest
 
-from domain.utils.pdf_parser import (
+from infra.pdf_parser import (
     HTMLParser,
     MarkdownParser,
     TextParser,

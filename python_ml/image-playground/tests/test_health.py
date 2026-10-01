@@ -1,8 +1,8 @@
-from main import app
+from controller.api import router
 
 
 def test_should_register_image_playground_routes():
-    paths = {getattr(r, "path", None) for r in app.routes}
+    paths = {getattr(r, "path", None) for r in router.routes}
     assert "/api/v1/images:generate" in paths
     assert "/api/v1/imageJobs/{image_job}" in paths
     assert "/output/image/{job_id}.png" in paths

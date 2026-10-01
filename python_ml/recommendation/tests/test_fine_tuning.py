@@ -1,6 +1,6 @@
 import torch
 
-from domain.models.pytorch_feed_ranker import FeedRanker, warm_start
+from training.pytorch_feed_ranker import FeedRanker, warm_start
 from training.eval_feed_ranker import ndcg_at_k, recall_at_k
 
 

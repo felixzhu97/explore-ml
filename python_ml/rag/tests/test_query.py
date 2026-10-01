@@ -2,7 +2,7 @@
 import pytest
 from unittest.mock import AsyncMock, patch, MagicMock
 
-from domain.schemas.query import QueryRequest, QueryResponse, SourceDocument
+from domain.query import QueryRequest, QueryResponse, SourceDocument
 
 
 class TestQuerySchemas:

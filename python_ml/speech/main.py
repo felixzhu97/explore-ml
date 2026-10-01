@@ -2,7 +2,7 @@ from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
 import config
-from api import router
+from controller.api import router
 
 app = FastAPI(title="Speech API (ASR + TTS)")
 app.add_middleware(

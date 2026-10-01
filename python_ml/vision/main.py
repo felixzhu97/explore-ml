@@ -3,8 +3,8 @@ from contextlib import asynccontextmanager
 from fastapi import FastAPI
 
 import config
-import service
-from api import router
+from service import vision as service
+from controller.api import router
 
 
 @asynccontextmanager
@@ -13,10 +13,7 @@ async def lifespan(_app: FastAPI):
     yield
 
 
-from aip import register_aip_exception_handlers
-
 app = FastAPI(title="Chat Vision", version="0.1.0", lifespan=lifespan)
-register_aip_exception_handlers(app)
 app.include_router(router)
 
 if __name__ == "__main__":

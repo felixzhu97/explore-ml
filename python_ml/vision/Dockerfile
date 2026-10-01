@@ -9,8 +9,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-COPY main.py config.py api.py service.py ./
+COPY main.py config.py ./
+COPY controller ./controller
+COPY service ./service
 COPY domain ./domain
+COPY infra ./infra
 
 ENV PYTHONUNBUFFERED=1
 EXPOSE 8001

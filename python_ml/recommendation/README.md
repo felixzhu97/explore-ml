@@ -1,6 +1,6 @@
 # Recommendation Service (Python)
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `api.py` / `service.py` / `domain/` / `tests/`.
+Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
 Start: `uvicorn main:app --host 0.0.0.0 --port 8000`.
 
 Offline and online recommendation stack for Chat:
@@ -50,7 +50,7 @@ See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md) for warm-start
 Vector towers for recall (user/post embeddings -> RedisVectorStore `rec:user:vec:{id}`, `rec:post:vec:{id}`):
 
 ```bash
-python -m models.pytorch_towers
+python -m training.pytorch_towers
 ```
 
 ## Online ranking service (FastAPI)

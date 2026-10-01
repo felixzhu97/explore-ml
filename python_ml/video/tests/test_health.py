@@ -1,8 +1,8 @@
-from main import app
+from controller.api import router
 
 
 def test_should_register_video_routes():
-    paths = {getattr(r, "path", None) for r in app.routes}
+    paths = {getattr(r, "path", None) for r in router.routes}
     assert "/api/v1/videos:generate" in paths
     assert "/api/v1/videoJobs/{video_job}" in paths
     assert "/output/video/{job_id}.mp4" in paths

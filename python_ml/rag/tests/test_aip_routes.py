@@ -10,24 +10,24 @@ def _read(name: str) -> str:
 
 
 def test_should_wire_aip_document_and_custom_method_paths():
-    documents = _read("api_documents.py")
+    documents = _read("controller/documents.py")
     assert '@router.post("",' in documents or '@router.post("", ' in documents
     assert "page_size" in documents
     assert "page_token" in documents
     assert "HTTP_204_NO_CONTENT" in documents
     assert "/upload" not in documents
 
-    query = _read("api_query.py")
+    query = _read("controller/query.py")
     assert '/documents:query"' in query
     assert '/documents:streamQuery"' in query
     assert '/documents:exportVectors"' in query
     assert '/collections"' in query
 
-    crawler = _read("api_crawler.py")
+    crawler = _read("controller/crawler.py")
     assert '/webpages:scrape"' in crawler
     assert '/webpages:crawl"' in crawler
 
-    sync = _read("api_sync.py")
+    sync = _read("controller/sync.py")
     assert '/posts:sync"' in sync
     assert '/comments:sync"' in sync
     assert '/resources:sync"' in sync

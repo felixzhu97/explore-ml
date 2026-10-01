@@ -1,1 +1,1 @@
-"""RAG domain layer: core logic, schemas, and utilities."""
+"""RAG domain layer: schemas, chunking and rerank rules."""
