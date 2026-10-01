@@ -1,0 +1,2 @@
+{"query": "Where are vectors stored?", "expected": ["qdrant"]}
+{"query": "What happens when the rerank sidecar is down?", "expected": ["vector order"]}
