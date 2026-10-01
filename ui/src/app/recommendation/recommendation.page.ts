@@ -6,6 +6,9 @@ import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
 import { BarChart } from '../shared/bar-chart';
 import { Call } from '../shared/call';
+import { rankShifts, scoreBins } from '../shared/chart-math';
+import { HistogramChart } from '../shared/histogram-chart';
+import { SlopeChart } from '../shared/slope-chart';
 import { Endpoint } from '../shared/endpoint';
 import { ModulePage } from '../shared/module-page';
 import {
@@ -35,6 +38,8 @@ function toBars(items: RankedItem[] | undefined) {
   imports: [
     BarChart,
     Endpoint,
+    HistogramChart,
+    SlopeChart,
     FormField,
     ModulePage,
     NzButtonModule,
@@ -104,7 +109,16 @@ function toBars(items: RankedItem[] | undefined) {
           </button>
         </div>
         @if (rankBars().length) {
-          <app-bar-chart [data]="rankBars()" ariaLabel="排序分数" />
+          <div class="grid gap-6 md:grid-cols-2">
+            <section class="flex flex-col gap-2">
+              <h3 class="m-0 text-caption font-semibold text-ink-80">名次变化</h3>
+              <app-slope-chart [shifts]="shifts()" ariaLabel="候选输入顺序与排序结果的名次变化" />
+            </section>
+            <section class="flex flex-col gap-2">
+              <h3 class="m-0 text-caption font-semibold text-ink-80">排序分数</h3>
+              <app-bar-chart [data]="rankBars()" ariaLabel="排序分数" />
+            </section>
+          </div>
         }
       </app-endpoint>
 
@@ -132,7 +146,20 @@ function toBars(items: RankedItem[] | undefined) {
           </button>
         </div>
         @if (recallBars().length) {
-          <app-bar-chart [data]="recallBars()" ariaLabel="召回分数" />
+          <div class="grid gap-6 md:grid-cols-2">
+            <section class="flex flex-col gap-2">
+              <h3 class="m-0 text-caption font-semibold text-ink-80">
+                分数分布 · {{ recallCall.value()?.items?.length }} 条
+              </h3>
+              <app-histogram-chart [bins]="recallBins()" ariaLabel="召回分数分布" />
+            </section>
+            <section class="flex flex-col gap-2">
+              <h3 class="m-0 text-caption font-semibold text-ink-80">
+                前 {{ recallBars().length }} 条
+              </h3>
+              <app-bar-chart [data]="recallBars()" ariaLabel="召回分数" />
+            </section>
+          </div>
         }
       </app-endpoint>
     </app-module-page>
@@ -157,9 +184,20 @@ export class RecommendationPage {
   protected readonly candidateIds = computed(() => splitIds(this.formModel().candidates));
   protected readonly rankBars = computed(() => toBars(this.rankCall.value()?.items));
   protected readonly recallBars = computed(() => toBars(this.recallCall.value()?.items));
+  protected readonly recallBins = computed(() =>
+    scoreBins((this.recallCall.value()?.items ?? []).map((item) => item.score)),
+  );
+  private readonly rankedCandidates = signal<string[]>([]);
+  protected readonly shifts = computed(() =>
+    rankShifts(this.rankedCandidates(), this.rankCall.value()?.items ?? []).slice(
+      0,
+      MAX_CHART_BARS,
+    ),
+  );
 
   protected runRank(): Promise<void> {
     const values = this.formModel();
+    this.rankedCandidates.set(this.candidateIds());
     return this.rankCall.run(() =>
       this.recommendationService.rank(values.surface, {
         user_id: values.userId.trim(),
