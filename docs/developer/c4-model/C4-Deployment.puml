@@ -13,25 +13,40 @@ LAYOUT_WITH_LEGEND()
 title [C4 Deployment] Explore ML - Local Development
 
 Deployment_Node(dev_machine, "Dev machine", "macOS / Linux") {
-  Deployment_Node(py_svcs, "python_ml (venv)", "") {
+  Deployment_Node(py_svcs, "python_ml (venv, one uvicorn per helper)", "Python 3.12") {
     Container(rec, "Recommendation", "FastAPI", ":8000")
     Container(vision, "Vision", "FastAPI", ":8001")
     Container(rag, "RAG", "FastAPI", ":8002")
     Container(ip, "Image Playground", "FastAPI", ":8003")
     Container(sp, "Speech", "FastAPI", ":8004")
     Container(vd, "Video", "FastAPI", ":8005")
+    ContainerDb(qdrant, "Qdrant (embedded)", "Files", "python_ml/rag/data/qdrant; or a remote QDRANT_URL")
   }
-  Deployment_Node(data_node, "data/", "fixtures") {
-    Container(fixtures, "fixtures", "Files", "Small files in git; large weights gitignored")
+  Deployment_Node(ollama_node, "Ollama", ":11434") {
+    Container(ollama, "Ollama", "LLM runtime", "Embedding + chat models")
   }
-  Deployment_Node(ui_node, "ui/ (Node)", "ng serve :4200") {
-    Container(ui, "Model Test UI", "Angular", "Proxies /svc/<name> to :8000-:8005")
+  Deployment_Node(weights_node, "~/Codes/models", "LOCAL_MODELS_ROOT, outside the repo") {
+    ContainerDb(weights, "Model weights", "Files", "asr, tts, image, rerank, recommendation, fine-tuned outputs")
+  }
+  Deployment_Node(data_node, "data/", "in git") {
+    ContainerDb(fixtures, "Fixtures", "JSONL", "data/finetune/* small eval and training sets")
+  }
+  Deployment_Node(ui_node, "ui/ (Node 22)", "ng serve :4200") {
+    Container(ui, "Model Test UI", "Angular", "Proxies /svc/<id> to :8000-:8005")
   }
 }
 
-Rel(rag, fixtures, "optional path")
-Rel(ui, rec, "HTTP", "/svc proxy, loopback")
-Rel(ui, rag, "HTTP", "/svc proxy, loopback")
+Rel(ui, rec, "/svc/recommendation")
+Rel(ui, vision, "/svc/vision")
+Rel(ui, rag, "/svc/rag", "HTTP + SSE")
+Rel(ui, ip, "/svc/image")
+Rel(ui, sp, "/svc/speech", "HTTP + WS")
+Rel(ui, vd, "/svc/video")
+Rel(rag, qdrant, "embedded client")
+Rel(rag, ollama, "HTTP")
+Rel(ip, weights, "reads")
+Rel(sp, weights, "reads")
+Rel(rec, weights, "reads feed ranker")
 
 SHOW_LEGEND()
 @enduml

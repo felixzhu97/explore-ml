@@ -5,28 +5,45 @@ UpdateElementStyle("person", "#FFFFFF", "#000000", "#000000")
 UpdateElementStyle("system", "#FFFFFF", "#000000", "#000000")
 UpdateElementStyle("container", "#FFFFFF", "#000000", "#000000")
 UpdateElementStyle("component", "#FFFFFF", "#000000", "#000000")
+UpdateElementStyle("external_container", "#FFFFFF", "#000000", "#000000")
 UpdateBoundaryStyle("", $bgColor="#FFFFFF", $fontColor="#000000", $borderColor="#000000")
 UpdateRelStyle("#000000", "#000000")
 skinparam backgroundColor #FFFFFF
 skinparam shadowing false
 
-LAYOUT_WITH_LEGEND()
-title [C4 Level 3] Explore ML - Component Diagram (single-service template)
+LAYOUT_TOP_DOWN()
+title [C4 Level 3] Explore ML - Components (RAG helper and Model Test UI)
 
-Container_Boundary(svc, "python_ml/<name>") {
-  Component(api, "controller/", "FastAPI routers", "HTTP + DTOs")
-  Component(service, "service/", "orchestration", "No piled-up business rules")
-  Component(domain, "domain/", "models / rules", "No external libraries")
-  Component(infra, "infra/", "models / stores / ETL", "torch, redis, qdrant, httpx")
-  Component(config, "config.py", "env", "ports / paths")
+Container_Boundary(rag, "python_ml/rag") {
+  Component(routers, "controller/", "FastAPI routers", "documents, query, crawler, sync, api (health); inline Pydantic DTOs; XServiceDependency")
+  Component(errors, "controller/errors.py", "exception handlers", "Domain errors -> 400 / 404 / 503 / upstream status, {detail}")
+  Component(services, "service/", "XService classes", "DocumentService, QueryService, WebpageService, SyncService, HealthService; @lru_cache get_x_service()")
+  Component(indexer, "service/indexing.py", "ChunkIndexer", "Embed in batches of 10, upsert one collection")
+  Component(domain, "domain/", "dataclasses + rules", "Chunk, TextChunker, SearchHit, Answer, ExportedVectors, SyncResult, errors, system prompt")
+  Component(infra, "infra/", "adapters", "QdrantService, EmbeddingService, LlmClient, ContentApiClient, DocumentProcessor, pdf_parser, web_fetcher, reranker")
 }
 
-Rel(api, service, "calls")
-Rel(service, domain, "calls")
-Rel(service, infra, "calls")
-Rel(infra, domain, "implements")
-Rel(api, config, "reads")
-Rel(service, config, "reads")
+Container_Boundary(ui, "ui/src/app") {
+  Component(shared, "shared/", "Angular", "helpers registry, proxy, HealthService, Call, SSE, polling, module page")
+  Component(pages, "<module>/", "Angular", "<module>.page.ts + <module>.service.ts (HttpClient, inline types) per helper")
+}
+
+Container_Ext(qdrant, "Qdrant", "Vector DB")
+Container_Ext(llm, "Ollama / OpenAI", "HTTP")
+Container_Ext(content_api, "Content API", "HTTP")
+
+Rel(routers, services, "inject via Depends")
+Rel(errors, domain, "maps errors")
+Rel(services, indexer, "index chunks")
+Rel(services, domain, "rules / value types")
+Rel(services, infra, "calls")
+Rel(indexer, infra, "embed + upsert")
+Rel(infra, domain, "raises domain errors")
+Rel(infra, qdrant, "HTTP / embedded")
+Rel(infra, llm, "HTTP")
+Rel(infra, content_api, "HTTP")
+Rel(pages, shared, "uses")
+Rel(pages, routers, "/svc/rag/api/v1/...", "HTTP + SSE")
 
 SHOW_LEGEND()
 @enduml
