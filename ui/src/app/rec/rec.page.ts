@@ -4,11 +4,12 @@ import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import { BarChart } from '../charts/bar-chart';
-import { rank, recall, type RankSurface, type RankedItem } from '../core/api/clients';
-import { Call } from '../core/call';
-import { Endpoint } from '../ui/endpoint';
-import { ModulePage } from '../ui/module-page';
+import { BarChart } from '../shared/bar-chart';
+import { rank, recall } from './rec.api';
+import type { RankSurface, RankedItem } from './rec.model';
+import { Call } from '../shared/call';
+import { Endpoint } from '../shared/endpoint';
+import { ModulePage } from '../shared/module-page';
 
 function splitIds(text: string): string[] {
   return text

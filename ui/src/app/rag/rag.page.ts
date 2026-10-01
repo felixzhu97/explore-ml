@@ -16,12 +16,12 @@ import {
   ragStreamQuery,
   ragSync,
   ragUpload,
-  type SyncTarget,
-} from '../core/api/clients';
-import { Call } from '../core/call';
-import { Endpoint } from '../ui/endpoint';
-import { FilePick } from '../ui/file-pick';
-import { ModulePage } from '../ui/module-page';
+} from './rag.api';
+import type { SyncTarget } from './rag.model';
+import { Call } from '../shared/call';
+import { Endpoint } from '../shared/endpoint';
+import { FilePick } from '../shared/file-pick';
+import { ModulePage } from '../shared/module-page';
 
 const PREVIEW_POINTS = 20;
 const PREVIEW_DIMS = 8;

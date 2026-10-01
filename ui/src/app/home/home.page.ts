@@ -3,9 +3,9 @@ import { RouterLink } from '@angular/router';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzCardModule } from 'ng-zorro-antd/card';
-import { BarChart } from '../charts/bar-chart';
-import { checkAll, type HealthResult } from '../core/health';
-import { SERVICES } from '../core/services';
+import { BarChart } from '../shared/bar-chart';
+import { checkAll, type HealthResult } from '../shared/health';
+import { SERVICES } from '../shared/services';
 
 @Component({
   selector: 'app-home',

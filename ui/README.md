@@ -79,11 +79,16 @@ CI runs both on every pull request.
 
 ```text
 src/app/
-├── core/      helper registry, /svc proxy rules, typed API clients, Call state
-├── charts/    d3 bar chart
-├── ui/        module page frame, endpoint card, file picker
-└── pages/     home plus one page per module
+├── shared/    helper registry, /svc proxy, HTTP, SSE, polling, Call state,
+│              d3 bar chart, module page frame, endpoint card, file picker
+├── home/      home.page.ts
+└── <module>/  rec, vision, rag, image, speech, video
+               <module>.page.ts   page (presentation)
+               <module>.api.ts    HTTP calls to the helper (infrastructure)
+               <module>.model.ts  request and response types (domain)
 ```
+
+Each folder holds flat files only; specs sit next to the file they test.
 
 ## Theme
 
