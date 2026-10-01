@@ -45,8 +45,14 @@ def load_labels():
 
 def load_model():
     global MODEL
-    weights = ResNet50_Weights.IMAGENET1K_V2
-    MODEL = resnet50(weights=weights)
+    if config.MODEL_PATH:
+        checkpoint = torch.load(config.MODEL_PATH, map_location="cpu")
+        MODEL = resnet50(weights=None)
+        MODEL.fc = torch.nn.Linear(MODEL.fc.in_features, int(checkpoint["num_classes"]))
+        MODEL.load_state_dict(checkpoint["state_dict"])
+        log.info("Loaded fine-tuned classifier from %s", config.MODEL_PATH)
+    else:
+        MODEL = resnet50(weights=ResNet50_Weights.IMAGENET1K_V2)
     MODEL.eval()
     MODEL.to(DEVICE)
 
@@ -157,16 +163,18 @@ def _nsfw_score(image: Image.Image) -> float:
 
 
 def moderate_image(image: Image.Image) -> dict[str, Any]:
-    tensor = _normalize_image_for_moderate(image)
-    with torch.no_grad():
-        out = MODEL(tensor)
-    probs = torch.softmax(out[0], dim=0)
     categories: list[dict[str, Any]] = []
-    for idx in config.PROHIBITED_INDICES:
-        if idx < len(probs):
-            score = float(probs[idx].cpu().item())
-            if score >= config.MODERATION_THRESHOLD:
-                categories.append({"label": "prohibited", "score": round(score, 4)})
+    # PROHIBITED_INDICES are ImageNet class ids; a fine-tuned head has its own labels.
+    if not config.MODEL_PATH:
+        tensor = _normalize_image_for_moderate(image)
+        with torch.no_grad():
+            out = MODEL(tensor)
+        probs = torch.softmax(out[0], dim=0)
+        for idx in config.PROHIBITED_INDICES:
+            if idx < len(probs):
+                score = float(probs[idx].cpu().item())
+                if score >= config.MODERATION_THRESHOLD:
+                    categories.append({"label": "prohibited", "score": round(score, 4)})
     nude_score = _nsfw_score(image) if config.NSFW_ENABLED else 0.0
     if nude_score >= config.NSFW_THRESHOLD:
         categories.append({"label": "nude", "score": round(nude_score, 4)})
