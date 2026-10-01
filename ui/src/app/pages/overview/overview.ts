@@ -1,11 +1,12 @@
 import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { RouterLink } from '@angular/router';
 import { BarChart } from '../../charts/bar-chart';
 import { checkAll, type HealthResult } from '../../core/health';
 import { SERVICES, svcUrl, type ServiceId } from '../../core/services';
 
 @Component({
   selector: 'app-overview',
-  imports: [BarChart],
+  imports: [BarChart, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   templateUrl: './overview.html',
   styleUrl: './overview.css',

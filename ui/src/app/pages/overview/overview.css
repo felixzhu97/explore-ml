@@ -23,6 +23,11 @@
   border: 2px solid var(--color-ink-muted-48);
 }
 
+.links {
+  display: flex;
+  gap: var(--space-lg);
+}
+
 .dot.up {
   background: var(--color-primary);
   border-color: var(--color-primary);

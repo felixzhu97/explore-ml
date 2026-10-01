@@ -26,6 +26,7 @@ export class BarChart {
   readonly max = input<number>();
   readonly format = input<(v: number) => string>(d3.format('.3~f'));
   readonly emptyLabel = input('—');
+  readonly threshold = input<{ value: number; label: string }>();
   readonly ariaLabel = input.required<string>();
 
   private readonly svg = viewChild.required<ElementRef<SVGSVGElement>>('svg');
@@ -42,12 +43,20 @@ export class BarChart {
     const emptyLabel = this.emptyLabel();
     const innerWidth = Math.max(80, width - LABEL_WIDTH - VALUE_WIDTH);
     const { x, y } = horizontalBarScales(data, innerWidth, ROW_HEIGHT, this.max());
+    const threshold = this.threshold();
+    const top = threshold ? 20 : 0;
     const root = d3
       .select(this.svg().nativeElement)
       .attr('width', width)
-      .attr('height', data.length * ROW_HEIGHT);
+      .attr('height', data.length * ROW_HEIGHT + top);
+    const plot = root
+      .selectAll<SVGGElement, number>('g.plot')
+      .data([top])
+      .join('g')
+      .attr('class', 'plot')
+      .attr('transform', (t) => `translate(0, ${t})`);
 
-    const rows = root
+    const rows = plot
       .selectAll<SVGGElement, BarDatum>('g.row')
       .data(data, (d) => d.label)
       .join((enter) => {
@@ -84,5 +93,24 @@ export class BarChart {
       .attr('x', LABEL_WIDTH + innerWidth + 8)
       .attr('y', y.bandwidth() / 2)
       .text((d) => (d.value == null ? emptyLabel : format(d.value)));
+
+    const rule = root
+      .selectAll<SVGGElement, { value: number; label: string }>('g.threshold')
+      .data(threshold ? [threshold] : [])
+      .join((enter) => {
+        const g = enter.append('g').attr('class', 'threshold');
+        g.append('line').attr('stroke', CHART_COLORS.ink).attr('stroke-dasharray', '3 3');
+        g.append('text').attr('text-anchor', 'middle');
+        return g;
+      });
+    rule.attr('transform', (t) => `translate(${LABEL_WIDTH + x(t.value)}, 0)`);
+    rule
+      .select('line')
+      .attr('y1', 14)
+      .attr('y2', top + data.length * ROW_HEIGHT);
+    rule
+      .select('text')
+      .attr('y', 10)
+      .text((t) => t.label);
   }
 }

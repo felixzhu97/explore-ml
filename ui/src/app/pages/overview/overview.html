@@ -39,7 +39,10 @@
               离线（{{ r.detail }}）
             }
           </p>
-          <a [href]="docsUrl(s.id)" target="_blank" rel="noopener">API 文档</a>
+          <div class="links">
+            <a [routerLink]="['/playground', s.id]">打开调试台</a>
+            <a [href]="docsUrl(s.id)" target="_blank" rel="noopener">API 文档</a>
+          </div>
         </div>
       }
     </div>
