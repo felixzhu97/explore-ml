@@ -33,5 +33,8 @@ interface NavItem {
   `,
 })
 export class App {
-  protected readonly nav: NavItem[] = [{ path: '/', label: '总览', exact: true }];
+  protected readonly nav: NavItem[] = [
+    { path: '/', label: '总览', exact: true },
+    { path: '/playground', label: '调试台', exact: false },
+  ];
 }
