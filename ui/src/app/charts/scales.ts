@@ -54,6 +54,23 @@ export function groupedBarScales(
   return { x0, x1, y };
 }
 
+/** Design tokens only, accent first: primary, muted ink, primary-on-dark, ink. */
+export const SERIES_COLORS = ['#0066cc', '#7a7a7a', '#2997ff', '#1d1d1f'];
+
+export interface ConfusionCell {
+  row: number;
+  col: number;
+  count: number;
+  rowShare: number;
+}
+
+export function confusionCells(matrix: readonly number[][]): ConfusionCell[] {
+  return matrix.flatMap((row, r) => {
+    const total = row.reduce((a, b) => a + b, 0);
+    return row.map((count, c) => ({ row: r, col: c, count, rowShare: total ? count / total : 0 }));
+  });
+}
+
 /** Sequential single-hue scale (canvas → primary) for heatmaps. */
 export function heatScale(max: number) {
   return d3

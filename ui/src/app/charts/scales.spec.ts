@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { groupedBarScales, heatScale, horizontalBarScales, textOn } from './scales';
+import { confusionCells, groupedBarScales, heatScale, horizontalBarScales, textOn } from './scales';
 
 describe('chart scales', () => {
   it('should size horizontal bars against the largest value', () => {
@@ -37,6 +37,16 @@ describe('chart scales', () => {
     expect(x1.range()[1]).toBeCloseTo(x0.bandwidth());
     expect(y(1)).toBe(0);
     expect(y(0)).toBe(200);
+  });
+
+  it('should flatten a confusion matrix with per-row shares', () => {
+    const cells = confusionCells([
+      [3, 1],
+      [0, 0],
+    ]);
+    expect(cells).toHaveLength(4);
+    expect(cells[0]).toEqual({ row: 0, col: 0, count: 3, rowShare: 0.75 });
+    expect(cells[3].rowShare).toBe(0);
   });
 
   it('should pick readable text over heatmap cells', () => {
