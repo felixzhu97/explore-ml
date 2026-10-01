@@ -1,0 +1,99 @@
+<section class="section">
+  <div class="container">
+    <h1>RAG 向量地图</h1>
+    <p class="caption">
+      在浏览器中用 UMAP（cosine）把 RAG 片段向量降到二维，点击任意点查看近邻，搜索时高亮命中的来源。
+    </p>
+    <div class="row">
+      <label class="field grow">
+        <span>搜索</span>
+        <input
+          [formField]="f.query"
+          placeholder="输入问题，高亮检索命中"
+          (keydown.enter)="search()"
+        />
+      </label>
+      <label class="field">
+        <span>集合</span>
+        <select [formField]="f.collection" (change)="project()">
+          <option value="">全部</option>
+          @for (c of collections(); track c) {
+            <option [value]="c">{{ c }}</option>
+          }
+        </select>
+      </label>
+      <button class="btn btn-primary" [disabled]="!model().query.trim()" (click)="search()">
+        搜索
+      </button>
+      <button class="btn btn-secondary" (click)="load()">重新加载</button>
+    </div>
+    @if (sampled(); as s) {
+      <p class="notice">
+        已抽样：显示 {{ s.shown }} / {{ s.total }} 个点，超过浏览器端上限的部分未参与降维。
+      </p>
+    }
+    @if (status()) {
+      <p class="caption">{{ status() }}</p>
+    }
+    @if (error()) {
+      <p class="error">{{ error() }}</p>
+    }
+  </div>
+</section>
+
+<section class="section parchment">
+  <div class="layout">
+    <div class="card map-card">
+      <div #map class="map"></div>
+      @if (legend().length) {
+        <ul class="legend">
+          @for (l of legend(); track l.name) {
+            <li><span class="swatch" [style.background]="l.color"></span>{{ l.name }}</li>
+          }
+        </ul>
+      }
+    </div>
+
+    <aside class="side">
+      @if (hits().length) {
+        <div class="card">
+          <h3>检索命中</h3>
+          <ol class="list">
+            @for (h of hits(); track h.index) {
+              <li>
+                <button class="link" (click)="focus(h.index)">
+                  <span class="mono">{{ h.score.toFixed(3) }}</span>
+                  {{ points()[h.index].text }}
+                </button>
+              </li>
+            }
+          </ol>
+        </div>
+      }
+      @if (selectedPoint(); as p) {
+        <div class="card">
+          <h3>选中片段</h3>
+          <p class="caption mono">{{ collectionName(p) }} · {{ p.id }}</p>
+          <p class="text">{{ p.text }}</p>
+          <h3>最近邻（cosine 距离）</h3>
+          <ol class="list">
+            @for (n of neighbors(); track n.index) {
+              <li>
+                <button class="link" (click)="focus(n.index)">
+                  <span class="mono">{{ n.distance.toFixed(3) }}</span>
+                  {{ points()[n.index].text }}
+                </button>
+              </li>
+            } @empty {
+              <li class="caption">近邻索引构建中…</li>
+            }
+          </ol>
+        </div>
+      } @else {
+        <div class="card">
+          <p class="caption">点击地图上的点查看文本与近邻。</p>
+        </div>
+      }
+    </aside>
+  </div>
+</section>

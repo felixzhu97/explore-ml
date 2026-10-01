@@ -12,5 +12,10 @@ export const routes: Routes = [
     title: '调试台 · Explore ML',
     loadComponent: () => import('./pages/playground/playground').then((m) => m.Playground),
   },
+  {
+    path: 'atlas',
+    title: '向量地图 · Explore ML',
+    loadComponent: () => import('./pages/atlas/atlas').then((m) => m.Atlas),
+  },
   { path: '**', redirectTo: '' },
 ];
