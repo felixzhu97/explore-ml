@@ -1,7 +1,7 @@
 # If pip reports opencv-python vs numpy conflict, run: pip uninstall opencv-python
 # This app uses opencv-python-headless only.
 fastapi==0.141.1
-uvicorn[standard]==0.52.4
+uvicorn[standard]==0.53.0
 torch==2.14.0
 torchvision==0.29.0
 numpy<3
