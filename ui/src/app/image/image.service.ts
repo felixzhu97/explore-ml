@@ -32,6 +32,6 @@ export class ImageService {
       () => firstValueFrom(this.http.get<ImageJob>(mlUrl(`/api/v1/imageJobs/${jobId}`))),
       pollOptions,
     );
-    return { jobId, url: toProxyUrl(job.image_url ?? `/output/image/${jobId}.png`) };
+    return { jobId, url: toProxyUrl(job.image_url!) };
   }
 }

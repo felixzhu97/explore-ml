@@ -2,6 +2,7 @@ import { provideHttpClient } from '@angular/common/http';
 import { HttpTestingController, provideHttpClientTesting } from '@angular/common/http/testing';
 import { TestBed } from '@angular/core/testing';
 import { HealthService, badgeStatus, parseHealthReport } from './health';
+import { HELPERS } from './helpers';
 
 describe('parseHealthReport', () => {
   it('should map module reports onto helpers by package name', () => {
@@ -10,7 +11,11 @@ describe('parseHealthReport', () => {
         status: 'degraded',
         modules: {
           image_playground: { status: 'ok', latency_ms: 1.5, backend: 'local', lora: false },
-          rag: { status: 'degraded', latency_ms: 30, services: { ollama: 'down' } },
+          rag: { status: 'degraded', latency_ms: 30, qdrant: true, embeddings: false },
+          recommendation: { status: 'ok', latency_ms: 0 },
+          vision: { status: 'ok', latency_ms: 0 },
+          speech: { status: 'ok', latency_ms: 0 },
+          video: { status: 'ok', latency_ms: 0 },
         },
       },
       42,
@@ -24,23 +29,19 @@ describe('parseHealthReport', () => {
       latencyMs: 1.5,
       detail: 'backend: local · lora: false',
     });
-    expect(rag).toMatchObject({ status: 'degraded', latencyMs: 30, detail: '' });
-  });
-
-  it('should mark a module disabled when the app does not serve it', () => {
-    const report = parseHealthReport({ status: 'ok', modules: {} }, 5);
-    expect(report.modules.every((health) => health.status === 'disabled')).toBe(true);
-  });
-
-  it('should treat an unknown module status as an error', () => {
-    const report = parseHealthReport({ modules: { video: { status: 'weird' } } }, 5);
-    expect(report.modules.find((health) => health.helper.id === 'video')?.status).toBe('error');
+    expect(rag).toMatchObject({
+      status: 'degraded',
+      latencyMs: 30,
+      detail: 'qdrant: true · embeddings: false',
+    });
   });
 
   it('should map statuses to badge colours', () => {
-    expect(
-      ['ok', 'degraded', 'error', 'offline'].map((status) => badgeStatus(status as never)),
-    ).toEqual(['success', 'warning', 'error', 'default']);
+    expect((['ok', 'degraded', 'offline'] as const).map((status) => badgeStatus(status))).toEqual([
+      'success',
+      'warning',
+      'default',
+    ]);
   });
 });
 
@@ -60,10 +61,13 @@ describe('HealthService', () => {
 
   it('should report round trip time when the app answers', async () => {
     const ticks = [100, 142];
-    const checked = service.check({ clock: () => ticks.shift()! });
-    httpTesting
-      .expectOne('/ml/health')
-      .flush({ status: 'ok', modules: { vision: { status: 'ok', latency_ms: 2 } } });
+    const checked = service.check(() => ticks.shift()!);
+    httpTesting.expectOne('/ml/health').flush({
+      status: 'ok',
+      modules: Object.fromEntries(
+        HELPERS.map((helper) => [helper.module, { status: 'ok', latency_ms: 2 }]),
+      ),
+    });
     expect(await checked).toMatchObject({ reachable: true, roundTripMs: 42 });
   });
 

@@ -1,5 +1,3 @@
-import { ML_BASE_PATH } from './proxy';
-
 export type HelperId = 'recommendation' | 'vision' | 'rag' | 'image' | 'speech' | 'video';
 
 /** One module of the `python_ml` app, keyed in `/health` by its package name. */
@@ -23,16 +21,10 @@ export function findHelper(id: string): Helper | undefined {
 }
 
 export function mlUrl(path: string): string {
-  return `${ML_BASE_PATH}${path.startsWith('/') ? path : `/${path}`}`;
+  return `/ml${path}`;
 }
 
 /** Rewrites an absolute backend URL (e.g. `http://localhost:8000/output/x.png`) onto the proxy. */
 export function toProxyUrl(url: string): string {
-  if (url.startsWith(`${ML_BASE_PATH}/`)) return url;
-  try {
-    const parsedUrl = new URL(url, 'http://placeholder');
-    return mlUrl(`${parsedUrl.pathname}${parsedUrl.search}`);
-  } catch {
-    return url;
-  }
+  return mlUrl(new URL(url).pathname);
 }

@@ -2,15 +2,8 @@ import { Component, computed, inject, input, type OnInit } from '@angular/core';
 import { NzBadgeModule } from 'ng-zorro-antd/badge';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { Call } from './call';
-import {
-  HEALTH_PATH,
-  HealthService,
-  STATUS_LABELS,
-  badgeStatus,
-  type HealthReport,
-} from './health';
+import { HealthService, STATUS_LABELS, badgeStatus, type HealthReport } from './health';
 import { findHelper, mlUrl, type HelperId } from './helpers';
-import { ML_BASE_PATH, ML_PORT } from './proxy';
 
 /** Page frame for one module: name, package, health check and the endpoint list. */
 @Component({
@@ -24,7 +17,7 @@ import { ML_BASE_PATH, ML_PORT } from './proxy';
           {{ currentHelper.name }}
         </h1>
         <p class="m-0 text-caption text-muted">
-          python_ml/{{ currentHelper.module }} · 端口 {{ port }} · 代理 {{ basePath }} ·
+          python_ml/{{ currentHelper.module }} · 端口 8000 · 代理 /ml ·
           <a [href]="docsUrl" target="_blank">OpenAPI</a>
         </p>
         <div class="flex items-center gap-4">
@@ -37,8 +30,7 @@ import { ML_BASE_PATH, ML_PORT } from './proxy';
               [nzStatus]="badgeStatus(health.status)"
               [nzText]="
                 statusLabels[health.status] +
-                ' · GET ' +
-                healthPath +
+                ' · GET /health' +
                 (health.latencyMs !== null ? ' · ' + health.latencyMs + ' ms' : '') +
                 (health.detail ? ' · ' + health.detail : '')
               "
@@ -59,9 +51,6 @@ export class ModulePage implements OnInit {
     this.healthCall.value()?.modules.find((health) => health.helper.id === this.module()),
   );
   protected readonly docsUrl = mlUrl('/docs');
-  protected readonly healthPath = HEALTH_PATH;
-  protected readonly basePath = ML_BASE_PATH;
-  protected readonly port = ML_PORT;
   protected readonly statusLabels = STATUS_LABELS;
   protected readonly badgeStatus = badgeStatus;
 
