@@ -22,11 +22,11 @@ these shapes over time.
 ```mermaid
 flowchart LR
   subgraph integrate [Integrate once]
-    Env[env_base_URLs]
+    Env[EXPLORE_ML_URL]
     Client[HTTP_client_timeouts]
     Contract[OpenAPI_/api/v1]
   end
-  subgraph helpers [Explore ML helpers]
+  subgraph app [Explore ML app :8000]
     Rec[Recommendation]
     Vis[Vision]
     Rag[RAG]
@@ -43,18 +43,19 @@ flowchart LR
   Contract --> Media
 ```
 
-Media Gen is not one process: it is three helpers (Image Playground, Speech
-and Video), each with its own port and base URL.
+Every module runs in one FastAPI process on one port. Media Gen is three
+modules (Image Playground, Speech and Video) behind the same base URL;
+`EXPLORE_MODULES` decides which ones load.
 
-Prefer one base URL per helper, one `.env` / YAML block on the product API, and
-stable `/api/v1` custom methods. Call helpers only over loopback from the
+Prefer one base URL, one `.env` / YAML block on the product API, and stable
+`/api/v1` custom methods. Call the app only over loopback from the
 server—never from browsers.
 
 ```mermaid
 sequenceDiagram
   participant Client
   participant API as Product_API
-  participant ML as Helper
+  participant ML as Explore_ML
   Client->>API: product request
   API->>ML: localhost base URL
   ML->>API: JSON or job id
@@ -215,7 +216,7 @@ flowchart TB
 
 ### HTTP and OpenAPI
 
-**Expose helpers as documented HTTP APIs on FastAPI.** Prefer stable `/api/v1`
+**Expose modules as documented HTTP APIs on FastAPI.** Prefer stable `/api/v1`
 resource and custom-method shapes (for example `images:generate`,
 `audios:transcribe`). Publish OpenAPI from the running app (`/docs`). See
 [FastAPI](https://fastapi.tiangolo.com/),
@@ -231,42 +232,27 @@ flowchart LR
   Docs -.->|"discover contract"| Product
 ```
 
-Configure one upstream string per helper. Discover request bodies from `/docs`
-instead of hard-coding ad-hoc clients.
+Configure one upstream string. Route paths are flat and unique across modules
+(no module prefix), so `/docs` lists every contract; discover request bodies
+there instead of hard-coding ad-hoc clients.
 
 ### Easiest product wiring
 
-**Prefer six env vars and timeouts—nothing else for first connect.** The
-names match the `ui/` proxy; set only the ones your product uses.
+**Prefer one env var and timeouts—nothing else for first connect.** The name
+matches the `ui/` proxy.
 
 ```mermaid
-flowchart TB
-  subgraph config [Product config]
-    R[RECOMMENDATION_URL]
-    V[VISION_URL]
-    G[RAG_URL]
-    I[IMAGE_URL]
-    S[SPEECH_URL]
-    D[VIDEO_URL]
-  end
-  subgraph ports [Local defaults]
-    P0[localhost:8000]
-    P1[localhost:8001]
-    P2[localhost:8002]
-    P3[localhost:8003 image-playground]
-    P4[localhost:8004 speech]
-    P5[localhost:8005 video]
-  end
-  R --> P0
-  V --> P1
-  G --> P2
-  I --> P3
-  S --> P4
-  D --> P5
+flowchart LR
+  URL[EXPLORE_ML_URL]
+  App[localhost:8000]
+  Health[GET_/health]
+  URL --> App
+  App --> Health
 ```
 
-Own connect timeouts and fallbacks in the product API. Degrade the feature when
-a helper is down; do not hang the main request forever.
+Own connect timeouts and fallbacks in the product API. Read `GET /health`:
+degrade a feature when its module reports `degraded` or `error`, or the app is
+down; do not hang the main request forever.
 
 ### Server-Sent Events
 
@@ -278,7 +264,7 @@ stable: each chunk is a `data: ...` frame, and the stream ends with
 ```mermaid
 sequenceDiagram
   participant API as Product_API
-  participant RAG as RAG_helper
+  participant RAG as RAG_module
   API->>RAG: documents:streamQuery
   loop tokens
     RAG-->>API: data: chunk
@@ -323,7 +309,7 @@ remain optional via documented OpenAI-compatible APIs when enabled.
 
 ```mermaid
 flowchart LR
-  RAG[RAG_helper]
+  RAG[RAG_module]
   Ollama[Ollama_embed_and_chat]
   Cloud[Optional_OpenAI_compatible]
   RAG --> Ollama

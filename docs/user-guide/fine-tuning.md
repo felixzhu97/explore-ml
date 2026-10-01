@@ -2,7 +2,7 @@
 
 ← [User guide home](README.md)
 
-Adapt a helper's model to your own data. Train once, write the result under
+Adapt a module's model to your own data. Train once, write the result under
 `LOCAL_MODELS_ROOT`, point one env var at it, and keep `/api/v1` routes
 unchanged.
 
@@ -11,7 +11,7 @@ are fixed faster with better data, thresholds, or prompts.
 
 ## Goal
 
-One loop for every helper. Train, evaluate against the base model, then
+One loop for every module. Train, evaluate against the base model, then
 promote or roll back by changing a single env var.
 
 ```mermaid
@@ -65,14 +65,15 @@ export LOCAL_MODELS_ROOT="${LOCAL_MODELS_ROOT:-$HOME/Codes/models}"
 
 3. Put a small train and eval split under `data/finetune/<area>/`. Commit only
    tiny fixtures; keep real data on disk or in a private Hub dataset.
-4. Install training dependencies inside the helper you tune:
+4. Install training dependencies for the module you tune. Every command
+   below runs from `python_ml/`, the same directory the app starts from:
 
 ```bash
-cd python_ml/<helper>
-pip install -r requirements-train.txt
+cd python_ml
+pip install -r <module>/requirements-train.txt
 ```
 
-5. Train, evaluate, and set the env var shown in the section for your helper.
+5. Train, evaluate, and set the env var shown in the section for your module.
 
 Name every output `<base>-ft-<yyyymmdd>`. Never overwrite a base model.
 
@@ -82,9 +83,9 @@ Warm-start the feed ranker from the current checkpoint and continue on recent
 engagement.
 
 ```bash
-cd python_ml/recommendation
+cd python_ml
 export RECOMMENDATION_MODEL_DIR="$LOCAL_MODELS_ROOT/recommendation/models"
-python run_jobs.py --job feed_rank \
+python -m recommendation.run_jobs --job feed_rank \
   --init-from "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
   --output "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-$(date +%Y%m%d).pt"
 ```
@@ -92,10 +93,10 @@ python run_jobs.py --job feed_rank \
 Compare against the current model on a held-out file:
 
 ```bash
-python -m training.eval_feed_ranker \
+python -m recommendation.training.eval_feed_ranker \
   --model "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-<yyyymmdd>.pt" \
   --baseline "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
-  --holdout ../../data/finetune/recommendation/eval.jsonl
+  --holdout ../data/finetune/recommendation/eval.jsonl
 ```
 
 Promote with `FEED_RANKER_MODEL=<path>`.
@@ -107,12 +108,12 @@ label under `train/` and `eval/`. Git tracks only `.jsonl` files under
 `data/finetune/`, so the vision image folders stay local.
 
 ```bash
-cd python_ml/vision
-python -m training.train_head \
-  --data ../../data/finetune/vision \
+cd python_ml
+python -m vision.training.train_head \
+  --data ../data/finetune/vision \
   --output "$LOCAL_MODELS_ROOT/vision/models/resnet50-ft-$(date +%Y%m%d)"
-python -m training.eval_head \
-  --data ../../data/finetune/vision/eval \
+python -m vision.training.eval_head \
+  --data ../data/finetune/vision/eval \
   --model "$LOCAL_MODELS_ROOT/vision/models/resnet50-ft-<yyyymmdd>"
 ```
 
@@ -132,11 +133,11 @@ Fine-tune the embedding model on query and passage pairs. Keep 768 dimensions
 so the vector store schema stays the same.
 
 ```bash
-cd python_ml/rag
-python -m training.train_embedding \
-  --train ../../data/finetune/rag/pairs.jsonl \
+cd python_ml
+python -m rag.training.train_embedding \
+  --train ../data/finetune/rag/pairs.jsonl \
   --output "$LOCAL_MODELS_ROOT/embed/models/nomic-embed-ft-$(date +%Y%m%d)"
-training/to_ollama.sh "$LOCAL_MODELS_ROOT/embed/models/nomic-embed-ft-<yyyymmdd>" nomic-embed-ft
+rag/training/to_ollama.sh "$LOCAL_MODELS_ROOT/embed/models/nomic-embed-ft-<yyyymmdd>" nomic-embed-ft
 ```
 
 Set `EMBEDDING_MODEL=nomic-embed-ft`, then re-index every document. Vectors
@@ -151,7 +152,7 @@ serves `Qwen3-Reranker-8B` by default. Compare the tuned 0.6B model with the
 
 ```bash
 hf jobs uv run --flavor l40sx1 --secrets HF_TOKEN \
-  training/train_reranker.py \
+  rag/training/train_reranker.py \
   --dataset <you>/rag-rerank --push-to <you>/qwen3-reranker-ft
 hf download <you>/qwen3-reranker-ft \
   --local-dir "$LOCAL_MODELS_ROOT/rerank/models/qwen3-reranker-ft"
@@ -162,7 +163,7 @@ Point the rerank sidecar at that directory with `RERANK_MODEL`.
 Measure both changes with the same query set:
 
 ```bash
-python -m training.eval_retrieval --queries ../../data/finetune/rag/eval.jsonl
+python -m rag.training.eval_retrieval --queries ../data/finetune/rag/eval.jsonl
 ```
 
 ## RAG LLM
@@ -173,15 +174,15 @@ the fair baseline. RAG serves `qwen3-coder:30b` by default (`LLM_MODEL`);
 run a second comparison against it before you switch.
 
 ```bash
-cd python_ml/rag
+cd python_ml
 hf jobs uv run --flavor l40sx1 --timeout 6h --secrets HF_TOKEN \
-  training/train_sft.py \
+  rag/training/train_sft.py \
   --dataset <you>/rag-sft --push-to <you>/rag-llm-ft
 hf download <you>/rag-llm-ft \
   --local-dir "$LOCAL_MODELS_ROOT/llm/models/rag-llm-ft"
-training/to_ollama.sh "$LOCAL_MODELS_ROOT/llm/models/rag-llm-ft" rag-llm-ft
-python -m training.eval_answers \
-  --questions ../../data/finetune/rag/qa.jsonl \
+rag/training/to_ollama.sh "$LOCAL_MODELS_ROOT/llm/models/rag-llm-ft" rag-llm-ft
+python -m rag.training.eval_answers \
+  --questions ../data/finetune/rag/qa.jsonl \
   --model rag-llm-ft --baseline qwen3:8b
 ```
 
@@ -193,9 +194,9 @@ Train a LoRA on 20 to 200 captioned images. Upload them as a private Hub
 dataset first.
 
 ```bash
-cd python_ml/image-playground
+cd python_ml
 hf jobs uv run --flavor a100-large --timeout 6h --secrets HF_TOKEN \
-  training/train_lora.py \
+  image_playground/training/train_lora.py \
   --dataset <you>/my-style --instance-prompt "a photo in my-style" \
   --push-to <you>/qwen-image-my-style
 hf download <you>/qwen-image-my-style \
@@ -206,7 +207,7 @@ Compare with fixed prompts and seeds before you keep it. The script writes
 base and LoRA images side by side:
 
 ```bash
-python -m training.compare_prompts \
+python -m image_playground.training.compare_prompts \
   --lora "$LOCAL_MODELS_ROOT/image/loras/my-style" \
   --prompts prompts.txt --out compare --seed 0 --steps 20
 ```
@@ -220,14 +221,14 @@ Promote with `IMAGE_LORA_PATH=<dir>` and optional `IMAGE_LORA_SCALE=0.8`.
 Upload `audio` and `text` pairs as a Hub dataset, then:
 
 ```bash
-cd python_ml/speech
+cd python_ml
 hf jobs uv run --flavor l40sx1 --timeout 6h --secrets HF_TOKEN \
-  training/train_asr.py \
+  speech/training/train_asr.py \
   --dataset <you>/asr-domain --push-to <you>/qwen3-asr-ft
 hf download <you>/qwen3-asr-ft \
   --local-dir "$LOCAL_MODELS_ROOT/asr/models/qwen3-asr-ft"
-python -m training.eval_wer \
-  --manifest ../../data/finetune/speech/eval.jsonl \
+python -m speech.training.eval_wer \
+  --manifest ../data/finetune/speech/eval.jsonl \
   --model "$LOCAL_MODELS_ROOT/asr/models/qwen3-asr-ft" \
   --baseline "$LOCAL_MODELS_ROOT/asr/models/Qwen3-ASR-1.7B"
 ```
@@ -241,7 +242,7 @@ Record about one hour of clean speech from one speaker. Upload `audio`,
 
 ```bash
 hf jobs uv run --flavor l40sx1 --timeout 6h --secrets HF_TOKEN \
-  training/train_tts.py \
+  speech/training/train_tts.py \
   --dataset <you>/tts-voice --speaker my_voice --push-to <you>/qwen3-tts-ft
 hf download <you>/qwen3-tts-ft \
   --local-dir "$LOCAL_MODELS_ROOT/tts/models/qwen3-tts-ft"

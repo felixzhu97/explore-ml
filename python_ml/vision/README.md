@@ -1,33 +1,23 @@
 # Vision service — image labeling and content moderation (ResNet50 + NudeNet)
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
-`service/` / `domain/` / `infra/` / `tests/` / `training/`.
-
-Port **8001** (`VISION_PORT`; `PORT` is ignored).
-
-## Setup
-
-```bash
-cd python_ml/vision
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-python main.py
-```
-
-Or: `uvicorn main:app --host 0.0.0.0 --port 8001`
-
-`.env.example` lists the variables, but this helper does not load `.env`;
-export them in your shell. The model loads at startup.
+Package `vision` in the single Explore ML app (port 8000): `module.py` /
+`config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/` /
+`training/`. Setup, `.env` and run commands:
+[`python_ml/README.md`](../README.md). The models load at startup.
 
 ## API
 
 | Route | Input | Response |
 | ----- | ----- | -------- |
-| `GET /health` | — | `{status: "ok", model: "resnet50"}` |
-| `POST /api/v1/images:predict` | multipart `file`, or JSON `{image_url}` | `{labels: [...]}` (top `VISION_TOP_K`) |
-| `POST /api/v1/images:moderate` | multipart `file`, or JSON `{image_url}` | `{safe, categories: [{label, score}]}` |
-| `POST /api/v1/videos:moderate` | multipart `file`, or JSON `{video_url}` | `{safe, categories: [{label, score}]}` |
+| `POST /api/v1/images:predict` | multipart `file`, or JSON `{image_url}` | `{labels, predictions: [{label, score}]}` (top `VISION_TOP_K`) |
+| `POST /api/v1/images:moderate` | multipart `file`, or JSON `{image_url}` | `{safe, categories, scores, thresholds, frames: []}` |
+| `POST /api/v1/videos:moderate` | multipart `file`, or JSON `{video_url}` | `{safe, categories, scores, thresholds, frames: [{offset_seconds, scores, safe}]}` |
+
+`categories` lists only flagged categories with their highest score.
+`scores` holds every checked category (for video, its peak across frames)
+and `thresholds` the cut-off for each. `frames` has one entry per sampled
+video frame. In `GET /health` the module reports
+`{status: "ok", model: "resnet50" | "fine_tuned"}`.
 
 Images are limited to 10 MB and videos to 100 MB; larger uploads, missing
 input and failed downloads return 400. Video moderation samples up to
@@ -39,7 +29,6 @@ With `VISION_MODERATION_ENABLED=false`, both moderation routes return
 
 | Variable | Default |
 | -------- | ------- |
-| `VISION_HOST` / `VISION_PORT` | `0.0.0.0` / `8001` |
 | `VISION_MODEL_PATH` / `VISION_LABELS_PATH` | ImageNet ResNet50 |
 | `VISION_TOP_K` | `10` |
 | `VISION_REQUEST_TIMEOUT` (seconds; doubled for video) | `15.0` |
@@ -50,12 +39,12 @@ With `VISION_MODERATION_ENABLED=false`, both moderation routes return
 
 ## Fine-tuned classifier
 
-Train a custom ResNet50 head, then point the helper at it:
+Train a custom ResNet50 head, then point the module at it:
 
 ```bash
-python -m training.train_head --data <dir with train/<label>/> --output <dir> \
+python -m vision.training.train_head --data <dir with train/<label>/> --output <dir> \
   [--epochs 5] [--batch-size 32] [--learning-rate 1e-3] [--unfreeze-layer4]
-python -m training.eval_head --model <dir> --data <dir with <label>/>
+python -m vision.training.eval_head --model <dir> --data <dir with <label>/>
 export VISION_MODEL_PATH=<dir>/model.pt VISION_LABELS_PATH=<dir>/labels.json
 ```
 
@@ -66,12 +55,6 @@ check relies on ImageNet ids. See the
 ## Tests
 
 ```bash
-pytest -q   # test_health.py, test_fine_tuning.py, test_moderation_api.py
-```
-
-## Docker
-
-```bash
-docker build -t explore-vision .
-docker run -p 8001:8001 explore-vision
+cd python_ml
+pytest -q vision/tests
 ```

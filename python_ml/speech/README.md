@@ -3,10 +3,9 @@
 Local loopback speech recognition and synthesis, named after Apple
 [Speech](https://developer.apple.com/documentation/speech) and
 [AVSpeechSynthesizer](https://developer.apple.com/documentation/avfaudio/avspeechsynthesizer).
-Port: **8004** (`SPEECH_PORT`, then `PORT`).
-
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
-`service/` / `domain/` / `infra/` / `tests/` / `training/`.
+Package `speech` in the single Explore ML app (port 8000): `module.py` /
+`config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/` /
+`training/`.
 
 | Capability | Default backend | Local path (under `LOCAL_MODELS_ROOT`)        | Other                   |
 | ---------- | --------------- | --------------------------------------------- | ----------------------- |
@@ -15,20 +14,12 @@ Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
 
 ## Setup
 
-```bash
-cd python_ml/speech
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8004
-```
-
-This helper does not load `.env`; export the variables from `.env.example` in
-your shell. Models load lazily on the first request.
+Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). Models load lazily on the first request.
 
 ## API
 
-There is no `/health` route; use `GET /openapi.json` as a liveness check.
+In the app's `GET /health` the module reports
+`{status: "ok", voice, asr}` (the configured backends).
 
 - **TTS**: `POST /api/v1/voices:synthesize` with `{text, voice?}` →
   `{audio_url}`. The file is ready when the call returns: `.wav` with the Qwen
@@ -54,8 +45,8 @@ There is no `/health` route; use `GET /openapi.json` as a liveness check.
 
 | Variable | Default |
 | -------- | ------- |
-| `SPEECH_HOST` / `SPEECH_PORT` / `SPEECH_BASE_URL` | `0.0.0.0` / `8004` / `http://localhost:<port>` |
-| `SPEECH_OUTPUT_DIR` | `output` |
+| `BASE_URL` (shared) | `http://localhost:$PORT` |
+| `SPEECH_OUTPUT_DIR` | `speech/output` |
 | `SPEECH_DEVICE=cpu` | force CPU |
 | `VOICE_BACKEND` | `qwen` (or `edge`) |
 | `TTS_MODEL` / `TTS_LANGUAGE` / `TTS_SPEAKER` | local Qwen3-TTS / `Chinese` / (empty) |
@@ -73,13 +64,13 @@ There is no `/health` route; use `GET /openapi.json` as a liveness check.
 `training/train_asr.py` and `training/train_tts.py` run the upstream Qwen3-ASR
 and Qwen3-TTS recipes on Hugging Face Jobs and push the final checkpoint. Point
 `ASR_MODEL`, or `TTS_MODEL` plus `TTS_SPEAKER`, at the downloaded directory.
-`python -m training.eval_wer` compares the WER (CER for CJK) of the fine-tuned
+`python -m speech.training.eval_wer` compares the WER (CER for CJK) of the fine-tuned
 and base ASR checkpoints. See the
 [fine-tuning guide](../../docs/user-guide/fine-tuning.md).
 
 ## Tests
 
 ```bash
-pytest -q   # test_health.py, test_fine_tuning.py, test_local_models_config.py,
-            # test_streaming_transcription.py, test_transcription_api.py
+cd python_ml
+pytest -q speech/tests
 ```

@@ -1,24 +1,15 @@
 # Video
 
 Local loopback video generation (CogVideoX). Plain **Video** name — Apple has no
-Image Playground–style generative video API. Port: **8005** (`VIDEO_PORT`,
-then `PORT`).
+Image Playground–style generative video API.
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
-`service/` / `domain/` / `infra/` / `tests/`. Video has no `training/`.
+Package `video` in the single Explore ML app (port 8000): `module.py` /
+`config.py` / `controller/` / `service/` / `domain/` / `infra/` / `tests/`.
+Video has no `training/`.
 
 ## Setup
 
-```bash
-cd python_ml/video
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-uvicorn main:app --host 0.0.0.0 --port 8005
-```
-
-This helper does not load `.env`; export the variables from `.env.example` in
-your shell. The pipeline warms up at startup.
+Setup, `.env` and run commands: [`python_ml/README.md`](../README.md). The pipeline warms up at startup.
 
 On macOS without CUDA, local generation is skipped: jobs fail with "Local
 video generation not supported on this platform". Set `VIDEO_FORCE_LOCAL=1`
@@ -26,7 +17,9 @@ video generation not supported on this platform". Set `VIDEO_FORCE_LOCAL=1`
 
 ## API
 
-There is no `/health` route; use `GET /openapi.json` as a liveness check.
+In the app's `GET /health` the module reports
+`{status: "ok", model, local}`; `local` is false when local generation is
+skipped on this platform.
 
 - `POST /api/v1/videos:generate` with `{prompt, image_url?}` → `{job_id}`.
   `image_url` is accepted but not used yet.
@@ -41,8 +34,8 @@ Poll the job until `status` is `succeeded`, then fetch `video_url`.
 
 | Variable | Default |
 | -------- | ------- |
-| `VIDEO_HOST` / `VIDEO_PORT` / `VIDEO_BASE_URL` | `0.0.0.0` / `8005` / `http://localhost:<port>` |
-| `VIDEO_OUTPUT_DIR` | `output` |
+| `BASE_URL` (shared) | `http://localhost:$PORT` |
+| `VIDEO_OUTPUT_DIR` | `video/output` |
 | `COGVIDEOX_MODEL` | `THUDM/CogVideoX-2b` (Hugging Face id; `LOCAL_MODELS_ROOT` is not used) |
 | `VIDEO_DEVICE=cpu` | force CPU (otherwise CUDA, then MPS) |
 | `VIDEO_FORCE_LOCAL=1` | run locally on macOS without CUDA |
@@ -51,5 +44,6 @@ Poll the job until `status` is `succeeded`, then fetch `video_url`.
 ## Tests
 
 ```bash
-pytest -q   # test_config.py, test_health.py
+cd python_ml
+pytest -q video/tests
 ```

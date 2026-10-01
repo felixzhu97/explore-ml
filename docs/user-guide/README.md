@@ -1,47 +1,42 @@
 # User guide
 
-Run only the Explore ML helpers you need. Point your product API at one base
-URL per helper. Prefer the smallest path that proves one feature end to end.
-
-Diagrams and steps below are **target best practices** for easy integration and
-configuration. They are independent of today’s package layout; align
-implementation to them over time.
+Run the Explore ML app with the modules you need. Point your product API at
+its one base URL. Prefer the smallest path that proves one feature end to end.
 
 For design rules see the [Guideline](../Guideline.md). For terms see the
 [Glossary](../Glossary.md).
 
 ## Goal
 
-Six optional helpers. One base URL each. Loopback only from your product API.
-Product clients never dial the helpers.
+Six optional modules in one process. One base URL. Loopback only from your
+product API. Product clients never dial the app.
 
 ```mermaid
 flowchart LR
   Client[Product_client]
   API[Product_API]
-  ML[Explore_ML_helpers]
+  ML[Explore_ML_app]
   Client --> API
   API -->|"base URL + /api/v1"| ML
 ```
 
 ## Get started
 
-1. Start the smallest helper set you need (see
+1. Start the app with the modules you need (see
    [Operator setup](operator-setup.md)).
-2. Confirm health on that base URL:
+2. Confirm health on the base URL:
 
 ```bash
-curl -s "$HELPER/health"         # recommendation, vision, RAG
-curl -s "$HELPER/openapi.json"   # image playground, speech, video
+export EXPLORE_ML_URL=http://localhost:8000
+curl -s "$EXPLORE_ML_URL/health"
 ```
 
-   Recommendation and vision serve `/health`. RAG serves `/health`,
-   `/health/live` and `/health/ready`. Image Playground, Speech and Video
-   have no health route yet; a 200 from `/openapi.json` means the process is
-   up.
+   The response lists every loaded module with its `status` (`ok`,
+   `degraded` or `error`) and `latency_ms`. `/health/live` and
+   `/health/ready` serve process probes.
 
-3. Open `$HELPER/docs` and copy one request from OpenAPI.
-4. Set one env var on the product API to `$HELPER` (see
+3. Open `$EXPLORE_ML_URL/docs` and copy one request from OpenAPI.
+4. Set one env var on the product API to `$EXPLORE_ML_URL` (see
    [Loopback integration](loopback-integration.md)).
 5. Call the same route through the product API once.
 
@@ -49,22 +44,15 @@ Download checkpoints only when a local Speech / Image Playground / Video or rera
 ([Model download](model-download.md)). Skip downloads when you use a
 lightweight or Hub-backed backend.
 
-Use `$HELPER` as a placeholder. Local defaults are often:
-
-- Recommendation — `http://localhost:8000`
-- Vision — `http://localhost:8001`
-- RAG — `http://localhost:8002`
-- Image Playground — `http://localhost:8003`
-- Speech — `http://localhost:8004`
-- Video — `http://localhost:8005`
+The local default is `http://localhost:8000` for every module.
 
 The Angular operator console in `ui/` runs on `http://localhost:4200` and
-proxies `/svc/<id>` to these helpers. Use it to try each helper by hand
-before you wire your own API.
+proxies `/ml/*` to the app. Use it to try each module by hand, with D3 charts
+of the results, before you wire your own API.
 
 ```mermaid
 flowchart TB
-  Start[Start_one_helper]
+  Start[Start_the_app]
   Health[GET_health]
   Docs[Open_/docs]
   Env[Set_one_base_URL]
@@ -74,11 +62,12 @@ flowchart TB
 
 ## Useful endpoints
 
-Relative to each helper base URL:
+Relative to the base URL:
 
-- Health — `GET /health` (recommendation, vision, RAG); RAG also has
-  `/health/live` and `/health/ready`
-- Contract — `GET /docs` and `GET /openapi.json` (every helper)
+- Health — `GET /health` (every module), `/health/live`, `/health/ready`;
+  `GET /metrics` for Prometheus
+- Contract — `GET /docs` and `GET /openapi.json` (all modules in one
+  document)
 - Recommendation — `POST /api/v1/feeds:rank`, `explores:rank`, `reels:rank`,
   `feeds:recall`
 - Vision — `POST /api/v1/images:predict`, `images:moderate`, `videos:moderate`
@@ -100,15 +89,15 @@ code moves.
 
 ## Next steps
 
-### Run helpers
+### Run the app
 
 **Follow [Operator setup](operator-setup.md).** One process, one port, one
-liveness check.
+health URL.
 
 ### Connect your API
 
-**Follow [Loopback integration](loopback-integration.md).** Six env vars for
-a full stack; one var for a single feature.
+**Follow [Loopback integration](loopback-integration.md).** One env var for
+every feature.
 
 ### Fetch checkpoints
 

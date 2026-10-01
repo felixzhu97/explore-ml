@@ -2,51 +2,41 @@
 
 ← [User guide home](README.md)
 
-Connect your product API to Explore ML the easy way: one base URL per helper,
-timeouts on the server, contracts from OpenAPI. Call helpers only from the
-back channel. Never expose helper ports to browsers or mobile clients.
-
-This page is a **target integration guide**. Field names and folder layouts may
-change; keep the wiring shape and align code over time.
+Connect your product API to Explore ML the easy way: one base URL, timeouts
+on the server, contracts from OpenAPI. Call the app only from the back
+channel. Never expose its port to browsers or mobile clients.
 
 ## Before you start
 
-1. At least one helper is up ([Operator setup](operator-setup.md)).
-2. The helper answers:
+1. The app is up with the module you need ([Operator setup](operator-setup.md)).
+2. The module reports `ok` (or `degraded` with a known reason):
 
 ```bash
-curl -s "$HELPER/health"         # recommendation, vision, RAG
-curl -s "$HELPER/openapi.json"   # image playground, speech, video
+curl -s "$EXPLORE_ML_URL/health"
 ```
 
-3. You opened `$HELPER/docs` and know which `/api/v1` method you need.
+3. You opened `$EXPLORE_ML_URL/docs` and know which `/api/v1` method you need.
 
-## Wire base URLs
+## Wire the base URL
 
-Set one upstream string per helper you use. These are the names the
-`ui/` proxy reads; reuse them in your product API. Local defaults for a full
-stack:
+Set one upstream string. `EXPLORE_ML_URL` is the name the `ui/` proxy reads;
+reuse it in your product API:
 
 ```bash
-export RECOMMENDATION_URL=http://localhost:8000
-export VISION_URL=http://localhost:8001
-export RAG_URL=http://localhost:8002
-export IMAGE_URL=http://localhost:8003
-export SPEECH_URL=http://localhost:8004
-export VIDEO_URL=http://localhost:8005
+export EXPLORE_ML_URL=http://localhost:8000
 ```
 
-For a single feature, set **only** that helper’s URL. Keep model roots and
-secrets on the helper side—never in the client bundle.
+Every module answers under that URL, so a new feature needs no new upstream.
+Keep model roots and secrets on the app side—never in the client bundle.
 
 ```mermaid
 flowchart TB
   subgraph product [Product API config]
-    Env[One_env_per_helper]
+    Env[One_base_URL]
     Timeout[Connect_and_read_timeouts]
     Fallback[Degrade_when_down]
   end
-  subgraph ml [Helpers]
+  subgraph ml [Explore_ML_app]
     HTTP["/health and /api/v1"]
   end
   Env --> HTTP
@@ -58,7 +48,7 @@ flowchart TB
 sequenceDiagram
   participant Client
   participant API as Product_API
-  participant ML as Helper
+  participant ML as Explore_ML
   Client->>API: product request
   API->>ML: HTTP loopback
   ML->>API: JSON, URL, or job id
@@ -67,13 +57,13 @@ sequenceDiagram
 
 ## Prove one route (easiest path)
 
-Copy a request from `$HELPER/docs`. Smoke it with curl against the helper,
-then call the same path from your API client.
+Copy a request from `$EXPLORE_ML_URL/docs`. Smoke it with curl against the
+app, then call the same path from your API client.
 
 ### Recommendation — rank a short list
 
 ```bash
-curl -s -X POST "$RECOMMENDATION_URL/api/v1/feeds:rank" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/feeds:rank" \
   -H 'Content-Type: application/json' \
   -d '{"user_id":"demo","candidate_ids":["1","2","3"]}'
 # {"items":[{"id":"2","score":0.91}, ...]}
@@ -88,19 +78,22 @@ Prefer separate recall and rank when you own candidate generation (see
 ### Vision — moderate a file
 
 ```bash
-curl -s -X POST "$VISION_URL/api/v1/images:moderate" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/images:moderate" \
   -F "file=@sample.jpg"
 ```
 
 Keep `images:predict` for labels and `images:moderate` for policy decisions.
+The moderation response carries `safe`, the flagged `categories`, every
+category's `scores` and the `thresholds` used; `videos:moderate` adds one
+`frames` entry per sampled frame (`offset_seconds`, `scores`, `safe`).
 
 ### RAG — ingest then ask
 
 ```bash
-curl -s -X POST "$RAG_URL/api/v1/documents" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/documents" \
   -F "file=@./notes.md"
 
-curl -s -X POST "$RAG_URL/api/v1/documents:query" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/documents:query" \
   -H 'Content-Type: application/json' \
   -d '{"query":"What should I do first?","top_k":5}'
 ```
@@ -123,13 +116,13 @@ Speech does not use jobs. Synthesis returns the audio URL and transcription
 returns the text in the same response.
 
 ```bash
-curl -s -X POST "$SPEECH_URL/api/v1/voices:synthesize" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/voices:synthesize" \
   -H 'Content-Type: application/json' \
   -d '{"text":"Hello from Explore ML"}'
-# {"audio_url":"http://localhost:8004/output/voice/<id>.wav"}
+# {"audio_url":"http://localhost:8000/output/voice/<id>.wav"}
 # (.mp3 when VOICE_BACKEND=edge)
 
-curl -s -X POST "$SPEECH_URL/api/v1/audios:transcribe" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/audios:transcribe" \
   -F "file=@sample.wav"
 # {"text":"...","language":"en"}
 ```
@@ -140,20 +133,20 @@ PCM audio; it sends `partial` and `final` events.
 ### Image Playground / Video — generate then poll
 
 ```bash
-curl -s -X POST "$IMAGE_URL/api/v1/images:generate" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/images:generate" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"a quiet desk lamp"}'
 # {"job_id":"<id>"}
 
-curl -s "$IMAGE_URL/api/v1/imageJobs/<id>"
+curl -s "$EXPLORE_ML_URL/api/v1/imageJobs/<id>"
 # {"name":"imageJobs/<id>","status":"succeeded",
-#  "image_url":"http://localhost:8003/output/image/<id>.png"}
+#  "image_url":"http://localhost:8000/output/image/<id>.png"}
 
-curl -s -X POST "$VIDEO_URL/api/v1/videos:generate" \
+curl -s -X POST "$EXPLORE_ML_URL/api/v1/videos:generate" \
   -H 'Content-Type: application/json' \
   -d '{"prompt":"a calm pan across a desk"}'
 
-curl -s "$VIDEO_URL/api/v1/videoJobs/<id>"
+curl -s "$EXPLORE_ML_URL/api/v1/videoJobs/<id>"
 ```
 
 Treat heavy work as a job: store the `job_id`, poll
@@ -179,27 +172,28 @@ sequenceDiagram
 
 ## Integration rules
 
-1. Call helpers only from the product API (or another trusted server).
-2. Own timeouts and fallbacks in the API. Degrade the feature when a helper is
-   down.
+1. Call the app only from the product API (or another trusted server).
+2. Own timeouts and fallbacks in the API. Degrade a feature when its module
+   reports `degraded` or `error`, or the app is down.
 3. Treat `/docs` + `/api/v1/...` as the contract.
-4. Change a port only when you update both the helper and every upstream.
+4. Change the port only together with `EXPLORE_ML_URL` (and `BASE_URL` when
+   set).
 5. Prefer loopback or private network URLs—not public ingress.
 
 ## Checklist
 
-1. Set one base URL per helper you use.
-2. Confirm `GET /health` (or `GET /openapi.json` for image, speech, video).
+1. Set `EXPLORE_ML_URL`.
+2. Confirm the module in `GET /health`.
 3. Smoke one `/api/v1` route with curl.
 4. Call the same route from the product API.
-5. Stop the helper and confirm the product fails gracefully.
+5. Stop the app and confirm the product fails gracefully.
 
 ## Smoke test
 
-1. Start one helper ([Operator setup](operator-setup.md)).
-2. `curl "$HELPER/health"` (or `/openapi.json`).
+1. Start the app ([Operator setup](operator-setup.md)).
+2. `curl "$EXPLORE_ML_URL/health"`.
 3. Run one curl example above.
-4. Point the product env at `$HELPER`.
+4. Point the product env at `$EXPLORE_ML_URL`.
 5. Repeat the action once through the product.
 
 ## Related

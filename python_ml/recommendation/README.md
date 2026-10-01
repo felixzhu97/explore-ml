@@ -1,9 +1,10 @@
 # Recommendation Service (Python)
 
-Layout (same as other Python helpers): `main.py` / `config.py` / `controller/` /
-`service/` / `domain/` / `infra/` / `tests/` / `training/`, plus
-`celery_app.py`, `tasks.py` and the `run_*.py` batch entry points.
-Start: `uvicorn main:app --host 0.0.0.0 --port 8000`.
+Package `recommendation` in the single Explore ML app (port 8000):
+`module.py` / `config.py` / `controller/` / `service/` / `domain/` / `infra/` /
+`tests/` / `training/`, plus `celery_app.py`, `tasks.py` and the `run_*.py`
+batch entry points. Setup, `.env` and run commands:
+[`python_ml/README.md`](../README.md).
 
 Offline and online recommendation stack for Explore products:
 
@@ -14,15 +15,11 @@ Offline and online recommendation stack for Explore products:
 
 ## Setup
 
-```bash
-cd python_ml/recommendation
-python -m venv .venv
-source .venv/bin/activate  # or .venv\Scripts\activate on Windows
-pip install -r requirements.txt
-cp .env.example .env       # loaded automatically
-```
+Install from `python_ml/` as described there. LightFM is optional
+(`requirements-optional.txt`) because it does not build on Python 3.12;
+without it the suggestions job skips that source.
 
-Point `.env` at the same Postgres (`DATABASE_URL`), Redis (`REDIS_URL`,
+Point `python_ml/.env` at the same Postgres (`DATABASE_URL`), Redis (`REDIS_URL`,
 `REDIS_PASSWORD`) and Cassandra (`CASSANDRA_CONTACT_POINTS`,
 `CASSANDRA_KEYSPACE`, `CASSANDRA_LOCAL_DC`) as the product backend.
 
@@ -33,19 +30,21 @@ implicit ALS with an Annoy index, then friend-of-friend) and write to Redis
 `recommendation:user:{userId}`. Friend-of-friend reads at most
 `FRIEND_OF_FRIEND_FOLLOWING_LIMIT` (500) followees per user.
 
+Run every command below from `python_ml/`:
+
 ```bash
-python run_user_suggestions.py
+python -m recommendation.run_user_suggestions
 # or
-python run_jobs.py --job suggestions
+python -m recommendation.run_jobs --job suggestions
 ```
 
 Explore hot list (Cassandra engagement + hot score → Redis `explore:hot`,
 TTL `EXPLORE_TTL_SECONDS` = 300):
 
 ```bash
-python run_explore.py
+python -m recommendation.run_explore
 # or
-python run_jobs.py --job explore
+python -m recommendation.run_jobs --job explore
 ```
 
 Feed ranking model (PyTorch, trained from Cassandra `post_likes` and
@@ -56,10 +55,10 @@ Per-variant files such as `feed_ranker_<experiment>_<variant>.pt` load from the
 same directory:
 
 ```bash
-python run_jobs.py --job feed_rank
-python run_jobs.py --job feed_rank --init-from "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
+python -m recommendation.run_jobs --job feed_rank
+python -m recommendation.run_jobs --job feed_rank --init-from "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
   --output "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-$(date +%Y%m%d).pt"
-python -m training.eval_feed_ranker --model <model.pt> --holdout <holdout.jsonl> \
+python -m recommendation.training.eval_feed_ranker --model <model.pt> --holdout <holdout.jsonl> \
   [--baseline <base.pt>] [--k 10]
 ```
 
@@ -70,7 +69,7 @@ Vector towers for recall (user/post embeddings → `RedisVectorStore`
 `rec:user:vec:{id}`, `rec:post:vec:{id}`):
 
 ```bash
-python -m training.pytorch_towers
+python -m recommendation.training.pytorch_towers
 ```
 
 `training/pytorch_reels_multimodal.py` is an experiment; serving does not load
@@ -78,15 +77,10 @@ it.
 
 ## Online service (FastAPI)
 
-```bash
-uvicorn main:app --host 0.0.0.0 --port 8000
-# or: python main.py / python run_service.py
-```
+The routes are served by the shared app on port 8000. In `GET /health` the
+module reports `{status: "ok", ranker: true | false}`; `ranker` is false
+when no model file was found. Endpoints:
 
-The port comes from `PORT`, then `RECOMMENDATION_PORT` (default `8000`); the
-host from `HOST`. Endpoints:
-
-- `GET /health` → `{status: "ok", service: "recommendation"}`
 - `POST /api/v1/feeds:rank` – rank feed candidates for a user
 - `POST /api/v1/explores:rank` – rank explore candidates
 - `POST /api/v1/reels:rank` – rank Reels candidates
@@ -115,15 +109,15 @@ Environment variables:
 Run the batch jobs on a schedule with Redis as broker.
 
 ```bash
-celery -A celery_app worker -l info        # run tasks
-celery -A celery_app beat -l info          # suggestions every 6h, explore every 5min
-celery -A celery_app worker -l info -B     # both in one process (dev only)
+celery -A recommendation.celery_app worker -l info     # run tasks
+celery -A recommendation.celery_app beat -l info       # suggestions every 6h, explore every 5min
+celery -A recommendation.celery_app worker -l info -B  # both in one process (dev only)
 ```
 
 Trigger tasks manually:
 
 ```python
-from tasks import run_suggestions, run_explore
+from recommendation.tasks import run_suggestions, run_explore
 
 run_suggestions.delay()
 run_explore.delay()
@@ -135,5 +129,6 @@ run_explore.delay()
 ## Tests
 
 ```bash
-pytest -q   # tests/test_health.py, tests/test_fine_tuning.py
+cd python_ml
+pytest -q recommendation/tests
 ```
