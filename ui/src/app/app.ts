@@ -37,5 +37,6 @@ export class App {
     { path: '/', label: '总览', exact: true },
     { path: '/playground', label: '调试台', exact: false },
     { path: '/atlas', label: '向量地图', exact: false },
+    { path: '/evaluation', label: '评估看板', exact: false },
   ];
 }
