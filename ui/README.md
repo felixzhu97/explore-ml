@@ -88,13 +88,16 @@ src/app/
 ## Theme
 
 The app follows the Apple design tokens: one accent colour (`#0066cc`), 17px
-body text, pill buttons, no shadows and no gradients.
+body text, pill buttons, no shadows and no gradients. To change the theme,
+edit variables rather than component styles:
 
-- `provideNzConfig` in `src/app/app.config.ts` sets the NG-ZORRO theme
-  colours. Primary, info and success use `#0066cc`, warning uses `#7a7a7a`,
-  and error uses ink `#1d1d1f`.
-- `src/styles.css` loads the CSS-variable build of NG-ZORRO into its own
-  cascade layer (`antd`). That layer sits above Tailwind's preflight and below
-  its utilities, so inline Tailwind classes still win.
-- The `antd-theme` layer maps the remaining tokens onto NG-ZORRO's fixed
-  metrics: 44px controls, 11px input radius, 18px cards and pill buttons.
+| File                    | Controls                                                                                                       |
+| ----------------------- | -------------------------------------------------------------------------------------------------------------- |
+| `src/theme/tokens.less` | NG-ZORRO Less variables: colours, font, 44px control height, radii, pill buttons, shadows, neutral error state |
+| `src/styles.css`        | Tailwind `@theme` tokens: colours, fonts, type scale (`text-display-lg`, `text-tagline`, …), radii, page width |
+
+Keep the shared colour values in both files in sync. `src/theme/antd.less`
+compiles NG-ZORRO with `tokens.less` inside the `antd` cascade layer. That
+layer sits above Tailwind's preflight and below its utilities, so inline
+Tailwind classes still win. The d3 charts read the same CSS variables
+(`var(--color-primary)` and so on).

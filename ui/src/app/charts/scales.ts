@@ -6,10 +6,10 @@ export interface BarDatum {
 }
 
 export const CHART_COLORS = {
-  primary: '#0066cc',
-  secondary: '#7a7a7a',
-  empty: '#e0e0e0',
-  ink: '#1d1d1f',
+  primary: 'var(--color-primary)',
+  secondary: 'var(--color-muted)',
+  empty: 'var(--color-hairline)',
+  ink: 'var(--color-ink)',
 } as const;
 
 export function horizontalBarScales(

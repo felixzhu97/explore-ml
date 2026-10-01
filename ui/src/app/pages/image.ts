@@ -19,11 +19,11 @@ import { ModulePage } from '../ui/module-page';
         [call]="call"
       >
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">prompt</span>
+          <span class="text-caption font-semibold text-ink-80">prompt</span>
           <textarea nz-input rows="3" [formField]="f.prompt"></textarea>
         </label>
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">negative_prompt（可选）</span>
+          <span class="text-caption font-semibold text-ink-80">negative_prompt（可选）</span>
           <input nz-input [formField]="f.negative" />
         </label>
         <div>
@@ -39,7 +39,7 @@ import { ModulePage } from '../ui/module-page';
           </button>
         </div>
         @if (url()) {
-          <img class="max-w-full rounded-xl" [src]="url()" alt="生成结果" />
+          <img class="max-w-full rounded-md" [src]="url()" alt="生成结果" />
         }
       </app-endpoint>
     </app-module-page>

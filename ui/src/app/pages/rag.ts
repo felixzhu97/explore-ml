@@ -63,16 +63,16 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="问答" path="/api/v1/documents:query" [call]="calls.query">
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1 sm:col-span-2">
-            <span class="text-sm font-semibold text-ink-80">问题</span>
+            <span class="text-caption font-semibold text-ink-80">问题</span>
             <textarea nz-input rows="3" [formField]="f.query"></textarea>
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">collection（可选）</span>
+            <span class="text-caption font-semibold text-ink-80">collection（可选）</span>
             <input nz-input [formField]="f.collection" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">top_k（1–20）</span>
-            <nz-input-number [nzMin]="1" [formField]="f.topK" />
+            <span class="text-caption font-semibold text-ink-80">top_k（1–20）</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.topK" />
           </label>
         </div>
         <div>
@@ -90,7 +90,7 @@ const PREVIEW_DIMS = 8;
       </app-endpoint>
 
       <app-endpoint title="流式问答" path="/api/v1/documents:streamQuery" [call]="calls.stream">
-        <p class="text-sm text-muted">使用上方「问答」的问题、集合与 top_k。</p>
+        <p class="m-0 text-caption text-muted">使用上方「问答」的问题、集合与 top_k。</p>
         <div>
           <button
             nz-button
@@ -124,11 +124,11 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="文档列表" method="GET" path="/api/v1/documents" [call]="calls.list">
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">page_size</span>
-            <nz-input-number [nzMin]="1" [formField]="f.pageSize" />
+            <span class="text-caption font-semibold text-ink-80">page_size</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.pageSize" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">page_token（可选）</span>
+            <span class="text-caption font-semibold text-ink-80">page_token（可选）</span>
             <input nz-input [formField]="f.pageToken" />
           </label>
         </div>
@@ -152,7 +152,7 @@ const PREVIEW_DIMS = 8;
         [call]="calls.doc"
       >
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">文档 id</span>
+          <span class="text-caption font-semibold text-ink-80">文档 id</span>
           <input nz-input [formField]="f.docId" />
         </label>
         <div class="flex gap-3">
@@ -180,15 +180,15 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="导出向量" path="/api/v1/documents:exportVectors" [call]="calls.export">
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">collection（可选）</span>
+            <span class="text-caption font-semibold text-ink-80">collection（可选）</span>
             <input nz-input [formField]="f.collection" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">limit</span>
-            <nz-input-number [nzMin]="1" [formField]="f.exportLimit" />
+            <span class="text-caption font-semibold text-ink-80">limit</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.exportLimit" />
           </label>
         </div>
-        <p class="text-sm text-muted">
+        <p class="m-0 text-caption text-muted">
           响应只展示前 {{ previewPoints }} 个点、每个向量前 {{ previewDims }} 维。
         </p>
         <div>
@@ -206,7 +206,7 @@ const PREVIEW_DIMS = 8;
 
       <app-endpoint title="抓取网页" path="/api/v1/webpages:scrape" [call]="calls.scrape">
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">url</span>
+          <span class="text-caption font-semibold text-ink-80">url</span>
           <input nz-input [formField]="f.url" />
         </label>
         <div>
@@ -225,12 +225,12 @@ const PREVIEW_DIMS = 8;
 
       <app-endpoint title="批量抓取" path="/api/v1/webpages:crawl" [call]="calls.crawl">
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">urls（每行一个，最多 50 个）</span>
+          <span class="text-caption font-semibold text-ink-80">urls（每行一个，最多 50 个）</span>
           <textarea nz-input rows="3" [formField]="f.urls"></textarea>
         </label>
         <label class="flex flex-col gap-1">
-          <span class="text-sm font-semibold text-ink-80">max_depth（1–3）</span>
-          <nz-input-number [nzMin]="1" [formField]="f.maxDepth" />
+          <span class="text-caption font-semibold text-ink-80">max_depth（1–3）</span>
+          <nz-input-number class="w-full" [nzMin]="1" [formField]="f.maxDepth" />
         </label>
         <div>
           <button
@@ -253,7 +253,7 @@ const PREVIEW_DIMS = 8;
       >
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">资源</span>
+            <span class="text-caption font-semibold text-ink-80">资源</span>
             <nz-select [formField]="f.syncTarget">
               <nz-option nzValue="posts" nzLabel="posts" />
               <nz-option nzValue="comments" nzLabel="comments" />
@@ -261,8 +261,8 @@ const PREVIEW_DIMS = 8;
             </nz-select>
           </div>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">limit</span>
-            <nz-input-number [nzMin]="1" [formField]="f.syncLimit" />
+            <span class="text-caption font-semibold text-ink-80">limit</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.syncLimit" />
           </label>
         </div>
         <div>

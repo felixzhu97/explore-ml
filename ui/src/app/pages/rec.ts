@@ -39,7 +39,7 @@ function toBars(items: RankedItem[] | undefined) {
       <app-endpoint title="排序" [path]="'/api/v1/' + m().surface + ':rank'" [call]="rankCall">
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">场景</span>
+            <span class="text-caption font-semibold text-ink-80">场景</span>
             <nz-select [formField]="f.surface">
               <nz-option nzValue="feeds" nzLabel="feeds" />
               <nz-option nzValue="explores" nzLabel="explores" />
@@ -47,33 +47,35 @@ function toBars(items: RankedItem[] | undefined) {
             </nz-select>
           </div>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">user_id</span>
+            <span class="text-caption font-semibold text-ink-80">user_id</span>
             <input nz-input [formField]="f.userId" />
           </label>
           <label class="flex flex-col gap-1 sm:col-span-2">
-            <span class="text-sm font-semibold text-ink-80">candidate_ids（逗号或换行分隔）</span>
+            <span class="text-caption font-semibold text-ink-80"
+              >candidate_ids（逗号或换行分隔）</span
+            >
             <textarea nz-input rows="3" [formField]="f.candidates"></textarea>
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">limit</span>
-            <nz-input-number [nzMin]="1" [formField]="f.limit" />
+            <span class="text-caption font-semibold text-ink-80">limit</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.limit" />
           </label>
           <div class="grid grid-cols-2 gap-2">
             <label class="flex flex-col gap-1">
-              <span class="text-sm font-semibold text-ink-80">region（可选）</span>
+              <span class="text-caption font-semibold text-ink-80">region（可选）</span>
               <input nz-input placeholder="CN" [formField]="f.region" />
             </label>
             <label class="flex flex-col gap-1">
-              <span class="text-sm font-semibold text-ink-80">language（可选）</span>
+              <span class="text-caption font-semibold text-ink-80">language（可选）</span>
               <input nz-input placeholder="zh" [formField]="f.language" />
             </label>
           </div>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">experiment_id（可选）</span>
+            <span class="text-caption font-semibold text-ink-80">experiment_id（可选）</span>
             <input nz-input [formField]="f.experimentId" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">variant_id（可选）</span>
+            <span class="text-caption font-semibold text-ink-80">variant_id（可选）</span>
             <input nz-input [formField]="f.variantId" />
           </label>
         </div>
@@ -97,12 +99,12 @@ function toBars(items: RankedItem[] | undefined) {
       <app-endpoint title="召回" path="/api/v1/feeds:recall" [call]="recallCall">
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">user_id</span>
+            <span class="text-caption font-semibold text-ink-80">user_id</span>
             <input nz-input [formField]="f.userId" />
           </label>
           <label class="flex flex-col gap-1">
-            <span class="text-sm font-semibold text-ink-80">limit</span>
-            <nz-input-number [nzMin]="1" [formField]="f.recallLimit" />
+            <span class="text-caption font-semibold text-ink-80">limit</span>
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.recallLimit" />
           </label>
         </div>
         <div>

@@ -12,13 +12,11 @@ import { SERVICES } from '../core/services';
   imports: [BarChart, NzBadgeModule, NzButtonModule, NzCardModule, RouterLink],
   changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
-    <div class="mx-auto flex max-w-[980px] flex-col gap-6 px-6 py-12">
+    <div class="mx-auto flex max-w-page flex-col gap-6 px-6 py-12">
       <header class="flex flex-wrap items-end justify-between gap-4">
         <div class="flex flex-col gap-2">
-          <h1 class="font-display text-[40px] leading-[1.1] font-semibold tracking-[-0.28px]">
-            Explore ML
-          </h1>
-          <p class="text-muted">
+          <h1 class="m-0 font-display text-display-lg font-semibold">Explore ML</h1>
+          <p class="m-0 text-muted">
             {{ upCount() }} /
             {{ services.length }} 个模块在线。每个模块一个页面，可直接测试全部接口。
           </p>
@@ -35,8 +33,8 @@ import { SERVICES } from '../core/services';
             <a class="block h-full" [routerLink]="'/' + s.id">
               <nz-card nzHoverable class="h-full">
                 <div class="flex flex-col gap-1">
-                  <span class="font-display text-[21px] font-semibold text-ink">{{ s.name }}</span>
-                  <span class="text-sm text-muted">python_ml/{{ s.dir }} · {{ s.port }}</span>
+                  <span class="font-display text-tagline font-semibold text-ink">{{ s.name }}</span>
+                  <span class="text-caption text-muted">python_ml/{{ s.dir }} · {{ s.port }}</span>
                   <nz-badge
                     [nzStatus]="r ? (r.ok ? 'success' : 'default') : 'processing'"
                     [nzText]="r ? (r.ok ? '在线' : '离线 · ' + r.detail) : '检查中…'"
@@ -48,8 +46,8 @@ import { SERVICES } from '../core/services';
         }
       </ul>
 
-      <section class="flex flex-col gap-3 rounded-2xl bg-parchment p-6">
-        <h2 class="font-display text-[21px] font-semibold">健康检查延迟</h2>
+      <section class="flex flex-col gap-3 rounded-lg bg-parchment p-6">
+        <h2 class="m-0 font-display text-tagline font-semibold">健康检查延迟</h2>
         <app-bar-chart
           [data]="latency()"
           [format]="formatMs"
