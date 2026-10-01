@@ -1,0 +1,2 @@
+{"query": "Where are vectors stored?", "positive": "Embeddings are stored in Qdrant, either on disk or behind QDRANT_URL."}
+{"query": "What happens when the rerank sidecar is down?", "positive": "If the rerank sidecar is unreachable, results keep their vector order."}
