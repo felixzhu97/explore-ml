@@ -5,6 +5,7 @@ import os
 import tempfile
 
 from vision import config
+from vision.domain.prediction import Prediction, top_unique
 import torch
 from torchvision import transforms
 from PIL import Image, UnidentifiedImageError
@@ -86,19 +87,19 @@ def class_probabilities(image: Image.Image) -> torch.Tensor:
     return torch.softmax(logits[0], dim=0)
 
 
-def top_labels(image: Image.Image, limit: int) -> list[str]:
+def top_predictions(image: Image.Image, limit: int) -> list[Prediction]:
     probabilities = class_probabilities(image)
-    _, top_indices = torch.topk(probabilities, min(limit, len(LABELS)))
-    labels: list[str] = []
-    for class_index in top_indices.cpu().tolist():
-        label = (
+    top_scores, top_indices = torch.topk(probabilities, min(limit, len(LABELS)))
+    predictions = (
+        Prediction(
             LABELS[class_index].strip().lower().replace(" ", "_")
             if class_index < len(LABELS)
-            else f"class_{class_index}"
+            else f"class_{class_index}",
+            round(float(score), 4),
         )
-        if label not in labels:
-            labels.append(label)
-    return labels[:limit]
+        for score, class_index in zip(top_scores.cpu().tolist(), top_indices.cpu().tolist())
+    )
+    return top_unique(predictions, limit)
 
 
 def class_scores(image: Image.Image, class_indices: list[int]) -> list[float]:
