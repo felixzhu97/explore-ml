@@ -118,8 +118,16 @@ def get_image_pipeline():
                     model_id,
                     torch_dtype=dtype,
                 )
+            apply_lora(image_pipe)
             image_pipe = image_pipe.to(device)
     return image_pipe
+
+
+def apply_lora(pipe) -> None:
+    if not config.IMAGE_LORA_PATH:
+        return
+    pipe.load_lora_weights(config.IMAGE_LORA_PATH, adapter_name="ft")
+    pipe.set_adapters(["ft"], adapter_weights=[config.IMAGE_LORA_SCALE])
 
 
 def run_image_job(job_id: str, prompt: str, negative_prompt: str):
