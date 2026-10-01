@@ -13,9 +13,29 @@ class ModerationCategory:
 
 
 @dataclass(frozen=True)
+class FrameVerdict:
+    """Raw category scores for one sampled video frame."""
+
+    offset_seconds: float
+    scores: dict[str, float]
+    safe: bool
+
+
+@dataclass(frozen=True)
 class ModerationVerdict:
     safe: bool
     categories: list[ModerationCategory] = field(default_factory=list)
+    scores: dict[str, float] = field(default_factory=dict)
+    frames: list[FrameVerdict] = field(default_factory=list)
+
+
+def flagged(scores: dict[str, float], thresholds: dict[str, float]) -> list[ModerationCategory]:
+    """Categories whose score reaches their threshold."""
+    return [
+        ModerationCategory(label, round(score, 4))
+        for label, score in scores.items()
+        if label in thresholds and score >= thresholds[label]
+    ]
 
 
 def is_explicit_class(class_name: str) -> bool:
@@ -40,15 +60,31 @@ def max_explicit_score(
     return max_score
 
 
-def verdict(categories: Iterable[ModerationCategory]) -> ModerationVerdict:
-    """Keep the highest score per label; safe when nothing was flagged."""
+def peak_scores(frames: Iterable[FrameVerdict]) -> dict[str, float]:
+    """Highest score per category across frames."""
+    peaks: dict[str, float] = {}
+    for frame in frames:
+        for label, score in frame.scores.items():
+            peaks[label] = max(score, peaks.get(label, score))
+    return peaks
+
+
+def verdict(
+    categories: Iterable[ModerationCategory],
+    frames: Iterable[FrameVerdict] = (),
+    scores: dict[str, float] | None = None,
+) -> ModerationVerdict:
+    """Keep the highest score per flagged label; `scores` defaults to the frame peaks."""
     best_score_by_label: dict[str, float] = {}
     for category in categories:
         if category.label and category.score > best_score_by_label.get(category.label, -1.0):
             best_score_by_label[category.label] = category.score
+    frames = list(frames)
     return ModerationVerdict(
         safe=not best_score_by_label,
         categories=[
             ModerationCategory(label, score) for label, score in best_score_by_label.items()
         ],
+        scores=dict(scores) if scores is not None else peak_scores(frames),
+        frames=frames,
     )

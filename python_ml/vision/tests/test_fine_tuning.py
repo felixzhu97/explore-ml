@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import pytest
 from PIL import Image
 
 from vision import config
@@ -33,4 +34,7 @@ def test_should_train_head_and_serve_it_when_model_path_is_set(tmp_path, monkeyp
     models.load_model()
 
     assert models.MODEL.fc.out_features == 2
-    assert get_vision_service().predict_image(Image.new("RGB", (64, 64))) in (["cat", "dog"], ["dog", "cat"])
+    predictions = get_vision_service().predict_image(Image.new("RGB", (64, 64)))
+
+    assert sorted(prediction.label for prediction in predictions) == ["cat", "dog"]
+    assert sum(prediction.score for prediction in predictions) == pytest.approx(1.0, abs=1e-3)

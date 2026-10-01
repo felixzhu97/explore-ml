@@ -10,6 +10,7 @@ from pydantic import BaseModel
 
 from vision import config
 from vision.domain.moderation import ModerationVerdict
+from vision.domain.prediction import Prediction
 from vision.service.vision import VisionService, get_vision_service
 
 router = APIRouter()
@@ -20,8 +21,24 @@ OptionalUpload = Annotated[UploadFile | None, File()]
 MAX_IMAGE_BYTES = 10 * 1024 * 1024
 
 
+class PredictionItem(BaseModel):
+    label: str
+    score: float
+
+
 class PredictionResponse(BaseModel):
     labels: list[str]
+    predictions: list[PredictionItem] = []
+
+    @classmethod
+    def from_predictions(cls, predictions: list[Prediction]) -> "PredictionResponse":
+        return cls(
+            labels=[prediction.label for prediction in predictions],
+            predictions=[
+                PredictionItem(label=prediction.label, score=prediction.score)
+                for prediction in predictions
+            ],
+        )
 
 
 class ModerationCategoryResponse(BaseModel):
@@ -29,17 +46,36 @@ class ModerationCategoryResponse(BaseModel):
     score: float
 
 
+class FrameResponse(BaseModel):
+    offset_seconds: float
+    scores: dict[str, float]
+    safe: bool
+
+
 class ModerationResponse(BaseModel):
     safe: bool
     categories: list[ModerationCategoryResponse] = []
+    scores: dict[str, float] = {}
+    thresholds: dict[str, float] = {}
+    frames: list[FrameResponse] = []
 
     @classmethod
-    def from_verdict(cls, result: ModerationVerdict) -> "ModerationResponse":
+    def from_verdict(
+        cls, result: ModerationVerdict, thresholds: dict[str, float]
+    ) -> "ModerationResponse":
         return cls(
             safe=result.safe,
             categories=[
                 ModerationCategoryResponse(label=category.label, score=category.score)
                 for category in result.categories
+            ],
+            scores=result.scores,
+            thresholds=thresholds,
+            frames=[
+                FrameResponse(
+                    offset_seconds=frame.offset_seconds, scores=frame.scores, safe=frame.safe
+                )
+                for frame in result.frames
             ],
         )
 
@@ -93,7 +129,7 @@ async def predict_image(
     if image is None:
         return PredictionResponse(labels=[])
     try:
-        return PredictionResponse(labels=vision_service.predict_image(image))
+        return PredictionResponse.from_predictions(vision_service.predict_image(image))
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
@@ -108,7 +144,9 @@ async def moderate_image(
     if image is None:
         return SAFE_RESPONSE
     try:
-        return ModerationResponse.from_verdict(vision_service.moderate_image(image))
+        return ModerationResponse.from_verdict(
+            vision_service.moderate_image(image), vision_service.thresholds()
+        )
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
 
@@ -122,7 +160,9 @@ def _moderate_video_bytes(
     try:
         os.write(file_descriptor, content)
         os.close(file_descriptor)
-        return ModerationResponse.from_verdict(vision_service.moderate_video(video_path))
+        return ModerationResponse.from_verdict(
+            vision_service.moderate_video(video_path), vision_service.thresholds()
+        )
     finally:
         if os.path.exists(video_path):
             os.unlink(video_path)
