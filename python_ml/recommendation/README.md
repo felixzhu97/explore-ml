@@ -37,11 +37,15 @@ Explore hot list (Cassandra engagement + hot score -> Redis `explore:hot`):
 python run_jobs.py --job explore
 ```
 
-Feed ranking model (PyTorch, trained from Cassandra `post_likes` + `post_engagement_counts`, outputs `models/feed_ranker.pt`):
+Feed ranking model (PyTorch, trained from Cassandra `post_likes` + `post_engagement_counts`). It writes to `FEED_RANKER_MODEL`, which defaults to `$RECOMMENDATION_MODEL_DIR/feed_ranker.pt` (`$LOCAL_MODELS_ROOT/recommendation/models`). Serving reads the same path. Per-variant files such as `feed_ranker_<experiment>_<variant>.pt` load from the same directory:
 
 ```bash
 python run_jobs.py --job feed_rank
+python run_jobs.py --job feed_rank --init-from "$RECOMMENDATION_MODEL_DIR/feed_ranker.pt" \
+  --output "$RECOMMENDATION_MODEL_DIR/feed_ranker-ft-$(date +%Y%m%d).pt"
 ```
+
+See the [fine-tuning guide](../../docs/user-guide/fine-tuning.md) for warm-start and evaluation.
 
 Vector towers for recall (user/post embeddings -> RedisVectorStore `rec:user:vec:{id}`, `rec:post:vec:{id}`):
 

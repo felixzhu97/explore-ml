@@ -1,7 +1,22 @@
 import os
+from pathlib import Path
+
 from dotenv import load_dotenv
 
 load_dotenv()
+
+LOCAL_MODELS_ROOT = Path(
+    os.getenv("LOCAL_MODELS_ROOT", str(Path.home() / "Codes" / "models"))
+).expanduser()
+RECOMMENDATION_MODEL_DIR = Path(
+    os.getenv(
+        "RECOMMENDATION_MODEL_DIR",
+        str(LOCAL_MODELS_ROOT / "recommendation" / "models"),
+    )
+).expanduser()
+FEED_RANKER_MODEL = Path(
+    os.getenv("FEED_RANKER_MODEL", str(RECOMMENDATION_MODEL_DIR / "feed_ranker.pt"))
+).expanduser()
 
 HOST = os.getenv("HOST", "0.0.0.0")
 PORT = int(os.getenv("PORT", os.getenv("RECOMMENDATION_PORT", "8000")))

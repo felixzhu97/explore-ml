@@ -80,7 +80,9 @@ class FeedRankingService:
         if key in self.models:
             return self.models[key]
         suffix = key.replace(":", "_").replace("/", "_")
-        candidate = f"domain/models/feed_ranker_{suffix}.pt"
+        candidate = os.path.join(
+            os.path.dirname(self.base_model_path), f"feed_ranker_{suffix}.pt"
+        )
         if os.path.exists(candidate):
             self._load_model(key, candidate)
             return self.models[key]

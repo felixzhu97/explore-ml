@@ -44,11 +44,10 @@ class VectorStoreFactory:
 class RankerFactory:
     @staticmethod
     def create_ranker() -> Optional[FeedRankingService]:
-        root = os.path.dirname(os.path.abspath(__file__))
-        model_path = os.path.join(root, "domain", "models", "feed_ranker.pt")
-        if not os.path.isfile(model_path):
+        model_path = cfg.FEED_RANKER_MODEL
+        if not model_path.is_file():
             return None
-        return FeedRankingService(model_path=model_path)
+        return FeedRankingService(model_path=str(model_path))
 
 
 class AppState:
