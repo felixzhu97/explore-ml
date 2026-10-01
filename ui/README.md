@@ -32,14 +32,14 @@ The browser only talks to the UI origin. The dev server proxies
 CORS setup. That matters for vision and recommendation, which ship without
 CORS.
 
-| Proxy path    | Helper           | Default target          | Override env |
-| ------------- | ---------------- | ----------------------- | ------------ |
-| `/svc/rec`    | recommendation   | `http://127.0.0.1:8000` | `REC_URL`    |
-| `/svc/vision` | vision           | `http://127.0.0.1:8001` | `VISION_URL` |
-| `/svc/rag`    | rag              | `http://127.0.0.1:8002` | `RAG_URL`    |
-| `/svc/image`  | image-playground | `http://127.0.0.1:8003` | `IMAGE_URL`  |
-| `/svc/speech` | speech           | `http://127.0.0.1:8004` | `SPEECH_URL` |
-| `/svc/video`  | video            | `http://127.0.0.1:8005` | `VIDEO_URL`  |
+| Proxy path            | Helper           | Default target          | Override env         |
+| --------------------- | ---------------- | ----------------------- | -------------------- |
+| `/svc/recommendation` | recommendation   | `http://127.0.0.1:8000` | `RECOMMENDATION_URL` |
+| `/svc/vision`         | vision           | `http://127.0.0.1:8001` | `VISION_URL`         |
+| `/svc/rag`            | rag              | `http://127.0.0.1:8002` | `RAG_URL`            |
+| `/svc/image`          | image-playground | `http://127.0.0.1:8003` | `IMAGE_URL`          |
+| `/svc/speech`         | speech           | `http://127.0.0.1:8004` | `SPEECH_URL`         |
+| `/svc/video`          | video            | `http://127.0.0.1:8005` | `VIDEO_URL`          |
 
 For example, to point RAG at a GPU box:
 
@@ -52,15 +52,15 @@ elsewhere, put the same `/svc/<name>` rewrites in front of it.
 
 ## Pages
 
-| Route      | Endpoints you can call                                                                                       |
-| ---------- | ------------------------------------------------------------------------------------------------------------ |
-| `#/`       | Health of every module, with a d3 latency chart.                                                             |
-| `#/rec`    | `{feeds,explores,reels}:rank`, `feeds:recall`                                                                |
-| `#/vision` | `images:predict`, `images:moderate`, `videos:moderate` (file upload or URL)                                  |
-| `#/rag`    | collections, documents (upload, list, get, delete), query, stream query, export vectors, scrape, crawl, sync |
-| `#/image`  | `images:generate`, then polls `imageJobs/{id}` and shows the image                                           |
-| `#/speech` | `voices:synthesize`, `audios:transcribe`, live ASR over `WS /ws/v1/audios:transcribe`                        |
-| `#/video`  | `videos:generate`, then polls `videoJobs/{id}` and plays the video                                           |
+| Route              | Endpoints you can call                                                                                       |
+| ------------------ | ------------------------------------------------------------------------------------------------------------ |
+| `#/`               | Health of every module, with a d3 latency chart.                                                             |
+| `#/recommendation` | `{feeds,explores,reels}:rank`, `feeds:recall`                                                                |
+| `#/vision`         | `images:predict`, `images:moderate`, `videos:moderate` (file upload or URL)                                  |
+| `#/rag`            | collections, documents (upload, list, get, delete), query, stream query, export vectors, scrape, crawl, sync |
+| `#/image`          | `images:generate`, then polls `imageJobs/{id}` and shows the image                                           |
+| `#/speech`         | `voices:synthesize`, `audios:transcribe`, live ASR over `WS /ws/v1/audios:transcribe`                        |
+| `#/video`          | `videos:generate`, then polls `videoJobs/{id}` and plays the video                                           |
 
 Every module page starts with a health check and lists one card per endpoint:
 the form, the elapsed time, any error, and the raw JSON response. Image, speech
@@ -79,16 +79,19 @@ CI runs both on every pull request.
 
 ```text
 src/app/
-├── shared/    helper registry, /svc proxy, HTTP, SSE, polling, Call state,
-│              d3 bar chart, module page frame, endpoint card, file picker
+├── shared/    helper registry, /svc proxy, HealthService, SSE, polling,
+│              Call state, d3 bar chart, module page frame, endpoint card,
+│              file picker
 ├── home/      home.page.ts
-└── <module>/  rec, vision, rag, image, speech, video
-               <module>.page.ts   page (presentation)
-               <module>.api.ts    HTTP calls to the helper (infrastructure)
-               <module>.model.ts  request and response types (domain)
+└── <module>/  recommendation, vision, rag, image, speech, video
+               <module>.page.ts     page; injects the service with inject()
+               <module>.service.ts  @Service() class calling the helper over
+                                    HttpClient, plus its request and
+                                    response types
 ```
 
 Each folder holds flat files only; specs sit next to the file they test.
+Service specs use `HttpTestingController` instead of a real helper.
 
 ## Theme
 

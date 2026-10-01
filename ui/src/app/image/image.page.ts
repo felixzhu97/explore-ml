@@ -1,38 +1,37 @@
-import { ChangeDetectionStrategy, Component, computed, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
-import { generateImage } from './image.api';
 import { Call } from '../shared/call';
 import { Endpoint } from '../shared/endpoint';
 import { ModulePage } from '../shared/module-page';
+import { ImageService } from './image.service';
 
 @Component({
   selector: 'app-image-page',
   imports: [Endpoint, FormField, ModulePage, NzButtonModule, NzInputModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="image">
       <app-endpoint
         title="文生图"
         path="/api/v1/images:generate → GET /api/v1/imageJobs/{id}"
-        [call]="call"
+        [call]="generateCall"
       >
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">prompt</span>
-          <textarea nz-input rows="3" [formField]="f.prompt"></textarea>
+          <textarea nz-input rows="3" [formField]="requestForm.prompt"></textarea>
         </label>
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">negative_prompt（可选）</span>
-          <input nz-input [formField]="f.negative" />
+          <input nz-input [formField]="requestForm.negativePrompt" />
         </label>
         <div>
           <button
             nz-button
             nzType="primary"
             nzShape="round"
-            [nzLoading]="call.busy()"
-            [disabled]="!m().prompt.trim()"
+            [nzLoading]="generateCall.busy()"
+            [disabled]="!formModel().prompt.trim()"
             (click)="run()"
           >
             生成
@@ -46,18 +45,26 @@ import { ModulePage } from '../shared/module-page';
   `,
 })
 export class ImagePage {
-  protected readonly m = signal({ prompt: 'a red fox in the snow, studio light', negative: '' });
-  protected readonly f = form(this.m);
-  protected readonly call = new Call<{ status: string; jobId?: string; url?: string }>();
-  protected readonly url = computed(() => this.call.value()?.url);
+  private readonly imageService = inject(ImageService);
+  protected readonly formModel = signal({
+    prompt: 'a red fox in the snow, studio light',
+    negativePrompt: '',
+  });
+  protected readonly requestForm = form(this.formModel);
+  protected readonly generateCall = new Call<{ status: string; jobId?: string; url?: string }>();
+  protected readonly url = computed(() => this.generateCall.value()?.url);
 
   protected run(): Promise<void> {
-    const m = this.m();
-    return this.call.run(async (set) => {
-      const r = await generateImage(m.prompt.trim(), m.negative.trim(), {
-        onStatus: (status) => set({ status }),
-      });
-      return { status: 'succeeded', ...r };
+    const values = this.formModel();
+    return this.generateCall.run(async (setValue) => {
+      const generated = await this.imageService.generate(
+        values.prompt.trim(),
+        values.negativePrompt.trim(),
+        {
+          onStatus: (status) => setValue({ status }),
+        },
+      );
+      return { status: 'succeeded', ...generated };
     });
   }
 }

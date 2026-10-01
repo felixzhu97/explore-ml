@@ -1,29 +1,29 @@
 import { signal } from '@angular/core';
-import { errorMessage } from './http';
+import { errorMessage } from './error-message';
 
 /** State of one endpoint request: busy flag, latest value, error and elapsed time. */
 export class Call<T = unknown> {
   readonly busy = signal(false);
   readonly value = signal<T | undefined>(undefined);
   readonly error = signal('');
-  readonly ms = signal<number | null>(null);
+  readonly elapsedMs = signal<number | null>(null);
 
-  constructor(private readonly now: () => number = () => performance.now()) {}
+  constructor(private readonly clock: () => number = () => performance.now()) {}
 
-  /** `fn` may push interim values (stream tokens, job status) through `set`. */
-  async run(fn: (set: (value: T) => void) => Promise<T | void>): Promise<void> {
+  /** `request` may push interim values (stream tokens, job status) through `setValue`. */
+  async run(request: (setValue: (value: T) => void) => Promise<T | void>): Promise<void> {
     this.busy.set(true);
     this.error.set('');
     this.value.set(undefined);
-    this.ms.set(null);
-    const start = this.now();
+    this.elapsedMs.set(null);
+    const startedAt = this.clock();
     try {
-      const value = await fn((v) => this.value.set(v));
-      if (value !== undefined) this.value.set(value);
-    } catch (e) {
-      this.error.set(errorMessage(e));
+      const result = await request((interimValue) => this.value.set(interimValue));
+      if (result !== undefined) this.value.set(result);
+    } catch (error) {
+      this.error.set(errorMessage(error));
     } finally {
-      this.ms.set(Math.round(this.now() - start));
+      this.elapsedMs.set(Math.round(this.clock() - startedAt));
       this.busy.set(false);
     }
   }

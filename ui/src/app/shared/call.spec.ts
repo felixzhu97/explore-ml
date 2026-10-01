@@ -7,16 +7,16 @@ describe('Call', () => {
     const call = new Call<number>(() => ticks.shift()!);
     await call.run(async () => 7);
     expect(call.value()).toBe(7);
-    expect(call.ms()).toBe(42);
+    expect(call.elapsedMs()).toBe(42);
     expect(call.busy()).toBe(false);
     expect(call.error()).toBe('');
   });
 
   it('should keep interim values when the request pushes them through set', async () => {
     const call = new Call<string>();
-    await call.run(async (set) => {
-      set('你');
-      set('你好');
+    await call.run(async (setValue) => {
+      setValue('你');
+      setValue('你好');
     });
     expect(call.value()).toBe('你好');
   });

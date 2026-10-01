@@ -14,10 +14,10 @@ export async function readSse(
       const { value, done } = await reader.read();
       if (done) break;
       buffer += decoder.decode(value, { stream: true });
-      let sep: number;
-      while ((sep = buffer.search(/\r?\n\r?\n/)) !== -1) {
-        const event = buffer.slice(0, sep);
-        buffer = buffer.slice(sep).replace(/^\r?\n\r?\n/, '');
+      let separatorIndex: number;
+      while ((separatorIndex = buffer.search(/\r?\n\r?\n/)) !== -1) {
+        const event = buffer.slice(0, separatorIndex);
+        buffer = buffer.slice(separatorIndex).replace(/^\r?\n\r?\n/, '');
         const data = event
           .split(/\r?\n/)
           .filter((line) => line.startsWith('data:'))

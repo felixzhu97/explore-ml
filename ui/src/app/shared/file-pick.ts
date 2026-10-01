@@ -1,4 +1,4 @@
-import { ChangeDetectionStrategy, Component, input, output, signal } from '@angular/core';
+import { Component, input, output, signal } from '@angular/core';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzIconModule } from 'ng-zorro-antd/icon';
 import type { NzUploadFile } from 'ng-zorro-antd/upload';
@@ -8,7 +8,6 @@ import { NzUploadModule } from 'ng-zorro-antd/upload';
 @Component({
   selector: 'app-file-pick',
   imports: [NzButtonModule, NzIconModule, NzUploadModule],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <nz-upload
       [nzAccept]="accept()"
@@ -32,8 +31,8 @@ export class FilePick {
     return false;
   };
 
-  protected onListChange(list: NzUploadFile[]): void {
-    if (list.length) return;
+  protected onListChange(fileList: NzUploadFile[]): void {
+    if (fileList.length) return;
     this.files.set([]);
     this.picked.emit(null);
   }

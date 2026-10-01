@@ -1,30 +1,17 @@
-import { ChangeDetectionStrategy, Component, signal } from '@angular/core';
+import { Component, inject, signal } from '@angular/core';
 import { FormField, form } from '@angular/forms/signals';
 import { NzButtonModule } from 'ng-zorro-antd/button';
 import { NzInputModule } from 'ng-zorro-antd/input';
 import { NzInputNumberModule } from 'ng-zorro-antd/input-number';
 import { NzSelectModule } from 'ng-zorro-antd/select';
-import {
-  ragCollections,
-  ragCrawl,
-  ragDeleteDocument,
-  ragExportVectors,
-  ragGetDocument,
-  ragListDocuments,
-  ragQuery,
-  ragScrape,
-  ragStreamQuery,
-  ragSync,
-  ragUpload,
-} from './rag.api';
-import type { SyncTarget } from './rag.model';
 import { Call } from '../shared/call';
 import { Endpoint } from '../shared/endpoint';
 import { FilePick } from '../shared/file-pick';
 import { ModulePage } from '../shared/module-page';
+import { RagService, type SyncTarget } from './rag.service';
 
 const PREVIEW_POINTS = 20;
-const PREVIEW_DIMS = 8;
+const PREVIEW_DIMENSIONS = 8;
 
 @Component({
   selector: 'app-rag-page',
@@ -38,7 +25,6 @@ const PREVIEW_DIMS = 8;
     NzInputNumberModule,
     NzSelectModule,
   ],
-  changeDetection: ChangeDetectionStrategy.OnPush,
   template: `
     <app-module-page module="rag">
       <app-endpoint
@@ -64,15 +50,15 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1 sm:col-span-2">
             <span class="text-caption font-semibold text-ink-80">问题</span>
-            <textarea nz-input rows="3" [formField]="f.query"></textarea>
+            <textarea nz-input rows="3" [formField]="requestForm.query"></textarea>
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">collection（可选）</span>
-            <input nz-input [formField]="f.collection" />
+            <input nz-input [formField]="requestForm.collection" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">top_k（1–20）</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.topK" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.topK" />
           </label>
         </div>
         <div>
@@ -81,7 +67,7 @@ const PREVIEW_DIMS = 8;
             nzType="primary"
             nzShape="round"
             [nzLoading]="calls.query.busy()"
-            [disabled]="!m().query.trim()"
+            [disabled]="!formModel().query.trim()"
             (click)="runQuery()"
           >
             提问
@@ -97,7 +83,7 @@ const PREVIEW_DIMS = 8;
             nzType="primary"
             nzShape="round"
             [nzLoading]="calls.stream.busy()"
-            [disabled]="!m().query.trim()"
+            [disabled]="!formModel().query.trim()"
             (click)="runStream()"
           >
             流式提问
@@ -125,11 +111,11 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">page_size</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.pageSize" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.pageSize" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">page_token（可选）</span>
-            <input nz-input [formField]="f.pageToken" />
+            <input nz-input [formField]="requestForm.pageToken" />
           </label>
         </div>
         <div>
@@ -149,28 +135,28 @@ const PREVIEW_DIMS = 8;
         title="文档详情 / 删除"
         method="GET"
         path="/api/v1/documents/{id}  ·  DELETE 同路径"
-        [call]="calls.doc"
+        [call]="calls.document"
       >
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">文档 id</span>
-          <input nz-input [formField]="f.docId" />
+          <input nz-input [formField]="requestForm.documentId" />
         </label>
         <div class="flex gap-3">
           <button
             nz-button
             nzType="primary"
             nzShape="round"
-            [nzLoading]="calls.doc.busy()"
-            [disabled]="!m().docId.trim()"
-            (click)="calls.doc.run(getDoc)"
+            [nzLoading]="calls.document.busy()"
+            [disabled]="!formModel().documentId.trim()"
+            (click)="calls.document.run(getDocument)"
           >
             查询
           </button>
           <button
             nz-button
             nzShape="round"
-            [disabled]="calls.doc.busy() || !m().docId.trim()"
-            (click)="calls.doc.run(deleteDoc)"
+            [disabled]="calls.document.busy() || !formModel().documentId.trim()"
+            (click)="calls.document.run(deleteDocument)"
           >
             删除
           </button>
@@ -181,15 +167,15 @@ const PREVIEW_DIMS = 8;
         <div class="grid gap-4 sm:grid-cols-2">
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">collection（可选）</span>
-            <input nz-input [formField]="f.collection" />
+            <input nz-input [formField]="requestForm.collection" />
           </label>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">limit</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.exportLimit" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.exportLimit" />
           </label>
         </div>
         <p class="m-0 text-caption text-muted">
-          响应只展示前 {{ previewPoints }} 个点、每个向量前 {{ previewDims }} 维。
+          响应只展示前 {{ previewPoints }} 个点、每个向量前 {{ previewDimensions }} 维。
         </p>
         <div>
           <button
@@ -207,7 +193,7 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="抓取网页" path="/api/v1/webpages:scrape" [call]="calls.scrape">
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">url</span>
-          <input nz-input [formField]="f.url" />
+          <input nz-input [formField]="requestForm.url" />
         </label>
         <div>
           <button
@@ -215,7 +201,7 @@ const PREVIEW_DIMS = 8;
             nzType="primary"
             nzShape="round"
             [nzLoading]="calls.scrape.busy()"
-            [disabled]="!m().url.trim()"
+            [disabled]="!formModel().url.trim()"
             (click)="calls.scrape.run(scrape)"
           >
             抓取
@@ -226,11 +212,11 @@ const PREVIEW_DIMS = 8;
       <app-endpoint title="批量抓取" path="/api/v1/webpages:crawl" [call]="calls.crawl">
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">urls（每行一个，最多 50 个）</span>
-          <textarea nz-input rows="3" [formField]="f.urls"></textarea>
+          <textarea nz-input rows="3" [formField]="requestForm.urls"></textarea>
         </label>
         <label class="flex flex-col gap-1">
           <span class="text-caption font-semibold text-ink-80">max_depth（1–3）</span>
-          <nz-input-number class="w-full" [nzMin]="1" [formField]="f.maxDepth" />
+          <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.maxDepth" />
         </label>
         <div>
           <button
@@ -248,13 +234,13 @@ const PREVIEW_DIMS = 8;
 
       <app-endpoint
         title="数据同步"
-        [path]="'/api/v1/' + m().syncTarget + ':sync'"
+        [path]="'/api/v1/' + formModel().syncTarget + ':sync'"
         [call]="calls.sync"
       >
         <div class="grid gap-4 sm:grid-cols-2">
           <div class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">资源</span>
-            <nz-select [formField]="f.syncTarget">
+            <nz-select [formField]="requestForm.syncTarget">
               <nz-option nzValue="posts" nzLabel="posts" />
               <nz-option nzValue="comments" nzLabel="comments" />
               <nz-option nzValue="resources" nzLabel="resources（全部）" />
@@ -262,7 +248,7 @@ const PREVIEW_DIMS = 8;
           </div>
           <label class="flex flex-col gap-1">
             <span class="text-caption font-semibold text-ink-80">limit</span>
-            <nz-input-number class="w-full" [nzMin]="1" [formField]="f.syncLimit" />
+            <nz-input-number class="w-full" [nzMin]="1" [formField]="requestForm.syncLimit" />
           </label>
         </div>
         <div>
@@ -281,15 +267,16 @@ const PREVIEW_DIMS = 8;
   `,
 })
 export class RagPage {
+  private readonly ragService = inject(RagService);
   protected readonly previewPoints = PREVIEW_POINTS;
-  protected readonly previewDims = PREVIEW_DIMS;
-  protected readonly m = signal({
+  protected readonly previewDimensions = PREVIEW_DIMENSIONS;
+  protected readonly formModel = signal({
     query: '这个项目包含哪些模块？',
     collection: '',
     topK: 5,
     pageSize: 20,
     pageToken: '',
-    docId: '',
+    documentId: '',
     exportLimit: 2000,
     url: 'https://example.com',
     urls: 'https://example.com',
@@ -297,7 +284,7 @@ export class RagPage {
     syncTarget: 'posts' as SyncTarget,
     syncLimit: 1000,
   });
-  protected readonly f = form(this.m);
+  protected readonly requestForm = form(this.formModel);
   protected readonly file = signal<File | null>(null);
   protected readonly calls = {
     collections: new Call(),
@@ -305,63 +292,78 @@ export class RagPage {
     stream: new Call<string>(),
     upload: new Call(),
     list: new Call(),
-    doc: new Call(),
+    document: new Call(),
     export: new Call(),
     scrape: new Call(),
     crawl: new Call(),
     sync: new Call(),
   };
 
-  protected readonly listCollections = () => ragCollections();
-  protected readonly getDoc = () => ragGetDocument(this.m().docId.trim());
-  protected readonly deleteDoc = () => ragDeleteDocument(this.m().docId.trim());
-  protected readonly scrape = () => ragScrape(this.m().url.trim());
-  protected readonly crawl = () => ragCrawl(this.crawlUrls(), this.m().maxDepth);
-  protected readonly sync = () => ragSync(this.m().syncTarget, this.m().syncLimit);
+  protected readonly listCollections = () => this.ragService.listCollections();
+  protected readonly getDocument = () =>
+    this.ragService.getDocument(this.formModel().documentId.trim());
+  protected readonly deleteDocument = () =>
+    this.ragService.deleteDocument(this.formModel().documentId.trim());
+  protected readonly scrape = () => this.ragService.scrapeWebpage(this.formModel().url.trim());
+  protected readonly crawl = () =>
+    this.ragService.crawlWebpages(this.crawlUrls(), this.formModel().maxDepth);
+  protected readonly sync = () =>
+    this.ragService.sync(this.formModel().syncTarget, this.formModel().syncLimit);
 
   protected crawlUrls(): string[] {
-    return this.m()
+    return this.formModel()
       .urls.split('\n')
-      .map((u) => u.trim())
+      .map((url) => url.trim())
       .filter(Boolean);
   }
 
-  private queryBody() {
-    const m = this.m();
-    return { query: m.query.trim(), collection: m.collection.trim() || undefined, top_k: m.topK };
+  private queryRequest() {
+    const values = this.formModel();
+    return {
+      query: values.query.trim(),
+      collection: values.collection.trim() || undefined,
+      top_k: values.topK,
+    };
   }
 
   protected runQuery(): Promise<void> {
-    return this.calls.query.run(() => ragQuery(this.queryBody()));
+    return this.calls.query.run(() => this.ragService.query(this.queryRequest()));
   }
 
   protected runStream(): Promise<void> {
-    return this.calls.stream.run(async (set) => {
+    return this.calls.stream.run(async (setValue) => {
       let answer = '';
-      await ragStreamQuery(this.queryBody(), (token) => set((answer += token)));
+      await this.ragService.streamQuery(this.queryRequest(), (token) =>
+        setValue((answer += token)),
+      );
       return answer;
     });
   }
 
   protected runUpload(): Promise<void> {
-    return this.calls.upload.run(() => ragUpload(this.file()!));
+    return this.calls.upload.run(() => this.ragService.uploadDocument(this.file()!));
   }
 
   protected runList(): Promise<void> {
-    const m = this.m();
-    return this.calls.list.run(() => ragListDocuments(m.pageSize, m.pageToken.trim()));
+    const values = this.formModel();
+    return this.calls.list.run(() =>
+      this.ragService.listDocuments(values.pageSize, values.pageToken.trim()),
+    );
   }
 
   protected runExport(): Promise<void> {
-    const m = this.m();
+    const values = this.formModel();
     return this.calls.export.run(async () => {
-      const r = await ragExportVectors(m.collection.trim(), m.exportLimit);
+      const exported = await this.ragService.exportVectors(
+        values.collection.trim(),
+        values.exportLimit,
+      );
       return {
-        dimension: r.dimension,
-        total: r.points.length,
-        points: r.points.slice(0, PREVIEW_POINTS).map((p) => ({
-          ...p,
-          vector: p.vector.slice(0, PREVIEW_DIMS),
+        dimension: exported.dimension,
+        total: exported.points.length,
+        points: exported.points.slice(0, PREVIEW_POINTS).map((point) => ({
+          ...point,
+          vector: point.vector.slice(0, PREVIEW_DIMENSIONS),
         })),
       };
     });
