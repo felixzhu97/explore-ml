@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import threading
 
 from image_playground import config
@@ -66,8 +65,6 @@ def _ensure_torch_distributed_device_mesh():
 def _select_device() -> str:
     import torch
 
-    if os.environ.get("IMAGE_PLAYGROUND_DEVICE") == "cpu":
-        return "cpu"
     if torch.cuda.is_available():
         return "cuda"
     mps_backend = getattr(torch.backends, "mps", None)

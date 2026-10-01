@@ -2,7 +2,6 @@
 
 from __future__ import annotations
 
-import os
 from functools import lru_cache
 
 from recommendation.domain.vector_store import VectorStore
@@ -19,7 +18,7 @@ class RecommendationService:
     def __init__(self) -> None:
         self._ranker: FeedRankingService | None = None
         self._ranker_loaded = False
-        self._vector_stores: dict[str, VectorStore] = {}
+        self._vector_store: VectorStore | None = None
 
     @property
     def ranker(self) -> FeedRankingService | None:
@@ -29,19 +28,14 @@ class RecommendationService:
         return self._ranker
 
     def vector_store(self) -> VectorStore:
-        backend = os.getenv("VECTOR_BACKEND", "redis").lower()
-        if backend not in self._vector_stores:
-            self._vector_stores[backend] = (
-                VectorStoreFactory.create_faiss_store()
-                if backend == "faiss"
-                else VectorStoreFactory.create_redis_store()
-            )
-        return self._vector_stores[backend]
+        if self._vector_store is None:
+            self._vector_store = VectorStoreFactory.get_vector_store()
+        return self._vector_store
 
     def clear(self) -> None:
         self._ranker = None
         self._ranker_loaded = False
-        self._vector_stores.clear()
+        self._vector_store = None
 
     def rank_candidates(
         self,

@@ -5,7 +5,7 @@ from typing import Any
 
 import httpx
 
-from rag.config import get_settings
+from rag import config
 from rag.domain.errors import UpstreamError
 
 REQUEST_TIMEOUT_SECONDS = 60
@@ -30,4 +30,4 @@ class ContentApiClient:
 
 @lru_cache
 def get_content_api_client() -> ContentApiClient:
-    return ContentApiClient(get_settings().content_api_url)
+    return ContentApiClient(config.CONTENT_API_URL)

@@ -2,8 +2,6 @@
 
 from __future__ import annotations
 
-import os
-
 import redis
 
 from recommendation import config
@@ -25,17 +23,15 @@ class VectorStoreFactory:
 
     @staticmethod
     def create_faiss_store() -> FaissVectorStore:
-        dimension = int(os.getenv("FAISS_DIM", "64"))
         return FaissVectorStore(
-            dimension=dimension,
-            index_path=os.getenv("FAISS_INDEX_PATH"),
-            ids_path=os.getenv("FAISS_IDS_PATH"),
+            dimension=config.FAISS_DIM,
+            index_path=config.FAISS_INDEX_PATH,
+            ids_path=config.FAISS_IDS_PATH,
         )
 
     @staticmethod
     def get_vector_store():
-        backend = os.getenv("VECTOR_BACKEND", "redis").lower()
-        if backend == "faiss":
+        if config.VECTOR_BACKEND == "faiss":
             return VectorStoreFactory.create_faiss_store()
         return VectorStoreFactory.create_redis_store()
 

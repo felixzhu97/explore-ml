@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import os
 import threading
 
 from video import config
@@ -65,8 +64,6 @@ def _ensure_torch_distributed_device_mesh():
 def _select_device() -> str:
     import torch
 
-    if os.environ.get("VIDEO_DEVICE") == "cpu":
-        return "cpu"
     if torch.cuda.is_available():
         return "cuda"
     mps_backend = getattr(torch.backends, "mps", None)
@@ -76,10 +73,6 @@ def _select_device() -> str:
 
 
 def skip_video_local() -> bool:
-    if os.environ.get("VIDEO_GEN_FORCE_LOCAL") == "1":
-        return False
-    if os.environ.get("VIDEO_FORCE_LOCAL") == "1":
-        return False
     import sys
 
     if sys.platform != "darwin":

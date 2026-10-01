@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import re
 from pathlib import Path
 from typing import Dict, List, Optional, Sequence
@@ -64,7 +63,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     parser.add_argument("--model", required=True)
     parser.add_argument("--baseline")
     parser.add_argument("--judge", help="Defaults to the baseline, then the model")
-    parser.add_argument("--host", default=os.getenv("OLLAMA_BASE_URL", "http://localhost:11434"))
+    parser.add_argument("--host", default="http://localhost:11434")
     args = parser.parse_args(argv)
 
     from ollama import Client

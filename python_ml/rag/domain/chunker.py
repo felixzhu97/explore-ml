@@ -4,7 +4,7 @@ import re
 import uuid
 from dataclasses import dataclass
 
-from rag.config import get_settings
+from rag import config
 
 logger = logging.getLogger(__name__)
 
@@ -38,9 +38,8 @@ class TextChunker:
         chunk_size: int | None = None,
         chunk_overlap: int | None = None,
     ) -> None:
-        settings = get_settings()
-        self.chunk_size = chunk_size or settings.chunk_size
-        self.chunk_overlap = chunk_overlap or settings.chunk_overlap
+        self.chunk_size = chunk_size or config.CHUNK_SIZE
+        self.chunk_overlap = chunk_overlap or config.CHUNK_OVERLAP
 
     def chunk_text(
         self,

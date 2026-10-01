@@ -6,8 +6,7 @@ from pathlib import Path
 
 import aiofiles
 
-from rag.config import get_settings
-
+from rag import config
 from rag.domain.chunker import Chunk, get_chunker
 from rag.infra.pdf_parser import parse_file
 
@@ -20,7 +19,6 @@ class DocumentProcessor:
     """
 
     def __init__(self) -> None:
-        self._settings = get_settings()
         self._chunker = get_chunker()
 
     async def process_uploaded_file(
@@ -214,15 +212,14 @@ class DocumentProcessor:
         Returns:
             Path to saved file
         """
-        settings = get_settings()
-        settings.ensure_directories()
+        config.UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
         # Generate unique filename
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S")
         document_id = self._generate_document_id(filename, file_content)[:8]
         safe_filename = f"{timestamp}_{document_id}_{filename}"
 
-        file_path = settings.uploads_dir / safe_filename
+        file_path = config.UPLOADS_DIR / safe_filename
 
         async with aiofiles.open(file_path, "wb") as output_file:
             await output_file.write(file_content)

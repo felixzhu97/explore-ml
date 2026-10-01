@@ -5,7 +5,7 @@ import logging
 import time
 from functools import lru_cache
 
-from rag.config import get_settings
+from rag import config
 from rag.domain.chunker import TextChunker, get_chunker
 from rag.domain.webpage import (
     MAX_CONCURRENT_CRAWLS,
@@ -117,5 +117,5 @@ def get_webpage_service() -> WebpageService:
         get_document_processor(),
         get_chunker(),
         get_chunk_indexer(),
-        get_settings().crawler_timeout,
+        config.CRAWLER_TIMEOUT,
     )

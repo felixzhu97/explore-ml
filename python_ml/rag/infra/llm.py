@@ -7,7 +7,7 @@ from functools import lru_cache
 import ollama
 from openai import AsyncOpenAI
 
-from rag.config import get_settings
+from rag import config
 from rag.domain.errors import ServiceUnavailableError
 
 logger = logging.getLogger(__name__)
@@ -18,15 +18,14 @@ OPENAI_TEMPERATURE = 0.7
 
 class LlmClient:
     def __init__(self) -> None:
-        settings = get_settings()
-        self._provider = settings.llm_provider
-        self._timeout = settings.llm_timeout
+        self._provider = config.LLM_PROVIDER
+        self._timeout = config.LLM_TIMEOUT
         if self._provider == "ollama":
-            self._model = settings.llm_model
-            self._ollama = ollama.AsyncClient(host=settings.ollama_base_url)
+            self._model = config.LLM_MODEL
+            self._ollama = ollama.AsyncClient(host=config.OLLAMA_BASE_URL)
         else:
-            self._model = settings.openai_llm_model
-            self._openai = AsyncOpenAI(api_key=settings.openai_api_key)
+            self._model = config.OPENAI_LLM_MODEL
+            self._openai = AsyncOpenAI(api_key=config.OPENAI_API_KEY)
 
     async def complete(self, system_prompt: str, question: str) -> str:
         messages = _messages(system_prompt, question)

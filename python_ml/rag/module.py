@@ -3,7 +3,6 @@
 import logging
 from contextlib import asynccontextmanager
 
-from rag.config import get_settings
 from rag.controller.api import router
 from rag.controller.errors import register_exception_handlers
 from rag.service.health import get_health_service
@@ -16,7 +15,6 @@ logger = logging.getLogger(__name__)
 @asynccontextmanager
 async def lifespan():
     logger.info("Starting RAG module...")
-    get_settings().ensure_directories()
     await get_health_service().startup()
     yield
     logger.info("Shutting down RAG module...")

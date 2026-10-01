@@ -18,8 +18,7 @@ from fastapi.responses import JSONResponse
 from prometheus_client import CONTENT_TYPE_LATEST, generate_latest
 from starlette.responses import Response
 
-import config
-
+MODULE_NAMES = ("recommendation", "vision", "rag", "image_playground", "speech", "video")
 SERVICE_NAME = "Explore ML"
 SERVICE_VERSION = "1.0.0"
 
@@ -131,6 +130,5 @@ def build_app(modules: Mapping[str, Any]) -> FastAPI:
     return app
 
 
-def create_app(module_names: Iterable[str] | None = None) -> FastAPI:
-    names = config.enabled_modules() if module_names is None else tuple(module_names)
-    return build_app(load_modules(names))
+def create_app(module_names: Iterable[str] = MODULE_NAMES) -> FastAPI:
+    return build_app(load_modules(module_names))

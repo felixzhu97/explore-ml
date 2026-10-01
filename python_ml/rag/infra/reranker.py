@@ -5,7 +5,7 @@ import logging
 
 import httpx
 
-from rag.config import get_settings
+from rag import config
 
 logger = logging.getLogger(__name__)
 
@@ -15,23 +15,16 @@ async def rerank_documents(
     documents: list[str],
 ) -> list[float] | None:
     """Return yes-probs aligned with documents, or None if disabled / unavailable."""
-    settings = get_settings()
-    if not settings.rerank_enabled or not documents:
+    if not config.RERANK_ENABLED or not documents:
         return None
-    url = f"{settings.rerank_url.rstrip('/')}/rerank"
     try:
-        async with httpx.AsyncClient(timeout=settings.rerank_timeout) as client:
+        async with httpx.AsyncClient(timeout=config.RERANK_TIMEOUT) as client:
             response = await client.post(
-                url,
+                f"{config.RERANK_URL}/rerank",
                 json={"query": query, "documents": documents},
             )
             response.raise_for_status()
-            payload = response.json()
-            scores = payload.get("scores")
-            if not isinstance(scores, list) or len(scores) != len(documents):
-                logger.warning("Rerank response shape mismatch; skipping")
-                return None
-            return [float(score) for score in scores]
+            return response.json()["scores"]
     except Exception as error:
         logger.warning("Rerank unavailable (%s); continuing without rerank", error)
         return None

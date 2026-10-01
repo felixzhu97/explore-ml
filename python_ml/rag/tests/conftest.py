@@ -1,23 +1,6 @@
 """Test configuration and fixtures."""
 import pytest
-from unittest.mock import AsyncMock, MagicMock, patch
-
-
-
-@pytest.fixture
-def mock_settings():
-    """Mock settings for testing."""
-    with patch("rag.config.get_settings") as mock:
-        settings = MagicMock()
-        settings.qdrant_url = "http://localhost:6333"
-        settings.qdrant_vector_size = 768
-        settings.embedding_provider = "ollama"
-        settings.ollama_base_url = "http://localhost:11434"
-        settings.chunk_size = 512
-        settings.chunk_overlap = 50
-        settings.uploads_dir = "/tmp/test_uploads"
-        mock.return_value = settings
-        yield settings
+from unittest.mock import AsyncMock
 
 
 @pytest.fixture
