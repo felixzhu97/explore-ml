@@ -1,5 +1,5 @@
 -r requirements.txt
-sentence-transformers>=5.1.0
-datasets>=4.0.0
-einops>=0.8.0
+sentence-transformers>=6.1.0
+datasets>=5.0.1
+einops>=0.8.2
 huggingface_hub[cli]
