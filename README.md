@@ -114,6 +114,15 @@ docs/          Glossary, Guideline, user-guide, C4, product-owner
 
 ## Contributing
 
-Contributions are welcome. Prefer a single English kebab-case branch slug,
-small PRs with a clear why and References, and keep Glossary plus C4 in sync
-when module boundaries change.
+See [CONTRIBUTING.md](CONTRIBUTING.md). Prefer a single English kebab-case
+branch slug, small PRs with a clear why and References, and keep Glossary
+plus C4 in sync when module boundaries change. Participation is governed by
+the [Code of Conduct](CODE_OF_CONDUCT.md).
+
+## Security
+
+Report vulnerabilities as described in [SECURITY.md](SECURITY.md).
+
+## License
+
+[MIT](LICENSE) © 2026 Felix
