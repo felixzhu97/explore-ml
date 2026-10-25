@@ -1,29 +1,29 @@
 # RAG Service dependencies
 # FastAPI and server
-fastapi>=0.141.1
-uvicorn[standard]>=0.53.0
+fastapi>=0.159.1
+uvicorn[standard]>=0.54.0
 python-multipart>=0.0.32
-pydantic>=2.13.5
-python-dotenv>=1.2.3
+pydantic>=2.14.1
+python-dotenv>=1.2.4
 
 # Vector database (handles httpx version resolution)
 qdrant-client>=1.19.1
 
 # Embedding providers (handles httpx version resolution)
-ollama>=0.6.2
-openai>=3.14.1
+ollama>=0.6.3
+openai>=3.36.1
 
 # Document processing
-pymupdf>=1.28.2
+pymupdf>=2.0
 beautifulsoup4>=4.15.0
 html2text>=2025.4.15
 python-docx>=1.2.0
-markdown>=3.10.3
+markdown>=3.11.2
 
 # Utilities
 aiofiles>=25.1.0
 redis>=6.4.0
-tenacity>=9.1.4
+tenacity>=9.2.1
 httpx>=0.28.1
 
 # Testing
