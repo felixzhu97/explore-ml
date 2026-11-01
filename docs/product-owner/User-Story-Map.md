@@ -5,8 +5,7 @@ title: Explore ML - User Story Map
 # User Story Map
 
 > Jeff Patton story map + Mermaid journey + GWT epics in files.  
-> Story bodies and acceptance criteria live under [user-stories/](./user-stories/);
-> this page is the index (single source).
+> Index only; details in [user-stories/](./user-stories/).
 
 ## Personas
 
