@@ -4,8 +4,9 @@ title: Explore ML - User Story Map
 
 # User Story Map
 
-> Index page. The ML app is consumed by sibling APIs; product users never
-> call its port directly.
+> Jeff Patton story map + Mermaid journey + GWT epics in files.  
+> Story bodies and acceptance criteria live under [user-stories/](./user-stories/);
+> this page is the index (single source).
 
 ## Personas
 
@@ -35,27 +36,24 @@ journey
 Health means `GET /health` on port 8000: one entry per loaded module with
 `status` (`ok`, `degraded` or `error`) and `latency_ms`.
 
+## Backbone story map
+
+| Modular services | Unified app | Operator console |
+| ---------------- | ----------- | ---------------- |
+| [US-01](./user-stories/E1-modular-services.md#us-01-flat-per-module-layout) Flat layout | [US-05](./user-stories/E2-unified-app.md#us-05-single-app-and-aggregated-health) Single app + health | [US-09](./user-stories/E3-operator-console.md#us-09-module-pages) Module pages |
+| [US-02](./user-stories/E1-modular-services.md#us-02-rag-export-vectors) RAG export vectors | [US-06](./user-stories/E2-unified-app.md#us-06-secrets-only-in-env) Secrets in `.env` | [US-10](./user-stories/E3-operator-console.md#us-10-d3-charts-on-every-module-page) D3 charts |
+| [US-03](./user-stories/E1-modular-services.md#us-03-streaming-asr-over-websocket) Streaming ASR | [US-07](./user-stories/E2-unified-app.md#us-07-vision-scores-and-video-moderation) Vision / video | [US-11](./user-stories/E3-operator-console.md#us-11-embedding-atlas-on-rag) Embedding atlas |
+| [US-04](./user-stories/E1-modular-services.md#us-04-fine-tuning-scripts) Fine-tuning scripts | [US-08](./user-stories/E2-unified-app.md#us-08-ui-proxy-and-per-module-health) UI `/ml` proxy | [US-12](./user-stories/E3-operator-console.md#us-12-eval-dashboard) Eval dashboard |
+
 ## Epic index
 
-| Epic | Status | Notes |
-| ---- | ------ | ----- |
-| E1 | Done | Six services on separate ports (8000–8005) |
-| E2 | Done | One FastAPI app on port 8000 (modules under `python_ml/`) |
-| E3 | Done | `ui/` model-test front end with one page per module |
+| Epic | File | Stories | Status |
+| ---- | ---- | ------- | ------ |
+| E1 Modular services | [E1-modular-services.md](./user-stories/E1-modular-services.md) | US-01 – US-04 | Done |
+| E2 Unified app | [E2-unified-app.md](./user-stories/E2-unified-app.md) | US-05 – US-08 | Done |
+| E3 Operator console | [E3-operator-console.md](./user-stories/E3-operator-console.md) | US-09 – US-12 | Done (US-12 Planned) |
 
-## Delivered stories
+## Related
 
-| Story | Epic | Status |
-| ----- | ---- | ------ |
-| Flat per-module layout (`controller/`, `service/`, `domain/`, `infra/`) | E1 | Done |
-| RAG export vectors (`documents:exportVectors`) | E1 | Done |
-| Streaming ASR over WebSocket (`/ws/v1/audios:transcribe`) | E1 | Done |
-| Fine-tuning scripts (`training/` in every module except video) | E1 | Done |
-| Single app, aggregated `/health`, one requirements and `.env.example` | E2 | Done |
-| Inline non-secret settings; `.env` for secrets only | E2 | Done |
-| Vision prediction scores and per-frame video moderation | E2 | Done |
-| UI single `/ml` proxy and per-module health | E2 | Done |
-| UI module pages: recommendation, vision, RAG, image, speech, video | E3 | Done |
-| D3 charts on every module page | E3 | Done |
-| Embedding atlas in `ui/` (PCA scatter on the RAG page) | E3 | Done |
-| Eval dashboard in `ui/` | E3 | Planned |
+- [User Story Mapping — Jeff Patton](https://www.jpattonassociates.com/user-story-mapping/)
+- [Domain Glossary](../Glossary.md)
