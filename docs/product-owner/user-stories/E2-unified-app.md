@@ -4,8 +4,8 @@
 
 ## Background
 
-Sibling APIs need one loopback base URL with aggregated health instead of
-six separate ports, while secrets stay out of committed defaults.
+One loopback process on a single base URL exposes all modules and aggregated
+health. Secrets stay in environment files, not committed defaults.
 
 ---
 
@@ -17,15 +17,15 @@ six separate ports, while secrets stay out of committed defaults.
 
 ### Acceptance criteria
 
-1. **Scenario** Aggregated health  
+1. **Scenario** Aggregated module health  
    **GIVEN** the unified app is running  
-   **WHEN** I `GET /health`  
+   **WHEN** `GET /health`  
    **THEN** each loaded module reports `status` and `latency_ms`
 
-2. **Scenario** Single dependency surface  
+2. **Scenario** Single install and process  
    **GIVEN** a fresh clone  
-   **WHEN** I install from the root requirements and `.env.example`  
-   **THEN** I can start all modules from one process
+   **WHEN** root requirements and `.env.example` are used  
+   **THEN** all modules start from one process
 
 ### Status
 
@@ -37,13 +37,13 @@ Done
 
 **As a** platform engineer  
 **I want** non-secret settings inline and secrets only in `.env`  
-**So that** local boot stays simple without committing credentials
+**So that** credentials are not committed while local boot stays documented
 
 ### Acceptance criteria
 
-1. **Scenario** Env split  
+1. **Scenario** Secrets stay in env  
    **GIVEN** the app configuration  
-   **WHEN** I inspect defaults vs `.env.example`  
+   **WHEN** defaults and `.env.example` are inspected  
    **THEN** secrets are env-only and non-secrets may be inline defaults
 
 ### Status
@@ -56,18 +56,18 @@ Done
 
 **As a** sibling API developer  
 **I want** vision prediction scores and per-frame video moderation  
-**So that** product BFFs can gate unsafe media with structured scores
+**So that** product BFFs can apply thresholds on structured scores
 
 ### Acceptance criteria
 
-1. **Scenario** Vision scores  
+1. **Scenario** Vision label scores  
    **GIVEN** the vision module is loaded  
-   **WHEN** I submit an image for prediction  
+   **WHEN** an image is submitted for prediction  
    **THEN** the response includes per-label scores
 
-2. **Scenario** Video frames  
+2. **Scenario** Per-frame video moderation  
    **GIVEN** the video module is loaded  
-   **WHEN** I submit a short clip  
+   **WHEN** a short clip is submitted  
    **THEN** moderation results are returned per frame
 
 ### Status
@@ -80,13 +80,13 @@ Done
 
 **As a** model-test engineer  
 **I want** the `ui/` console to use a single `/ml` proxy and show module health  
-**So that** I can exercise modules without opening six origins
+**So that** modules can be exercised without six separate origins
 
 ### Acceptance criteria
 
-1. **Scenario** Proxy health  
+1. **Scenario** Health via `/ml` proxy  
    **GIVEN** the UI is running against the loopback app  
-   **WHEN** I open the console  
+   **WHEN** the console is opened  
    **THEN** per-module health is visible through the `/ml` proxy
 
 ### Status

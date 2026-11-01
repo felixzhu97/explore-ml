@@ -4,8 +4,8 @@
 
 ## Background
 
-Model-test engineers need one page per ML module with charts so they can
-validate routes before sibling products wire BFFs.
+The `ui/` console provides one page per ML module with charts so routes can be
+checked before sibling products attach BFFs.
 
 ---
 
@@ -13,14 +13,14 @@ validate routes before sibling products wire BFFs.
 
 **As a** model-test engineer  
 **I want** UI pages for recommendation, vision, RAG, image, speech, and video  
-**So that** I can exercise each module from the operator console
+**So that** each module can be exercised from the operator console
 
 ### Acceptance criteria
 
-1. **Scenario** Pages exist  
+1. **Scenario** Submit fixture per module  
    **GIVEN** the `ui/` app on :4200  
-   **WHEN** I open each module route  
-   **THEN** I can submit a fixture request and see a structured result
+   **WHEN** each module route is opened  
+   **THEN** a fixture request can be submitted and a structured result shown
 
 ### Status
 
@@ -32,11 +32,11 @@ Done
 
 **As a** model-test engineer  
 **I want** D3 charts on every module page  
-**So that** scores and series are readable without raw JSON only
+**So that** numeric scores and series are readable without relying on raw JSON
 
 ### Acceptance criteria
 
-1. **Scenario** Chart renders  
+1. **Scenario** Chart for numeric series  
    **GIVEN** a successful module response with numeric series  
    **WHEN** the page renders  
    **THEN** a D3 chart visualizes the result
@@ -51,13 +51,13 @@ Done
 
 **As a** model-test engineer  
 **I want** a PCA embedding atlas on the RAG page  
-**So that** I can spot cluster shape in exported vectors
+**So that** cluster shape in exported vectors is visible
 
 ### Acceptance criteria
 
-1. **Scenario** Atlas scatter  
+1. **Scenario** PCA scatter on RAG  
    **GIVEN** RAG vectors are available  
-   **WHEN** I open the RAG page atlas  
+   **WHEN** the RAG page atlas is opened  
    **THEN** a PCA scatter plot is shown
 
 ### Status
@@ -70,11 +70,11 @@ Done
 
 **As a** model-test engineer  
 **I want** an eval dashboard in `ui/`  
-**So that** I can compare module quality over fixture runs
+**So that** fixture-run quality metrics can be compared across modules
 
 ### Acceptance criteria
 
-1. **Scenario** Dashboard entry  
+1. **Scenario** Eval metrics summary  
    **GIVEN** the operator console  
    **WHEN** eval is shipped  
    **THEN** a dashboard page summarizes fixture eval metrics
