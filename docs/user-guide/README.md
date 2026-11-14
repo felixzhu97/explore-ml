@@ -43,7 +43,7 @@ lightweight or Hub-backed backend.
 
 The local default is `http://localhost:8000` for every module.
 
-The Angular operator console in `ui/` runs on `http://localhost:4200` and
+The Angular operator console in `ui/` runs on `http://localhost:4210` and
 proxies `/ml/*` to the app. Use it to try each module by hand, with D3 charts
 of the results, before you wire your own API.
 

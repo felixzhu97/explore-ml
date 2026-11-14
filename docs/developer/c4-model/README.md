@@ -19,7 +19,7 @@ cd docs/developer/c4-model && docker run --rm -v "$PWD":/data plantuml/plantuml 
 | Surface | Port |
 | ------- | ---- |
 | ML app (`python_ml/main.py`, all six modules) | `:8000` |
-| Model Test UI (`ng serve`) | `:4200` |
+| Model Test UI (`ng serve`) | `:4210` |
 
 The UI reaches the app through the dev-server proxy at `/ml` (prefix
 stripped, WebSocket on). The target lives in `ui/proxy.conf.json`. Sibling

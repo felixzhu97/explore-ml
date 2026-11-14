@@ -18,7 +18,7 @@ checked before sibling products attach BFFs.
 ### Acceptance criteria
 
 1. **Scenario** Submit fixture per module  
-   **GIVEN** the `ui/` app on :4200  
+   **GIVEN** the `ui/` app on :4210  
    **WHEN** each module route is opened  
    **THEN** a fixture request can be submitted and a structured result shown
 

@@ -33,7 +33,7 @@ from `python_ml/.env`.
 | Image Playground | 图像游乐场 | `python_ml/image_playground` | Image generation                    |
 | Speech           | 语音       | `python_ml/speech`           | ASR + TTS                           |
 | Video            | 视频生成   | `python_ml/video`            | Video generation                    |
-| Model Test UI    | 测模界面   | `ui/` (`:4200`)              | Angular dev UI; proxies `/ml`       |
+| Model Test UI    | 测模界面   | `ui/` (`:4210`)              | Angular dev UI; proxies `/ml`       |
 | Fixture Data     | 测试数据   | `data/`                      | Small fixtures only                 |
 
 ```mermaid
