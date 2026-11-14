@@ -61,7 +61,7 @@ npm ci
 npm start
 ```
 
-This serves the UI at <http://localhost:4200>. It proxies `/ml/*` to the app
+This serves the UI at <http://localhost:4210>. It proxies `/ml/*` to the app
 on port `8000` without CORS setup. Each module has one page where you can call
 all of its endpoints and see the results charted with D3. See
 [ui/README.md](ui/README.md).

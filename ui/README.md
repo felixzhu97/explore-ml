@@ -20,7 +20,7 @@ npm ci
 npm start
 ```
 
-This serves the app at <http://localhost:4200>. Start the Python app first
+This serves the app at <http://localhost:4210>. Start the Python app first
 (`cd python_ml && uvicorn main:app --port 8000`); the overview page shows
 which modules are up.
 

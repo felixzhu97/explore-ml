@@ -26,7 +26,7 @@ Deployment_Node(dev_machine, "Dev machine", "macOS / Linux") {
   Deployment_Node(data_node, "data/", "in git") {
     ContainerDb(fixtures, "Fixtures", "JSONL", "data/finetune/* small eval and training sets")
   }
-  Deployment_Node(ui_node, "ui/ (Node 22)", "ng serve :4200") {
+  Deployment_Node(ui_node, "ui/ (Node 22)", "ng serve :4210") {
     Container(ui, "Model Test UI", "Angular", "Proxies /ml to :8000")
   }
 }
