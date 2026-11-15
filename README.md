@@ -1,4 +1,10 @@
-# Explore ML
+# explore-ml
+
+> **Moved.** Development continues in
+> [explore-workspace](https://github.com/felixzhu97/explore-workspace) under
+> `ml/`. This repository is archived; please open new issues and pull
+> requests there.
+
 
 `explore-ml` is an optional Python FastAPI app you can run beside sibling
 Explore products. It serves recommendation, vision, RAG, and media
